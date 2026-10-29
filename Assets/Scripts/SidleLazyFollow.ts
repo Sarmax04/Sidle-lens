@@ -1,5 +1,5 @@
 /**
- * RoomFitLazyFollow — keeps the control panel ~1 m in front of the user and a
+ * SidleLazyFollow — keeps the control panel ~1 m in front of the user and a
  * bit below eye level, following with a slight delay and settling when the
  * user stops. Faces the user (yaw) with a small upward tilt.
  *
@@ -9,8 +9,8 @@
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
 
 @component
-export class RoomFitLazyFollow extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">RoomFitLazyFollow – lazy head-follow</span>')
+export class SidleLazyFollow extends BaseScriptComponent {
+  @ui.label('<span style="color: #60A5FA;">SidleLazyFollow – lazy head-follow</span>')
   @ui.separator
   @ui.group_start("Settings")
   @input

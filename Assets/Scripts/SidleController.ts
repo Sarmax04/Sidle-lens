@@ -1,11 +1,11 @@
 /**
- * RoomFitController — the single owner of RoomFit state (testable via LEAF).
+ * SidleController — the single owner of Sidle state (testable via LEAF).
  *
  * Owns: current piece, its floor position + rotation, Measure toggle, drag
  * state, clearance result, gap-label fade, and the "piece behind you" arrow.
  * Builds the virtual stand-in room (walls, doorway, coffee table) and the four
  * box-shaped pieces under the authored roots it is given, and pushes view state
- * into RoomFitPanelUI / RoomFitLabelsUI.
+ * into SidlePanelUI / SidleLabelsUI.
  *
  * Expects @inputs: VirtualRoom, Doorway, CoffeeTable, Piece, FloorOutline
  * SceneObjects; the two UI components; a lit + an unlit template material.
@@ -20,9 +20,9 @@
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {InteractorEvent} from "SpectaclesInteractionKit.lspkg/Core/Interactor/InteractorEvent"
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
-import {RoomFitPanelUI} from "./RoomFitPanelUI"
-import {RoomFitLabelsUI} from "./RoomFitLabelsUI"
-import {MaterialCache, makeBox} from "./RoomFitBoxFactory"
+import {SidlePanelUI} from "./SidlePanelUI"
+import {SidleLabelsUI} from "./SidleLabelsUI"
+import {MaterialCache, makeBox} from "./SidleBoxFactory"
 import {
   ClearanceHit,
   EDGE_NAMES,
@@ -32,7 +32,7 @@ import {
   measureClearances,
   resolvePlacement,
   rotateLocal,
-} from "./RoomFitGeometry"
+} from "./SidleGeometry"
 
 export type PieceKey = "SofaA" | "SofaB" | "Bed" | "DiningTable"
 
@@ -54,8 +54,8 @@ const PIECES: PieceDef[] = [
 const COFFEE_TABLE = {w: 100, d: 50, h: 45}
 
 @component
-export class RoomFitController extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">RoomFitController – state, clearance, room</span>')
+export class SidleController extends BaseScriptComponent {
+  @ui.label('<span style="color: #60A5FA;">SidleController – state, clearance, room</span>')
   @ui.separator
   @ui.group_start("References")
   @input
@@ -80,11 +80,11 @@ export class RoomFitController extends BaseScriptComponent {
 
   @input
   @hint("Control panel view")
-  panelUI!: RoomFitPanelUI
+  panelUI!: SidlePanelUI
 
   @input
   @hint("Dimension + gap label view")
-  labelsUI!: RoomFitLabelsUI
+  labelsUI!: SidleLabelsUI
 
   @input
   @hint("Lit template material for room + furniture boxes (cloned per color)")
@@ -209,11 +209,11 @@ export class RoomFitController extends BaseScriptComponent {
 
   onAwake() {
     if (!this.room || !this.pieceRoot || !this.outlineRoot || !this.panelUI || !this.labelsUI) {
-      print("RoomFitController: required @input not wired (room/pieceRoot/outlineRoot/panelUI/labelsUI).")
+      print("SidleController: required @input not wired (room/pieceRoot/outlineRoot/panelUI/labelsUI).")
       return
     }
     if (!this.litMaterial || !this.unlitMaterial) {
-      print("RoomFitController: litMaterial/unlitMaterial not wired.")
+      print("SidleController: litMaterial/unlitMaterial not wired.")
       return
     }
     this.litCache = new MaterialCache(this.litMaterial)

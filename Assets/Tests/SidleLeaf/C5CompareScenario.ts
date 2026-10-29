@@ -8,15 +8,15 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
-import {RoomFitController} from "../../Scripts/RoomFitController"
-import {angDiffDeg, expectEdges, interactable, log, obj, resetState, tap, textOf, yawOf} from "./RoomFitTestHelpers"
+import {SidleController} from "../../Scripts/SidleController"
+import {angDiffDeg, expectEdges, interactable, log, obj, resetState, tap, textOf, yawOf} from "./SidleTestHelpers"
 
 function baseColor(key: string): vec4 {
   const base = obj(`Piece_${key}`).getChild(0)
   return (base.getComponent("Component.RenderMeshVisual") as RenderMeshVisual).mainMaterial.mainPass.baseColor
 }
 
-function checkSofa(c: RoomFitController, key: "SofaA" | "SofaB", pos: {x: number; z: number}, rot: number, gap: number): void {
+function checkSofa(c: SidleController, key: "SofaA" | "SofaB", pos: {x: number; z: number}, rot: number, gap: number): void {
   const dims = key === "SofaA" ? {w: 220, d: 90, h: 85} : {w: 180, d: 85, h: 85}
   expect(c.currentPieceKey, "piece").toBe(key)
   expect(JSON.stringify(c.currentDims), `${key} dims`).toBe(JSON.stringify(dims))

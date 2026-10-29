@@ -1,5 +1,5 @@
 /**
- * RoomFitGeometry — pure 2D floor-plan math for RoomFit (no scene access).
+ * SidleGeometry — pure 2D floor-plan math for Sidle (no scene access).
  *
  * Owns: piece catalog shape, oriented-rectangle (OBB) corners, clearance
  * measurement against walls + rectangular obstacles, and overlap resolution

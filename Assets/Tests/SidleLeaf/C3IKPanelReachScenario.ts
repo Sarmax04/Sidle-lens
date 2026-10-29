@@ -8,7 +8,7 @@ import {createIKInteractor} from "Leaf.lspkg/Interactors/interactor/ik/visualize
 import {DiagnosticRecorder} from "Leaf.lspkg/Diagnostic/DiagnosticRecorder"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {interactable, log, resetState} from "./RoomFitTestHelpers"
+import {interactable, log, resetState} from "./SidleTestHelpers"
 
 @component
 export class C3IKPanelReachScenario extends Scenario {

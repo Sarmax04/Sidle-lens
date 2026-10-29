@@ -51,7 +51,7 @@
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">RoomFitLabelsUI – dimension + gap labels</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SidleLabelsUI – dimension + gap labels</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float labelScale = 4.5 {"hint":"Uniform scale for the dimension labels (4.5 ≈ 8 cm tall digits)", "widget":"slider", "min":1, "max":8, "step":0.1}'

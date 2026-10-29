@@ -89,7 +89,7 @@
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">RoomFitController – state, clearance, room</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SidleController – state, clearance, room</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"References"}'
     - '// @input SceneObject room {"hint":"Root of the virtual stand-in room; its origin is the floor under the start position"}'

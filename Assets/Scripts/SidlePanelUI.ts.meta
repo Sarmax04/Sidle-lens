@@ -53,7 +53,7 @@
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">RoomFitPanelUI – control panel view</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SidlePanelUI – control panel view</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float buttonWidth = 6.4 {"hint":"Button width in cm (brief: about 6 cm)", "widget":"slider", "min":4, "max":10, "step":0.1}'

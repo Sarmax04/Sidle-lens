@@ -49,7 +49,7 @@
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">RoomFitLazyFollow – lazy head-follow</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SidleLazyFollow – lazy head-follow</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float distanceCm = 100 {"hint":"Distance in front of the user, cm", "widget":"slider", "min":40, "max":200, "step":1}'

@@ -6,7 +6,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {dragPiece, interactable, local, log, obj, resetState, tap, textOf} from "./RoomFitTestHelpers"
+import {dragPiece, interactable, local, log, obj, resetState, tap, textOf} from "./SidleTestHelpers"
 
 @component
 export class C2MeasureLabelsScenario extends Scenario {

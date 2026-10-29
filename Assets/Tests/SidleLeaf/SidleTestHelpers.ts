@@ -1,6 +1,6 @@
 /**
- * Shared helpers for the RoomFit LEAF scenarios (test-only; never shipped behaviour).
- * Reads RoomFitController state through its public getters and drives the real
+ * Shared helpers for the Sidle LEAF scenarios (test-only; never shipped behaviour).
+ * Reads SidleController state through its public getters and drives the real
  * UIKit buttons / PieceGrab Interactable through LEAF interactors.
  */
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
@@ -8,14 +8,14 @@ import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
-import {RoomFitController} from "../../Scripts/RoomFitController"
+import {SidleController} from "../../Scripts/SidleController"
 
 export const ROOM = {minX: -200, maxX: 200, minZ: -470, maxZ: 30}
 export const COFFEE = {minX: 100, maxX: 200, minZ: -470, maxZ: -420}
 export const START = {x: 0, z: -220}
 
 export function log(msg: string): void {
-  print(`[RoomFitLeaf] ${msg}`)
+  print(`[SidleLeaf] ${msg}`)
 }
 
 export function obj(name: string): SceneObject {
@@ -24,9 +24,9 @@ export function obj(name: string): SceneObject {
   return so
 }
 
-export function controller(): RoomFitController {
-  const c = obj("RoomFitController").getComponent(RoomFitController.getTypeName()) as RoomFitController
-  if (!c) throw new Error("RoomFitController component not found")
+export function controller(): SidleController {
+  const c = obj("SidleController").getComponent(SidleController.getTypeName()) as SidleController
+  if (!c) throw new Error("SidleController component not found")
   return c
 }
 
@@ -107,7 +107,7 @@ export function insideRoom(x: number, z: number, w: number, d: number): boolean 
   return x - w / 2 >= ROOM.minX - e && x + w / 2 <= ROOM.maxX + e && z - d / 2 >= ROOM.minZ - e && z + d / 2 <= ROOM.maxZ + e
 }
 
-export function expectEdges(c: RoomFitController, expected: string[], ctx: string): void {
+export function expectEdges(c: SidleController, expected: string[], ctx: string): void {
   expect(c.outlineEdgeColors.join(","), `${ctx}: outlineEdgeColors [front,right,back,left]`).toBe(expected.join(","))
   const names = ["Edge_Front", "Edge_Right", "Edge_Back", "Edge_Left"]
   for (let i = 0; i < 4; i++) {
@@ -121,7 +121,7 @@ export function expectEdges(c: RoomFitController, expected: string[], ctx: strin
  * Put the Lens back into a known state via the controller API (test setup only):
  * Sofa A, 0°, Measure off, not dragging, at the start spot; waits out any gap fade.
  */
-export async function resetState(): Promise<RoomFitController> {
+export async function resetState(): Promise<SidleController> {
   const c = controller()
   if (c.isDragging) c.endDrag()
   let guard = 0

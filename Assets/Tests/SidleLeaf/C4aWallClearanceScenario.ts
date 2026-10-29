@@ -8,10 +8,10 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {RoomFitController} from "../../Scripts/RoomFitController"
-import {dragPiece, expectEdges, interactable, local, log, obj, resetState, ROOM} from "./RoomFitTestHelpers"
+import {SidleController} from "../../Scripts/SidleController"
+import {dragPiece, expectEdges, interactable, local, log, obj, resetState, ROOM} from "./SidleTestHelpers"
 
-function checkGapLabelBetween(c: RoomFitController, ctx: string, expectGap: number, axis: "x" | "z", pieceEdge: number, wall: number): void {
+function checkGapLabelBetween(c: SidleController, ctx: string, expectGap: number, axis: "x" | "z", pieceEdge: number, wall: number): void {
   expect(c.gapLabelVisible, `${ctx}: gap label visible`).toBe(true)
   expect(obj("GapLabel").enabled, `${ctx}: GapLabel enabled`).toBe(true)
   expect(c.gapLabelText, `${ctx}: gap text`).toBe(`${Math.floor(expectGap)} cm`)
@@ -24,7 +24,7 @@ function checkGapLabelBetween(c: RoomFitController, ctx: string, expectGap: numb
   if (expectGap >= 20) {
     expect(v >= lo - 0.5 && v <= hi + 0.5, `${ctx}: gap label between piece edge ${pieceEdge} and wall ${wall} (got ${v})`).toBe(true)
   } else {
-    // narrow gaps: Lens puts it just outside the facing edge (documented in RoomFitController)
+    // narrow gaps: Lens puts it just outside the facing edge (documented in SidleController)
     expect(Math.abs(v - pieceEdge) <= 21, `${ctx}: narrow-gap label next to the facing edge (got ${v})`).toBe(true)
   }
 }

@@ -7,13 +7,13 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {RoomFitController} from "../../Scripts/RoomFitController"
-import {angDiffDeg, local, log, obj, placementValid, resetState, tap, yawOf} from "./RoomFitTestHelpers"
+import {SidleController} from "../../Scripts/SidleController"
+import {angDiffDeg, local, log, obj, placementValid, resetState, tap, yawOf} from "./SidleTestHelpers"
 
 const KEYS = ["SofaA", "SofaB", "Bed", "DiningTable"]
 
 function checkPiece(
-  c: RoomFitController,
+  c: SidleController,
   key: string,
   dims: {w: number; d: number; h: number},
   pos: {x: number; z: number},

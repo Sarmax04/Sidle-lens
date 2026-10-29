@@ -1,5 +1,5 @@
 /**
- * RoomFitLabelsUI — world-space labels next to the piece (passive view).
+ * SidleLabelsUI — world-space labels next to the piece (passive view).
  *
  * Owns (runtime children, stable names for tests):
  *   DimensionLabels/ WidthLabel, DepthLabel, HeightLabel — upright light text
@@ -11,7 +11,7 @@
  * Positions passed in are local to this SceneObject (which sits at the
  * VirtualRoom floor origin).
  *
- * Must not: compute clearance or decide visibility (RoomFitController does).
+ * Must not: compute clearance or decide visibility (SidleController does).
  */
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
@@ -19,8 +19,8 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 const LABEL_TEXT_SIZE = 100 // em-square ≈ 2.28 cm before labelScale
 
 @component
-export class RoomFitLabelsUI extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">RoomFitLabelsUI – dimension + gap labels</span>')
+export class SidleLabelsUI extends BaseScriptComponent {
+  @ui.label('<span style="color: #60A5FA;">SidleLabelsUI – dimension + gap labels</span>')
   @ui.separator
   @ui.group_start("Settings")
   @input

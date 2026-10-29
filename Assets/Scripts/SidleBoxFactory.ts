@@ -1,5 +1,5 @@
 /**
- * RoomFitBoxFactory — plain, obviously-fake box geometry for the virtual room
+ * SidleBoxFactory — plain, obviously-fake box geometry for the virtual room
  * and the furniture pieces.
  *
  * Owns: one shared unit-cube RenderMesh (MeshBuilder, with normals + UVs) and a

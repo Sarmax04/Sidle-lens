@@ -7,10 +7,10 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {RoomFitController} from "../../Scripts/RoomFitController"
-import {angDiffDeg, log, obj, placementValid, resetState, tap, yawOf} from "./RoomFitTestHelpers"
+import {SidleController} from "../../Scripts/SidleController"
+import {angDiffDeg, log, obj, placementValid, resetState, tap, yawOf} from "./SidleTestHelpers"
 
-function checkYaw(c: RoomFitController, deg: number, ctx: string): void {
+function checkYaw(c: SidleController, deg: number, ctx: string): void {
   expect(angDiffDeg(c.rotationDeg, deg) < 0.01, `${ctx}: rotationDeg ${c.rotationDeg} vs ${deg}`).toBe(true)
   const py = (yawOf(obj("Piece").getTransform()) * 180) / Math.PI
   const oy = (yawOf(obj("FloorOutline").getTransform()) * 180) / Math.PI

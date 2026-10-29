@@ -9,7 +9,7 @@
     - !<own> e857a34f-2ecc-4cbf-a87f-ce0a56cc711c
     - !<own> c3c118f5-c2c4-44c7-9863-ff498b18974b
     - !<own> 2a8cee4d-e8da-4af3-9787-cdd774fb39fb
-    - !<own> 3cf6a601-ea82-408b-8c96-95a7b6e741e5
+    - !<own> 1878c2ed-d07a-4501-8214-da1bca9646a7
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -519,6 +519,21 @@
     []
   Components:
     []
+- !<SceneObject/1878c2ed-d07a-4501-8214-da1bca9646a7>
+  PrefabRemaps:
+    []
+  Name: LEAF Plugin Bridge
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 61ecf76c-b400-4fb2-9273-1d0d418ddb43
 - !<RenderMeshVisual/1f969daa-5809-4500-b314-98d91ccba131>
   PrefabRemaps:
     []
@@ -617,7 +632,7 @@
 - !<ScriptComponent/26006b78-6ef2-4474-bd4f-c32593b049dc>
   PrefabRemaps:
     []
-  Name: RoomFitController
+  Name: SidleController
   Enabled: true
   ScriptAsset: !<reference> eac29fc6-7fc2-41f4-997b-e36aa5343cf0
   ScriptInputsDefault:
@@ -888,7 +903,7 @@
 - !<ScriptComponent/38e10e1c-0cba-4e00-8fa5-3d023d42af07>
   PrefabRemaps:
     []
-  Name: RoomFitLabelsUI
+  Name: SidleLabelsUI
   Enabled: true
   ScriptAsset: !<reference> b8783960-1422-4f5c-9392-2a9f3a24feeb
   ScriptInputsDefault:
@@ -939,21 +954,6 @@
     - !<own> 54130007-65c1-48d3-b9df-0866d8112e01
   Components:
     []
-- !<SceneObject/3cf6a601-ea82-408b-8c96-95a7b6e741e5>
-  PrefabRemaps:
-    []
-  Name: LEAF Plugin Bridge
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 76135c0c-329b-47b1-bb25-cf154aef42b8
 - !<SceneObject/3de2c7ea-1525-465a-9056-68565a4014a7>
   PrefabRemaps:
     []
@@ -1140,6 +1140,22 @@
       mouseTargetingMode: !<float> 2.000000
       moveInDepth: false
       moveInDepthAmount: !<float> 5.000000
+  ScriptTypes:
+    "":
+      {}
+- !<ScriptComponent/61ecf76c-b400-4fb2-9273-1d0d418ddb43>
+  PrefabRemaps:
+    []
+  Name: MessagingBridge
+  Enabled: true
+  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
   ScriptTypes:
     "":
       {}
@@ -1419,22 +1435,6 @@
     - !<own> 241be3d8-6f45-47d7-8b71-53778e375dc2
   Components:
     []
-- !<ScriptComponent/76135c0c-329b-47b1-bb25-cf154aef42b8>
-  PrefabRemaps:
-    []
-  Name: MessagingBridge
-  Enabled: true
-  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/77a79970-63f4-4c7c-984a-539d2ef0c92a>
   PrefabRemaps:
     []
@@ -1693,7 +1693,7 @@
 - !<SceneObject/8e3a9a80-ea77-4e78-b618-e6547f0905bf>
   PrefabRemaps:
     []
-  Name: RoomFitController
+  Name: SidleController
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
@@ -1800,7 +1800,7 @@
 - !<ScriptComponent/9d01d615-0736-430c-9cb8-d9b89eaf0402>
   PrefabRemaps:
     []
-  Name: RoomFitPanelUI
+  Name: SidlePanelUI
   Enabled: true
   ScriptAsset: !<reference> 7cf64202-5b2a-4cae-97fb-53c5d960cb47
   ScriptInputsDefault:
@@ -2121,7 +2121,7 @@
 - !<ScriptComponent/b718a4d3-a1c7-4446-b874-16899fec0b23>
   PrefabRemaps:
     []
-  Name: RoomFitLazyFollow
+  Name: SidleLazyFollow
   Enabled: true
   ScriptAsset: !<reference> 61b4ae99-fa56-4d57-ace7-e78781fd7151
   ScriptInputsDefault:

@@ -1,5 +1,5 @@
 /**
- * RoomFitPanelUI — the RoomFit control panel (passive view).
+ * SidlePanelUI — the Sidle control panel (passive view).
  *
  * Owns: a UIKit BackPlate panel with a header row (current piece name +
  * "piece is behind you" arrow) and a row of five UIKit Buttons:
@@ -9,8 +9,8 @@
  * Main -> UI: setPieceName, setCompareEnabled, setMeasureOn, setBehindArrow.
  * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight.
  *
- * Must not: hold domain state or make decisions (RoomFitController owns state).
- * Positioning/follow is done by RoomFitLazyFollow on the same SceneObject.
+ * Must not: hold domain state or make decisions (SidleController owns state).
+ * Positioning/follow is done by SidleLazyFollow on the same SceneObject.
  */
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
@@ -49,8 +49,8 @@ const LAYOUT_Z_LIFT = 0.02
 const BUTTON_FACE_Z = 0.08
 
 @component
-export class RoomFitPanelUI extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">RoomFitPanelUI – control panel view</span>')
+export class SidlePanelUI extends BaseScriptComponent {
+  @ui.label('<span style="color: #60A5FA;">SidlePanelUI – control panel view</span>')
   @ui.separator
   @ui.group_start("Settings")
   @input

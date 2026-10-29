@@ -6,7 +6,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
-import {controller, expectEdges, insideRoom, local, log, obj} from "./RoomFitTestHelpers"
+import {controller, expectEdges, insideRoom, local, log, obj} from "./SidleTestHelpers"
 
 @component
 export class C1StartStateScenario extends Scenario {
