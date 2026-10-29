@@ -2,7 +2,7 @@
 status: approved
 ---
 
-# Design brief: RoomFit
+# Design brief: Sidle
 
 <!-- Filled in by plan-lens from the learner's interview. Use the learner's words. Mark any value they didn't choose as (default). -->
 
