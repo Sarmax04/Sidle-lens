@@ -137,6 +137,20 @@ Problem: stepping through pieces with Next piece and Compare is blind; the user 
   15. Selecting a tile shows that piece in the same spot and facing (nudged if needed) and closes the gallery.
   16. Tiles show thumbnails; missing thumbnails fall back to a plain named tile.
 
+  ## Update 5: Panel size
+Problem: the panel is fixed in size; some users want it smaller to stay out of the way, others bigger to read it.
+
+1. Two small buttons on the grab bar row, "-" (smaller) and "+" (bigger), at the left and right ends of the grab bar, at least 3 cm wide and tall, with a gap of at least 1.5 cm from the bar. They are not part of the main button row.
+2. The panel has four sizes: 75%, 100% (default), 125% and 150% of the default. Each press moves one step. "-" is greyed out at 75% and "+" is greyed out at 150%; a pinch on a greyed button does nothing.
+3. The whole panel scales together (buttons, text, grab bar), around its own centre. Its offset from the head (distance and angles) does not change. At every size the main buttons stay at least 4.5 cm wide at the default 110 cm distance.
+4. The gallery opens at the same size as the panel.
+5. Changing the size never moves the piece, changes Measure, or presses another button.
+6. The size is not saved between sessions: every start is at 100%.
+- Out of scope: pinching or dragging a corner to resize, a free size slider, saving the size.
+- Done criteria:
+  17. The "+" and "-" buttons step the panel through 75%, 100%, 125% and 150%; the end buttons are greyed out and a pinch on them does nothing; the panel keeps its offset from the head and its buttons still work at every size.
+  18. The gallery opens at the panel's current size; changing the size does not move the piece or change Measure; the Lens starts at 100%.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
