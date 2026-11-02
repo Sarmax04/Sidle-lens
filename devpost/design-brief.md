@@ -92,6 +92,20 @@ Each one can be checked in Lens Studio's preview.
   9. With a broken or missing model file, the Lens shows a box of the right size and does not crash.
 - Out of scope: generating models or reading web pages on the glasses, and any brand-name products.
 
+## Update 2: Piece types and variants
+This update replaces the Next piece and Compare wording in Update 1 and done criteria 3, 5 and 6.
+- Every piece belongs to one type: sofa, chair, table or bed. Built-in pieces: Sofa A and Sofa B are sofas, the box dining table is a table, the bed is a bed. Imported pieces use their catalog category; an unknown category becomes its own type listed after bed.
+- Types are ordered sofa, chair, table, bed. Within a type, variants are ordered built-in pieces first, then imported pieces in catalog order.
+- Next piece moves to the next type that has at least one variant, wrapping around, and shows that type's first variant. The new piece appears in the same spot and facing the same way as the previous one.
+- Compare moves to the next variant of the current type, wrapping around, in the same spot and facing. It is greyed out when the type has only one variant. The outline, labels and clearance update for every variant. A variant that would overlap a wall or the coffee table is moved to the nearest valid spot.
+- A new Inspector checkbox on the controller, showPlaceholderPieces (default on), controls the built-in box pieces. When it is off, no built-in piece is offered by Next piece or Compare, types with no variants are skipped, and the Lens starts on the first variant of the first available type. If that leaves nothing to show, the Lens falls back to the built-in pieces and logs a warning.
+- Done criteria:
+  3. Next piece steps through the available types in order and wraps back to the first type, showing each type's first variant in the same spot and facing.
+  5. Compare steps through the variants of the current type in order and wraps, in the same spot and facing, and is greyed out for a type with one variant.
+  6. Imported pieces appear as variants of their type in catalog order, and entries with enabled set to false are skipped.
+  10. With showPlaceholderPieces off, no built-in piece is offered and the Lens starts on the first imported sofa.
+- Done criteria 1, 2, 4 and 7 to 9 are unchanged. With showPlaceholderPieces on, criterion 1 (Sofa A at the start) still holds.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
