@@ -77,6 +77,21 @@ Each one can be checked in Lens Studio's preview.
 - Dark colors render transparent on the glasses, so the pieces use light and mid tones. Color accuracy on real glasses is unproven.
 - The room is a virtual stand-in, not my real apartment.
 
+## Update 1: Imported pieces
+- A tool outside the Lens turns a product link into a catalog entry and a realistic model. The Lens only loads the finished, bundled files: Assets/Models/catalog.json and the .glb files next to it. It does not scrape websites, download anything, use text input or call AI services.
+- Each catalog entry has id, name, category, sourceUrl, domain, widthCm, depthCm, heightCm, glb, yawDeg, credit and an optional enabled flag (missing means true). Entries with enabled set to false are skipped.
+- Next piece cycles Sofa A, bed, dining table, then each enabled imported piece in catalog order, then back to Sofa A. Each new piece appears in the same spot and facing the same way as the previous one.
+- An imported piece uses its realistic model, scaled so its bounding box matches the catalog width, depth and height, standing on the floor with its pivot at the bottom centre. The outline, labels and clearance use the catalog dimensions, exactly as for built-in pieces.
+- The panel shows the piece name and, for imported pieces, the source domain and the width, depth and height in cm.
+- Compare is greyed out for imported pieces, as for the bed and table.
+- If catalog.json or a model is missing or fails to load, the Lens shows a plain box of the catalog size, logs a warning and keeps working.
+- Done criteria 6 to 9 (criteria 1 to 5 are unchanged):
+  6. Next piece steps through all built-in and enabled imported pieces in order and wraps back to Sofa A.
+  7. An imported piece stands on the floor with its model's bounding box within 1 cm of the catalog dimensions and its footprint outline matching.
+  8. The panel shows the source domain and dimensions for an imported piece, and shows neither for built-in pieces.
+  9. With a broken or missing model file, the Lens shows a box of the right size and does not crash.
+- Out of scope: generating models or reading web pages on the glasses, and any brand-name products.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
