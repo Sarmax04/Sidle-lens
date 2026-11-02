@@ -13,6 +13,10 @@
  * Must not: touch SceneObjects, components, or UI.
  */
 
+/** Virtual stand-in room size, cm. The one place to change the room's footprint. */
+export const ROOM_WIDTH_CM = 500 // X, across the doorway wall
+export const ROOM_DEPTH_CM = 600 // Z, doorway wall to far wall
+
 export interface Pt {
   x: number
   z: number

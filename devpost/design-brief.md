@@ -16,12 +16,12 @@ I'm standing in the middle of my living room and a sofa stands there at real siz
 ## Product or overlay
 - Type: overlay. The furniture responds to the real room it's placed in.
 - What the real version would sense: the fixed things in the room — the walls, the doorway, and other furniture — to measure clearance against.
-- Stand-in for the preview: the Lens provides a simple virtual living room, 4 m wide by 5 m deep, with four walls, one doorway (90 cm wide, 200 cm tall) in one of the short walls, and a coffee table (100 × 50 × 45 cm) as a fixed obstacle against the far wall in a corner. These are plain, obviously fake shapes, so it's clear they stand in for the real room. On real glasses the same indicator would measure against the actual room instead.
+- Stand-in for the preview: the Lens provides a simple virtual living room, 5 m wide by 6 m deep, with four walls, one doorway (90 cm wide, 200 cm tall) in one of the short walls, and a coffee table (100 × 50 × 45 cm) as a fixed obstacle against the far wall in a corner. These are plain, obviously fake shapes, so it's clear they stand in for the real room. On real glasses the same indicator would measure against the actual room instead.
 
 ## Where things live
 - Where the user is looking during the main task: at the piece on the floor, walking around it, glancing down at the outline and numbers.
 - Start position: just inside the doorway, facing into the room.
-- Virtual room: 4 × 5 m, walls about 250 cm tall (default), light plain colors (default). Doorway centered in the near short wall (default). The doorway is an opening in the near short wall; clearance to the doorway is measured to the wall line across the opening, the same as for the other walls.
+- Virtual room: 5 × 6 m, walls about 250 cm tall (default), light plain colors (default). Doorway centered in the near short wall (default). The doorway is an opening in the near short wall; clearance to the doorway is measured to the wall line across the opening, the same as for the other walls.
 - Furniture piece: Sofa A is shown at the start, on the floor in the middle of the room, about 2 m in front of the start, back toward the far wall. Fixed in the room, not following the user. At the start there's at least 80 cm clear on every side.
 - Pieces (plain, generic shapes in light and mid tones so they stay visible on the glasses):
   - Sofa A: 220 × 90 × 85 cm three-seater, light gray.
@@ -54,7 +54,7 @@ I'm standing in the middle of my living room and a sofa stands there at real siz
 
 ## Done criteria
 Each one can be checked in Lens Studio's preview.
-1. At the start I'm just inside the doorway of the 4 × 5 m virtual room. Sofa A (220 × 90 × 85 cm, light gray) stands on the floor in the middle of the room, about 2 m in front of me. I can walk all the way around it and see all four sides, and next to the 200 cm doorway it looks the right size. The faint floor outline is green, and no labels or gap numbers are showing.
+1. At the start I'm just inside the doorway of the 5 × 6 m virtual room. Sofa A (220 × 90 × 85 cm, light gray) stands on the floor in the middle of the room, about 2 m in front of me. I can walk all the way around it and see all four sides, and next to the 200 cm doorway it looks the right size. The faint floor outline is green, and no labels or gap numbers are showing.
 2. Measure is off at the start. Pinching Measure shows width, depth and height in centimeters (220, 90 and 85 for Sofa A), and pinching it again hides them. While I drag a piece the labels show even with Measure off, and they hide again when I let go. The outline and labels move with the piece.
 3. Pinching "Next piece" steps through Sofa A, the bed (160 × 200 × 55 cm), the dining table (160 × 90 × 75 cm), and back to Sofa A. Each one appears in the same spot and facing the same way as the previous piece, on the floor, with the outline matching its size.
 4. The outline is green when the piece has at least 80 cm of free space to the walls, the doorway opening and the coffee table (100 × 50 × 45 cm, fixed in the far corner). When I drag a piece closer than 80 cm to one of them, the outline edge facing it turns red and a live gap number in centimeters shows on the floor between them, for example "62 cm". When I drag it back to 80 cm or more, the outline goes green and the number fades out after about one second. The piece stays on the floor and can't go through walls or the coffee table. The rotate left and right buttons turn it in 15° steps and the outline turns with it.

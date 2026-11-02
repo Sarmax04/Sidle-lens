@@ -9,7 +9,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {dragPiece, expectEdges, interactable, local, log, obj, resetState, ROOM} from "./SidleTestHelpers"
+import {dragPiece, expectEdges, interactable, local, log, obj, resetState, ROOM, SOFA_A_HALF} from "./SidleTestHelpers"
 
 function checkGapLabelBetween(c: SidleController, ctx: string, expectGap: number, axis: "x" | "z", pieceEdge: number, wall: number): void {
   expect(c.gapLabelVisible, `${ctx}: gap label visible`).toBe(true)
@@ -41,7 +41,7 @@ export class C4aWallClearanceScenario extends Scenario {
     let guard = 0
     while (c.nearestGapCm >= 60 && guard++ < 12) await dragPiece(it, new vec3(1.5, 0, 0), 300)
     const p = c.piecePosition
-    const expectGap = ROOM.maxX - (p.x + 110)
+    const expectGap = ROOM.maxX - (p.x + SOFA_A_HALF.w)
     log(`after drag: pos ${JSON.stringify(p)} nearest ${c.nearestObstacle} ${c.nearestGapCm}`)
     expect(p.x > 10, `piece dragged right (x ${p.x})`).toBe(true)
     expect(c.nearestObstacle, "nearest obstacle").toBe("RightWall")
@@ -49,7 +49,7 @@ export class C4aWallClearanceScenario extends Scenario {
     expect(c.nearestGapCm, "gap value = wall - right edge").toBeCloseTo(expectGap, 1)
     expect(c.isClear, "isClear false").toBe(false)
     expectEdges(c, ["green", "red", "green", "green"], "near right wall")
-    checkGapLabelBetween(c, "near right wall", expectGap, "x", p.x + 110, ROOM.maxX)
+    checkGapLabelBetween(c, "near right wall", expectGap, "x", p.x + SOFA_A_HALF.w, ROOM.maxX)
     expect(Math.abs(local("GapLabel").z - p.z) <= 45.5, "gap label alongside the piece in z").toBe(true)
     expect(local("Piece").y, "piece stays on floor while dragged").toBeCloseTo(0, 2)
 
@@ -85,22 +85,24 @@ export class C4aWallClearanceScenario extends Scenario {
     expect(obj("GapLabel").enabled, "GapLabel disabled after fade").toBe(false)
 
     // ---- Threshold boundary + other walls (API positioning; values exact) ----
-    c.setPiecePosition(10, -220) // right gap exactly 80
+    const x80 = ROOM.maxX - SOFA_A_HALF.w - 80
+    c.setPiecePosition(x80, -220) // right gap exactly 80
     await sleep(50)
     expect(c.nearestGapCm, "boundary gap").toBeCloseTo(80, 2)
     expect(c.isClear, "80 cm counts as clear").toBe(true)
     expectEdges(c, ["green", "green", "green", "green"], "exactly 80")
-    c.setPiecePosition(10.5, -220)
+    c.setPiecePosition(x80 + 0.5, -220)
     await sleep(50)
     expect(c.isClear, "79.5 cm is too close").toBe(false)
     expect(c.gapLabelText, "79.5 floors to 79").toBe("79 cm")
     expectEdges(c, ["green", "red", "green", "green"], "79.5 to right wall")
 
-    c.setPiecePosition(-40, -220) // left wall: -150 edge, gap 50
+    const leftEdge = ROOM.minX + 50
+    c.setPiecePosition(leftEdge + SOFA_A_HALF.w, -220) // left wall: gap 50
     await sleep(50)
     expect(c.nearestObstacle, "left wall").toBe("LeftWall")
     expectEdges(c, ["green", "green", "green", "red"], "near left wall")
-    checkGapLabelBetween(c, "left wall", 50, "x", -150, ROOM.minX)
+    checkGapLabelBetween(c, "left wall", 50, "x", leftEdge, ROOM.minX)
 
     c.setPiecePosition(0, -40) // doorway wall line: front edge -40+45=5, gap 25
     await sleep(50)
@@ -108,12 +110,14 @@ export class C4aWallClearanceScenario extends Scenario {
     expectEdges(c, ["red", "green", "green", "green"], "near doorway wall")
     checkGapLabelBetween(c, "doorway wall", 25, "z", 5, ROOM.maxZ)
 
-    c.setPiecePosition(-50, -395) // far wall: back edge -440 -> gap 30 (left wall 40, coffee table 40)
+    // far wall: back edge gap 30 (left wall and coffee table both 90 away)
+    const backEdge = ROOM.minZ + 30
+    c.setPiecePosition(-50, backEdge + SOFA_A_HALF.d)
     await sleep(50)
     log(`far wall clearances ${JSON.stringify(c.clearances)}`)
     expect(c.nearestObstacle, "far wall").toBe("FarWall")
     expectEdges(c, ["green", "green", "red", "green"], "near far wall")
-    checkGapLabelBetween(c, "far wall", 30, "z", -440, ROOM.minZ)
+    checkGapLabelBetween(c, "far wall", 30, "z", backEdge, ROOM.minZ)
 
     c.setPiecePosition(0, -220)
     await sleep(1300)

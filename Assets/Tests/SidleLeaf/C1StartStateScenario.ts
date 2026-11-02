@@ -6,6 +6,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
+import {ROOM_DEPTH_CM, ROOM_WIDTH_CM} from "../../Scripts/SidleGeometry"
 import {controller, expectEdges, insideRoom, local, log, obj} from "./SidleTestHelpers"
 
 @component
@@ -14,11 +15,18 @@ export class C1StartStateScenario extends Scenario {
     await sleep(1500)
     const c = controller()
 
-    // Room stand-in: 4 x 5 m, doorway 90 x 200 in the near short wall
+    // Room stand-in: 5 x 6 m, doorway 90 x 200 in the near short wall
     const R = c.roomSpec
     log(`roomSpec ${JSON.stringify(R)}`)
-    expect(R.maxX - R.minX, "room width cm").toBeCloseTo(400, 1)
-    expect(R.maxZ - R.minZ, "room depth cm").toBeCloseTo(500, 1)
+    expect(ROOM_WIDTH_CM, "ROOM_WIDTH_CM").toBe(500)
+    expect(ROOM_DEPTH_CM, "ROOM_DEPTH_CM").toBe(600)
+    expect(R.maxX - R.minX, "room width cm").toBeCloseTo(ROOM_WIDTH_CM, 1)
+    expect(R.maxZ - R.minZ, "room depth cm").toBeCloseTo(ROOM_DEPTH_CM, 1)
+    const wf = obj("Wall_Far").getTransform().getLocalScale()
+    const wl = obj("Wall_Left").getTransform().getLocalScale()
+    expect(wf.x - 20, "built far wall spans the room width").toBeCloseTo(ROOM_WIDTH_CM, 1)
+    expect(wl.z - 20, "built side wall spans the room depth").toBeCloseTo(ROOM_DEPTH_CM, 1)
+    expect(wl.y, "wall height unchanged").toBeCloseTo(250, 1)
     const door = obj("Doorway")
     const jl = findSceneObjectByName("Jamb_Left", door)!.getTransform().getLocalPosition()
     const jr = findSceneObjectByName("Jamb_Right", door)!.getTransform().getLocalPosition()

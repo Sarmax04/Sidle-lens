@@ -8,7 +8,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, local, log, obj, placementValid, resetState, tap, yawOf} from "./SidleTestHelpers"
+import {angDiffDeg, local, log, obj, placementValid, resetState, ROOM, tap, yawOf} from "./SidleTestHelpers"
 
 const KEYS = ["SofaA", "SofaB", "Bed", "DiningTable"]
 
@@ -87,7 +87,7 @@ export class C3NextPieceScenario extends Scenario {
 
     // Swap that would overlap: Sofa A near the far wall, then Next -> Bed (200 deep)
     // must be nudged to the nearest valid spot (stays inside the room).
-    c.setPiecePosition(0, -400) // API setup
+    c.setPiecePosition(0, ROOM.minZ + 60) // API setup: sofa back edge 15 cm off the far wall
     await sleep(100)
     await tap(it, "NextButton")
     const bp = c.piecePosition

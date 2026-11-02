@@ -9,7 +9,7 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, expectEdges, interactable, log, obj, resetState, tap, textOf, yawOf} from "./SidleTestHelpers"
+import {angDiffDeg, expectEdges, interactable, log, obj, resetState, ROOM, tap, textOf, yawOf} from "./SidleTestHelpers"
 
 function baseColor(key: string): vec4 {
   const base = obj(`Piece_${key}`).getChild(0)
@@ -56,7 +56,7 @@ export class C5CompareScenario extends Scenario {
     // is 30 cm from the right wall at 0° for exact clearance numbers.
     await tap(it, "MeasureButton")
     expect(c.measureOn, "Measure on").toBe(true)
-    c.setPiecePosition(60, -220) // Sofa A right edge 170 -> 30 cm; Sofa B right edge 150 -> 50 cm
+    c.setPiecePosition(ROOM.maxX - 140, -220) // Sofa A right edge 30 cm off the wall; Sofa B (180 wide) 50 cm
     await sleep(50)
     const pos = c.piecePosition
     const rot = c.rotationDeg

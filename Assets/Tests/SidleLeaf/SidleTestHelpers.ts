@@ -9,10 +9,16 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {SidleController} from "../../Scripts/SidleController"
+import {ROOM_DEPTH_CM, ROOM_WIDTH_CM} from "../../Scripts/SidleGeometry"
 
-export const ROOM = {minX: -200, maxX: 200, minZ: -470, maxZ: 30}
-export const COFFEE = {minX: 100, maxX: 200, minZ: -470, maxZ: -420}
+/** Doorway wall line is 30 cm behind the start position (SidleController.startInsetCm). */
+const START_INSET = 30
+export const ROOM = {minX: -ROOM_WIDTH_CM / 2, maxX: ROOM_WIDTH_CM / 2, minZ: START_INSET - ROOM_DEPTH_CM, maxZ: START_INSET}
+/** 100 x 50 coffee table in the far right corner. */
+export const COFFEE = {minX: ROOM.maxX - 100, maxX: ROOM.maxX, minZ: ROOM.minZ, maxZ: ROOM.minZ + 50}
 export const START = {x: 0, z: -220}
+/** Sofa A footprint half-extents at 0°. */
+export const SOFA_A_HALF = {w: 110, d: 45}
 
 export function log(msg: string): void {
   print(`[SidleLeaf] ${msg}`)

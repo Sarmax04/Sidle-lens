@@ -28,6 +28,8 @@ import {
   EDGE_NAMES,
   EdgeName,
   Obstacle,
+  ROOM_DEPTH_CM,
+  ROOM_WIDTH_CM,
   RoomSpec,
   measureClearances,
   resolvePlacement,
@@ -67,7 +69,7 @@ export class SidleController extends BaseScriptComponent {
   doorway!: SceneObject
 
   @input
-  @hint("Coffee table root — its local X/Z is the obstacle's footprint center")
+  @hint("Coffee table root — placed in the far right corner at start")
   coffeeTable!: SceneObject
 
   @input
@@ -97,16 +99,7 @@ export class SidleController extends BaseScriptComponent {
 
   @ui.separator
   @ui.group_start("Room")
-  @input
-  @hint("Room width (X), cm")
-  @widget(new SliderWidget(250, 800, 10))
-  roomWidth: number = 400
-
-  @input
-  @hint("Room depth (Z), cm")
-  @widget(new SliderWidget(250, 800, 10))
-  roomDepth: number = 500
-
+  // Width/depth are ROOM_WIDTH_CM / ROOM_DEPTH_CM in SidleGeometry (shared with the tests).
   @input
   @hint("Wall height, cm")
   @widget(new SliderWidget(200, 350, 5))
@@ -395,11 +388,17 @@ export class SidleController extends BaseScriptComponent {
 
   private room3(): RoomSpec {
     const maxZ = this.startInsetCm
-    return {minX: -this.roomWidth / 2, maxX: this.roomWidth / 2, minZ: maxZ - this.roomDepth, maxZ}
+    return {minX: -ROOM_WIDTH_CM / 2, maxX: ROOM_WIDTH_CM / 2, minZ: maxZ - ROOM_DEPTH_CM, maxZ}
+  }
+
+  /** Coffee table footprint center: against the far wall, in the far right corner. */
+  private coffeeTableCenter(): vec3 {
+    const R = this.room3()
+    return new vec3(R.maxX - COFFEE_TABLE.w / 2, 0, R.minZ + COFFEE_TABLE.d / 2)
   }
 
   private obstacles(): Obstacle[] {
-    const p = this.coffeeTable ? this.coffeeTable.getTransform().getLocalPosition() : new vec3(150, 0, -445)
+    const p = this.coffeeTableCenter()
     return [{name: "CoffeeTable", cx: p.x, cz: p.z, w: COFFEE_TABLE.w, d: COFFEE_TABLE.d}]
   }
 
@@ -624,8 +623,8 @@ export class SidleController extends BaseScriptComponent {
 
   private buildRoom(): void {
     const R = this.room3()
-    const W = this.roomWidth
-    const D = this.roomDepth
+    const W = ROOM_WIDTH_CM
+    const D = ROOM_DEPTH_CM
     const H = this.wallHeight
     const T = 10 // wall thickness (outside the wall lines)
     const cz = (R.minZ + R.maxZ) / 2
@@ -665,6 +664,7 @@ export class SidleController extends BaseScriptComponent {
     // Coffee table (fixed obstacle) — top + legs
     if (this.coffeeTable) {
       const ct = this.coffeeTable
+      ct.getTransform().setLocalPosition(this.coffeeTableCenter())
       const top = this.lit(0.66, 0.6, 0.54)
       const leg = this.lit(0.55, 0.5, 0.45)
       const {w, d, h} = COFFEE_TABLE
