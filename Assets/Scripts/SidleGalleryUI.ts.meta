@@ -1,0 +1,65 @@
+- !<AssetImportMetadata/25d0af3f-b585-4454-8b8d-c1d035597097>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 3e65c8cc-c862-4b4f-8756-847af416246f
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 3e65c8cc-c862-4b4f-8756-847af416246f
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> f0373802-5f6c-4e40-ac0b-1a954db91e23
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/f0373802-5f6c-4e40-ac0b-1a954db91e23>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 8c855d08-7944-4631-bdb3-a61bccd16dd4
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    accentColor: false
+    padding: false
+    thumbSize: false
+    tileGap: false
+    tileHeight: false
+    tileWidth: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - tileWidth: !<float> 8.000000
+      tileHeight: 8.600000
+      tileGap: 1.500000
+      thumbSize: !<float> 6.000000
+      padding: 1.600000
+      accentColor: !<Vec4> {x: 1.000000, y: 0.820000, z: 0.450000, w: 1.000000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SidleGalleryUI – piece gallery view</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float tileWidth = 8 {"hint":"Tile width in cm (brief: at least 6 at 1 m)", "widget":"slider", "min":6, "max":12, "step":0.1}'
+    - '// @input float tileHeight = 8.6 {"hint":"Tile height in cm", "widget":"slider", "min":6, "max":12, "step":0.1}'
+    - '// @input float tileGap = 1.5 {"hint":"Gap between tiles in cm", "widget":"slider", "min":0.5, "max":4, "step":0.1}'
+    - '// @input float thumbSize = 6 {"hint":"Thumbnail / swatch size inside a tile, cm", "widget":"slider", "min":3, "max":10, "step":0.1}'
+    - '// @input float padding = 1.6 {"hint":"Panel padding in cm", "widget":"slider", "min":0.5, "max":4, "step":0.1}'
+    - '// @input vec4 accentColor = "{1.0, 0.82, 0.45, 1.0}" {"hint":"Name colour of the tile of the piece that is showing, and of the active tab marker", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

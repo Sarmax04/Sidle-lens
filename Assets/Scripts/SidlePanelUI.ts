@@ -3,15 +3,16 @@
  *
  * Owns: a UIKit BackPlate panel with a header row (current piece name +
  * "piece is behind you" arrow), a detail line (PieceDetailLabel: source domain
- * + dimensions, imported pieces only) and a row of five UIKit Buttons:
- *   NextButton, CompareButton, MeasureButton, RotateLeftButton, RotateRightButton
+ * + dimensions, imported pieces only) and six UIKit Buttons (Update 4) — one
+ * row, or two rows of three when one row would be wider than 45 cm:
+ *   NextButton, CompareButton, MeasureButton, RotateLeftButton, RotateRightButton, GalleryButton
  * plus a grab bar along the top edge (PanelGrabBar: a light pill with its own
  * collider + SIK Interactable, so pinching it never reaches a button)
  * (those are the runtime SceneObject names, stable for tests).
  *
  * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setMeasureOn, setBehindArrow,
  *             setGrabBarActive.
- * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight,
+ * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight, onGallery,
  *             onGrabBarStart(e), onGrabBarUpdate(e), onGrabBarEnd.
  *
  * Must not: hold domain state or make decisions (SidleController owns state).
@@ -34,6 +35,10 @@ const ICON_MEASURE = requireAsset("../Icons/straighten.png") as Texture
 const ICON_ROT_L = requireAsset("../Icons/rotate_left.png") as Texture
 const ICON_ROT_R = requireAsset("../Icons/rotate_right.png") as Texture
 const ICON_ARROW = requireAsset("../Icons/arrow_upward.png") as Texture
+const ICON_GALLERY = requireAsset("../Icons/grid_view.png") as Texture
+
+/** Brief (Update 4): if the buttons do not fit in one row this wide (cm, at 1 m), use two rows. */
+const MAX_ONE_ROW_WIDTH_CM = 45
 
 // ── Typography (type scale; panel sits ~100 cm away) ─────────────────────────
 const FONT_SIZE_SCALE = 1.0
@@ -51,6 +56,19 @@ function roleSize(role: TextRole, distanceCm: number = 110): number {
 function applyTextRole(t: Text, role: TextRole, distanceCm: number = 110): void {
   t.size = roleSize(role, distanceCm)
   ;(t as Text & {weight?: number}).weight = TYPE_SCALE[role].weight
+}
+
+/**
+ * Set a UIKit Button's greyed-out state and keep its Interactable in step:
+ * when its SceneObject is re-enabled UIKit turns the Interactable back on even
+ * if the button is inactive, and setting the same value again does nothing.
+ */
+export function applyInactive(btn: Button, inactive: boolean): void {
+  const inter = btn.getSceneObject().getComponent(Interactable.getTypeName()) as Interactable | null
+  if (btn.inactive !== inactive || (inter && inter.enabled === inactive)) {
+    btn.inactive = !inactive
+    btn.inactive = inactive
+  }
 }
 
 const LAYOUT_Z_LIFT = 0.02
@@ -75,6 +93,11 @@ export class SidlePanelUI extends BaseScriptComponent {
   @hint("Gap between buttons in cm (brief: about 2 cm)")
   @widget(new SliderWidget(0.5, 4, 0.1))
   buttonGap: number = 2.0
+
+  @input
+  @hint("Minimum width of the panel content (name, detail line, buttons) in cm")
+  @widget(new SliderWidget(20, 45, 0.5))
+  minContentWidth: number = 30
 
   @input
   @hint("Panel padding in cm")
@@ -107,6 +130,10 @@ export class SidlePanelUI extends BaseScriptComponent {
   private _onMeasure = new Event<void>()
   private _onRotateLeft = new Event<void>()
   private _onRotateRight = new Event<void>()
+  private _onGallery = new Event<void>()
+  get onGallery(): PublicApi<void> {
+    return this._onGallery.publicApi()
+  }
   get onNext(): PublicApi<void> {
     return this._onNext.publicApi()
   }
@@ -166,7 +193,7 @@ export class SidlePanelUI extends BaseScriptComponent {
 
   setCompareEnabled(enabled: boolean): void {
     this.pendingCompareEnabled = enabled
-    if (this.compareButton) this.compareButton.inactive = !enabled
+    if (this.compareButton) applyInactive(this.compareButton, !enabled)
   }
 
   setMeasureOn(on: boolean): void {
@@ -191,12 +218,25 @@ export class SidlePanelUI extends BaseScriptComponent {
 
   // ── Build ──────────────────────────────────────────────────────────────────
   private build(): void {
-    const n = 5
-    const rowW = n * this.buttonWidth + (n - 1) * this.buttonGap
+    const buttons: [string, string, Texture, () => void][] = [
+      ["NextButton", "Next piece", ICON_NEXT, () => this._onNext.invoke()],
+      ["CompareButton", "Compare", ICON_COMPARE, () => this._onCompare.invoke()],
+      ["MeasureButton", "Measure", ICON_MEASURE, () => this._onMeasure.invoke()],
+      ["RotateLeftButton", "Rotate left", ICON_ROT_L, () => this._onRotateLeft.invoke()],
+      ["RotateRightButton", "Rotate right", ICON_ROT_R, () => this._onRotateRight.invoke()],
+      ["GalleryButton", "Gallery", ICON_GALLERY, () => this._onGallery.invoke()],
+    ]
+    const n = buttons.length
+    const oneRowPanelW = n * this.buttonWidth + (n - 1) * this.buttonGap + this.padding * 2
+    const rows = oneRowPanelW > MAX_ONE_ROW_WIDTH_CM ? 2 : 1
+    const perRow = Math.ceil(n / rows)
+    const buttonRowW = perRow * this.buttonWidth + (perRow - 1) * this.buttonGap
+    const buttonsH = rows * this.buttonHeight + (rows - 1) * this.buttonGap
+    const rowW = Math.max(buttonRowW, this.minContentWidth)
     const headerH = 3.2
     const detailH = 2.2
     const panelW = rowW + this.padding * 2
-    const panelH = headerH + detailH + this.buttonHeight + this.padding * 2 + 2.0
+    const panelH = headerH + detailH + buttonsH + this.padding * 2 + 2.0
 
     this.sceneObject.createComponent("Component.Canvas")
     const plate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
@@ -232,7 +272,7 @@ export class SidlePanelUI extends BaseScriptComponent {
         applyTextRole(t, "Subheadline", 100)
         t.horizontalAlignment = HorizontalAlignment.Left
         t.verticalAlignment = VerticalAlignment.Center
-        t.horizontalOverflow = HorizontalOverflow.Overflow
+        t.horizontalOverflow = HorizontalOverflow.Shrink // long names shrink instead of running off the panel
         t.verticalOverflow = VerticalOverflow.Overflow
         const w = rowW - headerH - 1.0
         t.layoutRect = Rect.create(-w / 2, w / 2, -headerH / 2, headerH / 2)
@@ -266,7 +306,7 @@ export class SidlePanelUI extends BaseScriptComponent {
       applyTextRole(t, "Caption", 100)
       t.horizontalAlignment = HorizontalAlignment.Left
       t.verticalAlignment = VerticalAlignment.Center
-      t.horizontalOverflow = HorizontalOverflow.Overflow
+      t.horizontalOverflow = HorizontalOverflow.Shrink
       t.verticalOverflow = VerticalOverflow.Overflow
       t.layoutRect = Rect.create(-rowW / 2, rowW / 2, -detailH / 2, detailH / 2)
       t.textFill.color = new vec4(1, 1, 1, 0.75)
@@ -274,26 +314,36 @@ export class SidlePanelUI extends BaseScriptComponent {
       this.detailText = t
     })
 
-    // Button row
-    this.flexChild(content, {w: rowW, h: this.buttonHeight}, (rowObj) => {
-      const row = rowObj.createComponent(FlexLayout.getTypeName()) as FlexLayout
-      row.width = rowW
-      row.height = this.buttonHeight
-      row.direction = FlexDirection.Row
-      row.alignItems = FlexAlign.Center
-      row.justifyContent = FlexJustify.Center
-      row.columnGap = this.buttonGap
-
-      this.addButton(rowObj, "NextButton", "Next piece", ICON_NEXT, () => this._onNext.invoke())
-      this.compareButton = this.addButton(rowObj, "CompareButton", "Compare", ICON_COMPARE, () =>
-        this._onCompare.invoke(),
-      )
-      this.measureButton = this.addButton(rowObj, "MeasureButton", "Measure", ICON_MEASURE, () =>
-        this._onMeasure.invoke(),
-      )
-      this.measureButton.setIsToggleable(true)
-      this.addButton(rowObj, "RotateLeftButton", "Rotate left", ICON_ROT_L, () => this._onRotateLeft.invoke())
-      this.addButton(rowObj, "RotateRightButton", "Rotate right", ICON_ROT_R, () => this._onRotateRight.invoke())
+    // Button rows (ButtonRow1, ButtonRow2 when two rows are needed)
+    this.flexChild(content, {w: rowW, h: buttonsH}, (block) => {
+      block.name = "Buttons"
+      const colLayout = block.createComponent(FlexLayout.getTypeName()) as FlexLayout
+      colLayout.width = rowW
+      colLayout.height = buttonsH
+      colLayout.direction = FlexDirection.Column
+      colLayout.alignItems = FlexAlign.Center
+      colLayout.justifyContent = FlexJustify.Center
+      colLayout.rowGap = this.buttonGap
+      for (let r = 0; r < rows; r++) {
+        this.flexChild(block, {w: buttonRowW, h: this.buttonHeight}, (rowObj) => {
+          rowObj.name = `ButtonRow${r + 1}`
+          const row = rowObj.createComponent(FlexLayout.getTypeName()) as FlexLayout
+          row.width = buttonRowW
+          row.height = this.buttonHeight
+          row.direction = FlexDirection.Row
+          row.alignItems = FlexAlign.Center
+          row.justifyContent = FlexJustify.Center
+          row.columnGap = this.buttonGap
+          for (const [name, label, icon, cb] of buttons.slice(r * perRow, (r + 1) * perRow)) {
+            const b = this.addButton(rowObj, name, label, icon, cb)
+            if (name === "CompareButton") this.compareButton = b
+            if (name === "MeasureButton") {
+              this.measureButton = b
+              b.setIsToggleable(true)
+            }
+          }
+        })
+      }
     })
 
     this.compareButton!.inactive = !this.pendingCompareEnabled

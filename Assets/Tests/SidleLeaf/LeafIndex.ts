@@ -18,6 +18,10 @@ import {C12BedsChairsScenario} from "./C12BedsChairsScenario"
 import {C13PanelDefaultScenario} from "./C13PanelDefaultScenario"
 import {C14PanelDragScenario} from "./C14PanelDragScenario"
 import {C15GapLabelViewScenario} from "./C15GapLabelViewScenario"
+import {C16GalleryOpenScenario} from "./C16GalleryOpenScenario"
+import {C17GalleryTabsScenario} from "./C17GalleryTabsScenario"
+import {C18GallerySelectScenario} from "./C18GallerySelectScenario"
+import {C19GalleryThumbsScenario} from "./C19GalleryThumbsScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -41,5 +45,9 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c13-panel-default", typename: C13PanelDefaultScenario.getTypeName()},
     {id: "c14-panel-drag", typename: C14PanelDragScenario.getTypeName()},
     {id: "c15-gap-label-view", typename: C15GapLabelViewScenario.getTypeName()},
+    {id: "c16-gallery-open", typename: C16GalleryOpenScenario.getTypeName()},
+    {id: "c17-gallery-tabs", typename: C17GalleryTabsScenario.getTypeName()},
+    {id: "c18-gallery-select", typename: C18GallerySelectScenario.getTypeName()},
+    {id: "c19-gallery-thumbs", typename: C19GalleryThumbsScenario.getTypeName()},
   ]
 }

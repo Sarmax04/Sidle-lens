@@ -35,6 +35,7 @@
     grabBarHeight: false
     grabBarWidth: false
     iconSize: false
+    minContentWidth: false
     padding: false
   ScriptTypesHidden:
     {}
@@ -48,6 +49,7 @@
     - buttonWidth: 6.400000
       buttonHeight: !<float> 6.000000
       buttonGap: !<float> 2.000000
+      minContentWidth: !<float> 30.000000
       padding: 1.600000
       iconSize: 2.400000
       arrowColor: !<Vec4> {x: 1.000000, y: 0.820000, z: 0.450000, w: 1.000000}
@@ -63,6 +65,7 @@
     - '// @input float buttonWidth = 6.4 {"hint":"Button width in cm (brief: about 6 cm)", "widget":"slider", "min":4, "max":10, "step":0.1}'
     - '// @input float buttonHeight = 6 {"hint":"Button height in cm", "widget":"slider", "min":4, "max":10, "step":0.1}'
     - '// @input float buttonGap = 2 {"hint":"Gap between buttons in cm (brief: about 2 cm)", "widget":"slider", "min":0.5, "max":4, "step":0.1}'
+    - '// @input float minContentWidth = 30 {"hint":"Minimum width of the panel content (name, detail line, buttons) in cm", "widget":"slider", "min":20, "max":45, "step":0.5}'
     - '// @input float padding = 1.6 {"hint":"Panel padding in cm", "widget":"slider", "min":0.5, "max":4, "step":0.1}'
     - '// @input float iconSize = 2.4 {"hint":"Icon size inside each button, in cm", "widget":"slider", "min":1, "max":4, "step":0.1}'
     - "// @input vec4 arrowColor = \"{1.0, 0.82, 0.45, 1.0}\" {\"hint\":\"Color of the 'piece is behind you' arrow\", \"widget\":\"color\"}"

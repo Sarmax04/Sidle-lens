@@ -18,6 +18,10 @@
  * the bundled catalog.json + the GLB prefabs from Assets/Models.
  * All math is VirtualRoom-local (floor at y = 0, doorway wall at +Z).
  *
+ * Gallery (Update 4): openGallery, closeGallery, selectFromGallery(key),
+ * galleryShowType(type), galleryNextPage, galleryPrevPage; while it is open the
+ * control panel is hidden and SidleGalleryUI is shown at the panel's offset.
+ *
  * Public API (for tests): nextPiece, compare, toggleMeasure, rotateLeft,
  * rotateRight, setPiecePosition(x, z), beginDrag, endDrag, refresh,
  * loadCatalogText(text), setShowPlaceholderPieces(on) and resetPanelOffset()
@@ -30,10 +34,11 @@ import {InteractorEvent} from "SpectaclesInteractionKit.lspkg/Core/Interactor/In
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
 import {SidlePanelUI} from "./SidlePanelUI"
 import {SidleLazyFollow} from "./SidleLazyFollow"
+import {GALLERY_TILES_PER_PAGE, GalleryView, SidleGalleryUI} from "./SidleGalleryUI"
 import {PanelOffset, clampOffset, headFrame, worldToOffset} from "./SidlePanelOffset"
 import {SidleLabelsUI} from "./SidleLabelsUI"
 import {MaterialCache, makeBox} from "./SidleBoxFactory"
-import {CatalogEntry, buildImportedVisual, glbBaseName, parseCatalog, warn} from "./SidleCatalog"
+import {CatalogEntry, buildImportedVisual, fileBaseName, glbBaseName, parseCatalog, warn} from "./SidleCatalog"
 import {
   ClearanceHit,
   EDGE_NAMES,
@@ -71,6 +76,14 @@ const BUILT_IN: PieceDef[] = [
   {key: "Bed", name: "Bed", type: "bed", w: 160, d: 200, h: 55},
   {key: "DiningTable", name: "Dining table", type: "table", w: 160, d: 90, h: 75},
 ]
+/** Gallery swatch colours: the built-ins' main colour; imported pieces without a thumbnail use the fallback-box grey. */
+const SWATCH: {[key: string]: number[]} = {
+  SofaA: [0.82, 0.82, 0.84],
+  SofaB: [0.86, 0.75, 0.6],
+  Bed: [0.62, 0.72, 0.84],
+  DiningTable: [0.86, 0.74, 0.58],
+}
+const SWATCH_IMPORTED = [0.78, 0.78, 0.8]
 const COFFEE_TABLE = {w: 100, d: 50, h: 45}
 
 @component
@@ -107,6 +120,11 @@ export class SidleController extends BaseScriptComponent {
   labelsUI!: SidleLabelsUI
 
   @input
+  @hint("Gallery view (Update 4); has its own SidleLazyFollow")
+  @allowUndefined
+  galleryUI: SidleGalleryUI
+
+  @input
   @hint("Lit template material for room + furniture boxes (cloned per color)")
   litMaterial!: Material
 
@@ -126,6 +144,11 @@ export class SidleController extends BaseScriptComponent {
   @hint("GLB prefabs from Assets/Models; matched to catalog entries by file name")
   @allowUndefined
   modelPrefabs: ObjectPrefab[] = []
+
+  @input
+  @hint("Gallery thumbnails from Assets/Models/thumbs; matched to the catalog thumbnail field by file name")
+  @allowUndefined
+  thumbnailTextures: Texture[] = []
 
   @input
   @hint("Offer the built-in box pieces (Sofa A/B, bed, dining table). Off: imported pieces only; falls back to the built-ins if there are none")
@@ -230,6 +253,10 @@ export class SidleController extends BaseScriptComponent {
   private _panelDragging = false
   private panelGrab: {rayDist: number; startOffset: PanelOffset; startPoint: PanelOffset} | null = null
   private panelFollow: SidleLazyFollow | null = null
+  private galleryFollow: SidleLazyFollow | null = null
+  private _galleryOpen = false
+  private _galleryType = ""
+  private _galleryPage = 0
 
   // ── Scene handles ──────────────────────────────────────────────────────────
   private litCache!: MaterialCache
@@ -277,7 +304,20 @@ export class SidleController extends BaseScriptComponent {
       // SidleLazyFollow sits lower in the hierarchy: only initialized from OnStart on.
       this.panelFollow = this.panelUI.getSceneObject().getComponent(SidleLazyFollow.getTypeName()) as SidleLazyFollow | null
       if (!this.panelFollow) warn("SidleLazyFollow not found on the panel; the panel cannot be placed or moved")
+      if (this.galleryUI) {
+        this.galleryFollow = this.galleryUI.getSceneObject().getComponent(SidleLazyFollow.getTypeName()) as SidleLazyFollow | null
+        if (!this.galleryFollow) warn("SidleLazyFollow not found on the gallery; it will not follow the user")
+        this.galleryUI.onTab.add((t: string) => this.galleryShowType(t))
+        this.galleryUI.onTile.add((k: string) => this.selectFromGallery(k))
+        this.galleryUI.onPrevPage.add(() => this.galleryPrevPage())
+        this.galleryUI.onNextPage.add(() => this.galleryNextPage())
+        this.galleryUI.onClose.add(() => this.closeGallery())
+        this.galleryUI.setVisible(false)
+      } else {
+        warn("galleryUI not wired; the Gallery button does nothing")
+      }
       this.resetPanelOffset()
+      this.panelUI.onGallery.add(() => this.openGallery())
       this.panelUI.onNext.add(() => this.nextPiece())
       this.panelUI.onCompare.add(() => this.compare())
       this.panelUI.onMeasure.add(() => this.toggleMeasure())
@@ -361,6 +401,65 @@ export class SidleController extends BaseScriptComponent {
     this.pushPanelOffset(true)
   }
 
+  // -- Gallery (Update 4) ------------------------------------------------------
+
+  /** Open the gallery on the current piece's type and the page that holds it; the panel is hidden meanwhile. */
+  openGallery(): void {
+    if (!this.galleryUI) return
+    const type = this.currentPieceType
+    const keys = this.variantKeys(type)
+    this._galleryType = type
+    this._galleryPage = Math.max(0, Math.floor(keys.indexOf(this.currentPieceKey) / GALLERY_TILES_PER_PAGE))
+    this._galleryOpen = true
+    this.panelUI.getSceneObject().enabled = false
+    if (this.galleryFollow) this.galleryFollow.setOffset(this._panelOffset, true)
+    this.galleryUI.setVisible(true)
+    this.renderGallery()
+  }
+
+  /** Close without choosing; the panel comes back at its offset. */
+  closeGallery(): void {
+    if (!this._galleryOpen) return
+    this._galleryOpen = false
+    if (this.galleryUI) this.galleryUI.setVisible(false)
+    this.panelUI.getSceneObject().enabled = true
+    this.pushPanelOffset(true)
+  }
+
+  /**
+   * Show `key` in the same spot and facing (nudged to the nearest valid spot if
+   * it would overlap) and close the gallery. Returns false (and changes nothing)
+   * if the gallery is closed or the piece is not offered.
+   */
+  selectFromGallery(key: string): boolean {
+    if (!this._galleryOpen || !this.isOffered(key)) return false
+    this.showPiece(key)
+    this.closeGallery()
+    return true
+  }
+
+  /** Gallery tab: show `type` from its first page. */
+  galleryShowType(type: string): void {
+    if (!this._galleryOpen || this.variantKeys(type).length === 0) return
+    this._galleryType = type
+    this._galleryPage = 0
+    this.renderGallery()
+  }
+
+  /** Next gallery page; does nothing on the last page (no wrap). */
+  galleryNextPage(): void {
+    if (!this._galleryOpen || this._galleryPage >= this.galleryPageCount - 1) return
+    this._galleryPage++
+    this.renderGallery()
+  }
+
+  /** Previous gallery page; does nothing on the first page (no wrap). */
+  galleryPrevPage(): void {
+    if (!this._galleryOpen || this._galleryPage <= 0) return
+    this._galleryPage--
+    this.renderGallery()
+  }
+
   /** Re-run clearance + view sync (also runs every frame). */
   refresh(): void {
     this.applyAll()
@@ -385,6 +484,7 @@ export class SidleController extends BaseScriptComponent {
     this.buildImportedPieces(text === null ? this.bundledCatalogText() : text)
     this.rebuildOffer()
     this.select(this.isOffered(key) ? key : this.firstKey())
+    this.renderGallery()
     this.applyAll()
   }
 
@@ -397,6 +497,7 @@ export class SidleController extends BaseScriptComponent {
     this.showPlaceholderPieces = on
     this.rebuildOffer()
     this.select(this.firstKey())
+    this.renderGallery()
     this.applyAll()
   }
 
@@ -460,6 +561,34 @@ export class SidleController extends BaseScriptComponent {
   /** True while the panel's grab bar is held. */
   get panelDragging(): boolean {
     return this._panelDragging
+  }
+  get galleryOpen(): boolean {
+    return this._galleryOpen
+  }
+  /** Type of the gallery tab that is showing ("" before the gallery was first opened). */
+  get galleryType(): string {
+    return this._galleryType
+  }
+  /** Gallery page index, 0-based. */
+  get galleryPage(): number {
+    return this._galleryPage
+  }
+  get galleryPageCount(): number {
+    return Math.max(1, Math.ceil(this.variantKeys(this._galleryType).length / GALLERY_TILES_PER_PAGE))
+  }
+  /** Gallery tabs: the offered types in Next-piece order. */
+  get galleryTypes(): string[] {
+    return this.availableTypes
+  }
+  /** Keys of the tiles on the gallery page that is showing, in tile order. */
+  get galleryPageKeys(): string[] {
+    const start = this._galleryPage * GALLERY_TILES_PER_PAGE
+    return this.variantKeys(this._galleryType).slice(start, start + GALLERY_TILES_PER_PAGE)
+  }
+  /** Name of the thumbnail texture a piece's tile uses; "" for a plain tile. */
+  galleryThumbnailFor(key: string): string {
+    const t = this.thumbnailFor(key)
+    return t ? t.name : ""
   }
   get measureOn(): boolean {
     return this._measureOn
@@ -562,6 +691,33 @@ export class SidleController extends BaseScriptComponent {
    * Group the offered pieces into types. Built-ins are offered when
    * showPlaceholderPieces is on, or (with a warning) when there is no imported piece.
    */
+  /** Thumbnail texture for a piece, matched by file name; null for built-ins and missing thumbnails. */
+  private thumbnailFor(key: string): Texture | null {
+    const p = this.pieces.find((q) => q.key === key)
+    if (!p || !p.entry || !p.entry.thumbnail) return null
+    const want = fileBaseName(p.entry.thumbnail)
+    for (const t of this.thumbnailTextures ?? []) {
+      if (t && (t.name === want || fileBaseName(t.name) === want)) return t
+    }
+    return null
+  }
+
+  private renderGallery(): void {
+    if (!this._galleryOpen || !this.galleryUI) return
+    const view: GalleryView = {
+      types: this.types.map((g) => ({type: g.type, label: g.type.charAt(0).toUpperCase() + g.type.slice(1)})),
+      activeType: this._galleryType,
+      page: this._galleryPage,
+      pageCount: this.galleryPageCount,
+      tiles: this.galleryPageKeys.map((key) => {
+        const p = this.pieces.find((q) => q.key === key)!
+        const c = SWATCH[key] ?? SWATCH_IMPORTED
+        return {key, name: p.name, thumbnail: this.thumbnailFor(key), swatch: new vec4(c[0], c[1], c[2], 1), current: key === this.currentPieceKey}
+      }),
+    }
+    this.galleryUI.render(view)
+  }
+
   private rebuildOffer(): void {
     let placeholders = this.showPlaceholderPieces
     this._placeholderFallback = false
@@ -577,6 +733,11 @@ export class SidleController extends BaseScriptComponent {
     this.types = order
       .map((type) => ({type, keys: offered.filter((p) => p.type === type).map((p) => p.key)}))
       .filter((g) => g.keys.length > 0)
+    if (this._galleryOpen) {
+      // Offer changed while the gallery is open: keep it on a valid type and page.
+      if (this.variantKeys(this._galleryType).length === 0) this._galleryType = this.types[0].type
+      this._galleryPage = Math.min(this._galleryPage, this.galleryPageCount - 1)
+    }
   }
 
   private firstKey(): string {
@@ -703,8 +864,10 @@ export class SidleController extends BaseScriptComponent {
     this.pushPanelOffset(false)
   }
 
+  /** The gallery follows at the same offset as the panel. */
   private pushPanelOffset(snap: boolean): void {
     if (this.panelFollow) this.panelFollow.setOffset(this._panelOffset, snap)
+    if (this.galleryFollow) this.galleryFollow.setOffset(this._panelOffset, snap)
   }
 
   // ── Per-frame view sync ────────────────────────────────────────────────────

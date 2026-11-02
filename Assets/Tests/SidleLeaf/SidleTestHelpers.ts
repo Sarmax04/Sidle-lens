@@ -288,6 +288,7 @@ export function expectEdges(c: SidleController, expected: string[], ctx: string)
  */
 export async function resetState(): Promise<SidleController> {
   const c = controller()
+  if (c.galleryOpen) c.closeGallery()
   if (c.isDragging) c.endDrag()
   if (!c.showPlaceholderPieces) c.setShowPlaceholderPieces(true)
   let guard = 0
@@ -496,4 +497,83 @@ export function angularBox(points: vec3[]): {hMin: number; hMax: number; vMin: n
 
 export function fmtBox(b: {hMin: number; hMax: number; vMin: number; vMax: number}): string {
   return `h ${b.hMin.toFixed(1)}..${b.hMax.toFixed(1)}°, v ${b.vMin.toFixed(1)}..${b.vMax.toFixed(1)}°`
+}
+
+// ── Gallery (Update 4) ───────────────────────────────────────────────────────
+
+export const TILES_PER_PAGE = 6
+
+/** Gallery root SceneObject (the SidleGalleryUI object). */
+export function galleryObj(c: SidleController): SceneObject {
+  return c.galleryUI.getSceneObject()
+}
+
+/** The gallery is showing (its GalleryRoot enabled) and the control panel is hidden. */
+export function galleryShown(c: SidleController): boolean {
+  const root = galleryObj(c).getChild(0)
+  return root.isEnabledInHierarchy && !panelObj(c).isEnabledInHierarchy
+}
+
+/** "sofa" -> "Sofa" (tab label). */
+export function typeLabel(type: string): string {
+  return type.charAt(0).toUpperCase() + type.slice(1)
+}
+
+/** What a tile slot shows, read from the scene objects (not from the controller). */
+export function tileView(slot: number): {visible: boolean; name: string; thumb: string | null; swatch: boolean} {
+  const so = obj(`GalleryTile_${slot + 1}`)
+  if (!so.isEnabledInHierarchy) return {visible: false, name: "", thumb: null, swatch: false}
+  const face = so.getChild(so.getChildrenCount() - 1).name === "Face" ? so.getChild(so.getChildrenCount() - 1) : findChild(so, "Face")
+  const thumb = findChild(face, "Thumb")
+  const swatch = findChild(face, "Swatch")
+  const name = (findChild(face, "Name").getComponent("Component.Text") as Text).text
+  let tex: string | null = null
+  if (thumb.enabled) {
+    const img = thumb.getComponent("Component.Image") as Image
+    const t = img && img.mainMaterial ? img.mainMaterial.mainPass.baseTex : null
+    tex = t ? t.name : ""
+  }
+  return {visible: true, name, thumb: tex, swatch: swatch.enabled}
+}
+
+/** Visible tab slots, read from the scene: label text and whether it is marked active. */
+export function tabViews(): {label: string; active: boolean}[] {
+  const out: {label: string; active: boolean}[] = []
+  for (let i = 1; i <= 8; i++) {
+    const so = findSceneObjectByName(`GalleryTab_${i}`)
+    if (!so || !so.isEnabledInHierarchy) continue
+    out.push({label: (findChild(so, "Label").getComponent("Component.Text") as Text).text, active: findChild(so, "Underline").enabled})
+  }
+  return out
+}
+
+export function findChild(root: SceneObject, name: string): SceneObject {
+  const stack = [root]
+  while (stack.length) {
+    const so = stack.pop()!
+    if (so !== root && so.name === name) return so
+    for (let i = 0; i < so.getChildrenCount(); i++) stack.push(so.getChild(i))
+  }
+  throw new Error(`"${name}" not found under "${root.name}"`)
+}
+
+/**
+ * A UIKit button is greyed out (Button.inactive, interactable disabled) and a
+ * real pinch with a separate interactor does not register.
+ */
+export async function expectGreyedButton(name: string, ctx: string): Promise<void> {
+  const btn = obj(name).getComponent(Button.getTypeName()) as Button
+  expect(btn.inactive, `${ctx}: ${name} greyed out`).toBe(true)
+  const inter = interactable(name)
+  expect(inter.enabled, `${ctx}: ${name} interactable disabled`).toBe(false)
+  const probe = new DefaultLeafInteractor(`Probe_${name}_${Date.now()}`)
+  let landed = true
+  try {
+    await withTimeout(probe.trigger(inter), 1500, "no hover")
+  } catch (e) {
+    landed = false
+    ;(probe as unknown as {overrideInteractable?: unknown}).overrideInteractable = undefined
+  }
+  await sleep(200)
+  expect(landed, `${ctx}: pinch on greyed-out ${name} does not register`).toBe(false)
 }

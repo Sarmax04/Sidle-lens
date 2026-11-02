@@ -7,6 +7,7 @@
     - !<own> 8e3a9a80-ea77-4e78-b618-e6547f0905bf
     - !<own> ad9aba06-e6ae-4aae-a1e2-ed5e787519db
     - !<own> e857a34f-2ecc-4cbf-a87f-ce0a56cc711c
+    - !<own> 9dd62012-d9b1-4c9c-8635-c278f9948b14
     - !<own> 2a8cee4d-e8da-4af3-9787-cdd774fb39fb
     - !<own> 5710fbb5-7c89-4513-a1bd-2224d58fe16c
     - !<own> cae8a860-7492-4f4c-8aff-7a7a71f539f7
@@ -584,6 +585,26 @@
     - !<own> 33c3b818-8a2f-4298-8659-2ea691615666
   Components:
     []
+- !<ScriptComponent/238a876c-d7b1-4e88-bdc7-640969f1c6e6>
+  PrefabRemaps:
+    []
+  Name: SidleLazyFollow
+  Enabled: true
+  ScriptAsset: !<reference> 61b4ae99-fa56-4d57-ace7-e78781fd7151
+  ScriptInputsDefault:
+    followSpeed: true
+    deadZoneCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      panelDistanceCm: !<float> 110.000000
+      panelDropDeg: !<float> 30.000000
+      followSpeed: 2.500000
+      deadZoneCm: !<float> 8.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/23951e6e-e4be-4a1c-bd46-027c3d5a273e>
   PrefabRemaps:
     []
@@ -646,6 +667,7 @@
       outlineRoot: !<reference.SceneObject> 9217624d-1781-49e9-8bcb-4f906543e0cf
       panelUI: !<MappingBased.AssignableType_1> 9d01d615-0736-430c-9cb8-d9b89eaf0402
       labelsUI: !<MappingBased.AssignableType_2> 38e10e1c-0cba-4e00-8fa5-3d023d42af07
+      galleryUI: !<MappingBased.AssignableType_3> 3d1c58df-4a7f-4059-aaf4-2c98030efa10
       litMaterial: !<reference.Material> 94cad239-6d55-4372-b1e0-ccc278a962bf
       unlitMaterial: !<reference.Material> 1b4c85ca-84a0-4242-8cc6-d03d65a80078
       catalog: !<reference.JsonAsset> 9945a6a3-5231-4096-b44a-7d4d4c40c554
@@ -665,6 +687,22 @@
         - !<reference> 73fc9e76-3680-4c4a-99ae-7c700d296e89
         - !<reference> c4e4a953-68c6-45f3-a9a0-b67c8db9b2a8
         - !<reference> ec58ecc3-5305-41e8-9161-54c2b4b42deb
+      thumbnailTextures: !<reference.Texture[]>
+        - !<reference> 34a582e1-adc4-4cdb-b150-cf782e68b704
+        - !<reference> 74ff899b-94b8-4c71-b026-8eb19fdd950d
+        - !<reference> 9054a215-9ff8-4a73-98fe-9f8ff6500231
+        - !<reference> 9b50d718-cc08-4eda-841c-9b4f3f839bed
+        - !<reference> 6925ee5d-8ae3-4f6c-8662-da8c783a09fa
+        - !<reference> 9d83098a-f23f-4f94-bcf3-837030588e70
+        - !<reference> 65f7b91b-0895-404b-a69c-72d20d0a434b
+        - !<reference> ea7745a3-e197-4653-92fe-e1599ef83437
+        - !<reference> a090ded5-f2b1-4efe-b6fe-e9362b297108
+        - !<reference> 06d4e794-e25a-4466-86f0-f7e8abece99f
+        - !<reference> a6f528f9-c497-4602-bb91-fe9f71adc8f5
+        - !<reference> 0c57006a-f7a1-4761-bec4-77e6b71b421c
+        - !<reference> b9f8fc23-664b-4f8e-9eaa-af89bea58240
+        - !<reference> c37bd7d6-dd5e-485c-a39f-9f0a85f88855
+        - !<reference> b91fe99a-f2d5-4d07-b51f-cc35c59c8583
       showPlaceholderPieces: true
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
@@ -954,6 +992,32 @@
     - !<own> 54130007-65c1-48d3-b9df-0866d8112e01
   Components:
     []
+- !<ScriptComponent/3d1c58df-4a7f-4059-aaf4-2c98030efa10>
+  PrefabRemaps:
+    []
+  Name: SidleGalleryUI
+  Enabled: true
+  ScriptAsset: !<reference> 3e65c8cc-c862-4b4f-8756-847af416246f
+  ScriptInputsDefault:
+    tileWidth: true
+    tileHeight: true
+    tileGap: true
+    thumbSize: true
+    padding: true
+    accentColor: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      tileWidth: !<float> 8.000000
+      tileHeight: 8.600000
+      tileGap: 1.500000
+      thumbSize: !<float> 6.000000
+      padding: 1.600000
+      accentColor: !<Vec4> {x: 1.000000, y: 0.820000, z: 0.450000, w: 1.000000}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/3de2c7ea-1525-465a-9056-68565a4014a7>
   PrefabRemaps:
     []
@@ -1822,6 +1886,7 @@
     buttonWidth: true
     buttonHeight: true
     buttonGap: true
+    minContentWidth: true
     padding: true
     iconSize: true
     arrowColor: true
@@ -1834,6 +1899,7 @@
       buttonWidth: 6.400000
       buttonHeight: !<float> 6.000000
       buttonGap: !<float> 2.000000
+      minContentWidth: !<float> 30.000000
       padding: 1.600000
       iconSize: 2.400000
       arrowColor: !<Vec4> {x: 1.000000, y: 0.820000, z: 0.450000, w: 1.000000}
@@ -1842,6 +1908,22 @@
   ScriptTypes:
     "":
       {}
+- !<SceneObject/9dd62012-d9b1-4c9c-8635-c278f9948b14>
+  PrefabRemaps:
+    []
+  Name: Gallery
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: -55.000000, z: -95.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 3d1c58df-4a7f-4059-aaf4-2c98030efa10
+    - !<own> 238a876c-d7b1-4e88-bdc7-640969f1c6e6
 - !<SceneObject/9e373d68-993f-4c8f-83a0-6644f1d9fefd>
   PrefabRemaps:
     []

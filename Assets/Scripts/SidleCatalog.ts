@@ -25,6 +25,8 @@ export interface CatalogEntry {
   glb: string
   yawDeg: number
   credit: string
+  /** "Models/thumbs/<id>.png" or "" (Update 4: gallery tile image). */
+  thumbnail: string
 }
 
 export function warn(msg: string): void {
@@ -82,9 +84,16 @@ export function parseCatalog(text: string | null): {entries: CatalogEntry[]; war
       glb: String(r.glb ?? ""),
       yawDeg: Number(r.yawDeg) || 0,
       credit: String(r.credit ?? ""),
+      thumbnail: typeof r.thumbnail === "string" ? r.thumbnail : "",
     })
   })
   return {entries, warnings}
+}
+
+/** "Models/thumbs/sofa_02.png" -> "sofa_02" (texture asset name); "" for "". */
+export function fileBaseName(path: string): string {
+  const file = path.split("/").pop() ?? path
+  return file.replace(/\.[^.]*$/, "")
 }
 
 /** "Models/sofa_02.glb" -> "sofa_02" (bundled prefab asset name). */
