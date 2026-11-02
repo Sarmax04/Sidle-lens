@@ -106,6 +106,37 @@ This update replaces the Next piece and Compare wording in Update 1 and done cri
   10. With showPlaceholderPieces off, no built-in piece is offered and the Lens starts on the first imported sofa.
 - Done criteria 1, 2, 4 and 7 to 9 are unchanged. With showPlaceholderPieces on, criterion 1 (Sofa A at the start) still holds.
 
+## Update 3: Panel position and moving it
+This update replaces the "Control panel" line under "Where things live".
+
+Problem: the control panel follows the user and sits in the middle of the view, so it covers the piece the user is looking at.
+
+1. Default position: the panel sits below the line of sight. Defaults (Inspector-tunable): 60 cm from the head, centred horizontally, 28 degrees below the head's forward direction, tilted to face the user. At the default, no part of the panel is within 10 degrees below the forward direction, so the piece in front of the user is never covered.
+2. Grab bar: a visible bar along the top edge of the panel, at least 12 cm wide and 2.5 cm tall, can be grabbed with a pinch and dragged. While dragging, the panel follows the hand and keeps facing the user.
+3. The new place is kept: when released, the panel stays at that offset from the head (distance, horizontal angle, vertical angle) and keeps following the user at that offset, with the same slight delay as before.
+4. Limits so it cannot be lost: distance 40 to 90 cm, horizontal angle within 40 degrees of forward, vertical angle between 10 degrees above and 50 degrees below forward. Dragging past a limit stops at the limit.
+5. Dragging the panel never moves the piece, changes Measure, or presses a button. Pinching a button works as before.
+6. The offset is not saved between sessions: every start uses the defaults.
+- Done criteria:
+  11. At the start, the panel is 60 cm away and 28 degrees below forward, and no part of it is within 10 degrees below forward.
+  12. Dragging the grab bar moves the panel; after release it stays at the new offset while the head turns and moves; limits hold when dragged past them; the piece, Measure state and buttons are unaffected.
+
+## Update 4: Gallery
+Problem: stepping through pieces with Next piece and Compare is blind; the user wants to see all pieces and choose one.
+
+1. A sixth panel button, "Gallery". If six buttons do not fit in 45 cm at 1 m, use two rows of three. Buttons at least 6 cm wide with at least 2 cm gaps.
+2. Pressing it opens the gallery: a panel with one tab per type, in Update 2 order (sofa, chair, table, bed, then an unknown type if there is one), and at most six tiles per page (3 x 2). Previous and next page buttons do not wrap. Tiles are at least 6 cm wide at 1 m.
+3. A tile shows the piece's thumbnail (the "thumbnail" field in catalog.json, images under Assets/Models/thumbs) and its name. Built-in pieces and pieces with a missing thumbnail show a plain tile with the name and a colour swatch.
+4. Selecting a tile shows that piece in the same spot and facing as the current one (nudged to the nearest valid spot if it does not fit) and closes the gallery.
+5. Opening starts on the current piece's type and on the page that holds it. The gallery follows the user at the panel's offset, and can be closed without choosing.
+6. The gallery never moves the piece or changes Measure.
+- Out of scope: search, text input, remote images, drag-and-drop, network.
+- Done criteria:
+  13. The Gallery button opens the gallery, starting on the current piece's type and page.
+  14. Tabs show the right pieces per type, six per page, paging without wrap.
+  15. Selecting a tile shows that piece in the same spot and facing (nudged if needed) and closes the gallery.
+  16. Tiles show thumbnails; missing thumbnails fall back to a plain named tile.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
