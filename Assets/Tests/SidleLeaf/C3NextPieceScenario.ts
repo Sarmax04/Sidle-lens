@@ -8,7 +8,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, local, log, obj, placementValid, resetState, ROOM, tap, yawOf} from "./SidleTestHelpers"
+import {angDiffDeg, local, log, obj, placementValid, resetState, ROOM, tap, tapThroughImported, yawOf} from "./SidleTestHelpers"
 
 const KEYS = ["SofaA", "SofaB", "Bed", "DiningTable"]
 
@@ -73,6 +73,7 @@ export class C3NextPieceScenario extends Scenario {
     expect(obj("PieceNameLabel").getComponent("Component.Text") ? (obj("PieceNameLabel").getComponent("Component.Text") as Text).text : "", "panel name").toBe("Bed")
     await tap(it, "NextButton")
     checkPiece(c, "DiningTable", {w: 160, d: 90, h: 75}, pos, rot)
+    await tapThroughImported(it, c) // Update 1: imported pieces sit between the table and Sofa A
     await tap(it, "NextButton")
     checkPiece(c, "SofaA", {w: 220, d: 90, h: 85}, pos, rot)
 
@@ -82,6 +83,7 @@ export class C3NextPieceScenario extends Scenario {
     await tap(it, "NextButton")
     checkPiece(c, "Bed", {w: 160, d: 200, h: 55}, pos, rot)
     await tap(it, "NextButton")
+    await tapThroughImported(it, c)
     await tap(it, "NextButton")
     checkPiece(c, "SofaA", {w: 220, d: 90, h: 85}, pos, rot)
 

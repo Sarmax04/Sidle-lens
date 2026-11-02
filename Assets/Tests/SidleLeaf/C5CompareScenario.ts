@@ -9,7 +9,7 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, expectEdges, interactable, log, obj, resetState, ROOM, tap, textOf, yawOf} from "./SidleTestHelpers"
+import {angDiffDeg, expectEdges, interactable, log, obj, resetState, ROOM, tap, tapThroughImported, textOf, yawOf} from "./SidleTestHelpers"
 
 function baseColor(key: string): vec4 {
   const base = obj(`Piece_${key}`).getChild(0)
@@ -97,6 +97,7 @@ export class C5CompareScenario extends Scenario {
       expect(c.currentPieceKey, `${key}: compare() API no-op`).toBe(key)
     }
 
+    await tapThroughImported(it, c) // Update 1: imported pieces sit between the table and Sofa A
     await tap(it, "NextButton") // back to Sofa A
     expect(c.currentPieceKey, "back to Sofa A").toBe("SofaA")
     expect(cmpBtn.inactive, "Compare active again with Sofa A").toBe(false)

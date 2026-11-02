@@ -8,6 +8,10 @@ import {C4aWallClearanceScenario} from "./C4aWallClearanceScenario"
 import {C4bCoffeeTableBlockingScenario} from "./C4bCoffeeTableBlockingScenario"
 import {C4cRotateScenario} from "./C4cRotateScenario"
 import {C5CompareScenario} from "./C5CompareScenario"
+import {C6ImportedCycleScenario} from "./C6ImportedCycleScenario"
+import {C7ImportedFitScenario} from "./C7ImportedFitScenario"
+import {C8PanelSourceScenario} from "./C8PanelSourceScenario"
+import {C9MissingModelScenario} from "./C9MissingModelScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -21,5 +25,9 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c4b-coffee-table-blocking", typename: C4bCoffeeTableBlockingScenario.getTypeName()},
     {id: "c4c-rotate", typename: C4cRotateScenario.getTypeName()},
     {id: "c5-compare", typename: C5CompareScenario.getTypeName()},
+    {id: "c6-imported-cycle", typename: C6ImportedCycleScenario.getTypeName()},
+    {id: "c7-imported-fit", typename: C7ImportedFitScenario.getTypeName()},
+    {id: "c8-panel-source", typename: C8PanelSourceScenario.getTypeName()},
+    {id: "c9-missing-model", typename: C9MissingModelScenario.getTypeName()},
   ]
 }

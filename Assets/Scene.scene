@@ -9,7 +9,7 @@
     - !<own> e857a34f-2ecc-4cbf-a87f-ce0a56cc711c
     - !<own> c3c118f5-c2c4-44c7-9863-ff498b18974b
     - !<own> 2a8cee4d-e8da-4af3-9787-cdd774fb39fb
-    - !<own> 1878c2ed-d07a-4501-8214-da1bca9646a7
+    - !<own> c191b421-2307-47d0-8f9a-f946a584c22b
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -519,21 +519,6 @@
     []
   Components:
     []
-- !<SceneObject/1878c2ed-d07a-4501-8214-da1bca9646a7>
-  PrefabRemaps:
-    []
-  Name: LEAF Plugin Bridge
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 61ecf76c-b400-4fb2-9273-1d0d418ddb43
 - !<RenderMeshVisual/1f969daa-5809-4500-b314-98d91ccba131>
   PrefabRemaps:
     []
@@ -636,8 +621,6 @@
   Enabled: true
   ScriptAsset: !<reference> eac29fc6-7fc2-41f4-997b-e36aa5343cf0
   ScriptInputsDefault:
-    roomWidth: true
-    roomDepth: true
     wallHeight: true
     startInsetCm: true
     doorWidth: true
@@ -664,8 +647,14 @@
       labelsUI: !<MappingBased.AssignableType_2> 38e10e1c-0cba-4e00-8fa5-3d023d42af07
       litMaterial: !<reference.Material> 94cad239-6d55-4372-b1e0-ccc278a962bf
       unlitMaterial: !<reference.Material> 1b4c85ca-84a0-4242-8cc6-d03d65a80078
-      roomWidth: !<float> 400.000000
-      roomDepth: !<float> 500.000000
+      catalog: !<reference.JsonAsset> 9945a6a3-5231-4096-b44a-7d4d4c40c554
+      modelPrefabs: !<reference.ObjectPrefab[]>
+        - !<reference> 9fcb282f-7d29-42c7-8e37-1f9458a327d7
+        - !<reference> 21f69fdb-b316-4a20-8333-4d9a8e50c036
+        - !<reference> 9dd4b4e1-39f2-4ba2-9be4-5dc7d324616e
+        - !<reference> 5ac49a89-09f0-482f-ab02-9f58ab602912
+        - !<reference> b727d5eb-a173-479f-b7e6-a4a74795c9b6
+        - !<reference> 7f16f3f1-e1e3-498c-9e46-c793a4c0b54e
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
       doorWidth: !<float> 90.000000
@@ -1143,22 +1132,6 @@
   ScriptTypes:
     "":
       {}
-- !<ScriptComponent/61ecf76c-b400-4fb2-9273-1d0d418ddb43>
-  PrefabRemaps:
-    []
-  Name: MessagingBridge
-  Enabled: true
-  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<ScriptComponent/62967490-d66e-4479-8829-e5c9da5b5b57>
   PrefabRemaps:
     []
@@ -1529,6 +1502,22 @@
     - !<own> b463be13-dddb-4b36-a3dd-c344bd3d8ef5
   Components:
     []
+- !<ScriptComponent/7fe30473-322c-4a59-b9c5-c19f0445b2c4>
+  PrefabRemaps:
+    []
+  Name: MessagingBridge
+  Enabled: true
+  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/80192b3e-40b9-4bfc-97ff-d04eb4e94315>
   PrefabRemaps:
     []
@@ -2260,6 +2249,21 @@
     []
   Components:
     []
+- !<SceneObject/c191b421-2307-47d0-8f9a-f946a584c22b>
+  PrefabRemaps:
+    []
+  Name: LEAF Plugin Bridge
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 7fe30473-322c-4a59-b9c5-c19f0445b2c4
 - !<SceneObject/c3c118f5-c2c4-44c7-9863-ff498b18974b>
   PrefabRemaps:
     []
@@ -2709,7 +2713,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 150.000000, y: 0.000000, z: -445.000000}
+    Position: {x: 200.000000, y: 0.000000, z: -545.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
     Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
     HasSegmentScaleCompensation: false

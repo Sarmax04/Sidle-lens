@@ -28,6 +28,7 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    catalog: false
     clearColor: false
     clearanceCm: false
     coffeeTable: false
@@ -39,13 +40,12 @@
     gapFadeSeconds: false
     labelsUI: false
     litMaterial: false
+    modelPrefabs: false
     outlineRoot: false
     outlineWidthCm: false
     panelUI: false
     pieceRoot: false
     room: false
-    roomDepth: false
-    roomWidth: false
     rotateStepDeg: false
     startInsetCm: false
     tooCloseColor: false
@@ -70,8 +70,9 @@
       labelsUI: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
       litMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       unlitMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
-      roomWidth: !<float> 400.000000
-      roomDepth: !<float> 500.000000
+      catalog: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
+      modelPrefabs: !<reference.ObjectPrefab[]>
+        []
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
       doorWidth: !<float> 90.000000
@@ -94,7 +95,7 @@
     - '// @ui {"widget":"group_start", "label":"References"}'
     - '// @input SceneObject room {"hint":"Root of the virtual stand-in room; its origin is the floor under the start position"}'
     - '// @input SceneObject doorway {"hint":"Doorway root (authored at the near wall line)"}'
-    - "// @input SceneObject coffeeTable {\"hint\":\"Coffee table root — its local X/Z is the obstacle's footprint center\"}"
+    - '// @input SceneObject coffeeTable {"hint":"Coffee table root — placed in the far right corner at start"}'
     - '// @input SceneObject pieceRoot {"hint":"Piece root — moved/rotated on the floor; its authored X/Z is the start spot"}'
     - '// @input SceneObject outlineRoot {"hint":"Floor outline root (follows the piece)"}'
     - '// @input AssignableType_1 panelUI {"hint":"Control panel view"}'
@@ -103,9 +104,12 @@
     - '// @input Asset.Material unlitMaterial {"hint":"Unlit template material for the floor outline (cloned per color)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Imported pieces"}'
+    - '// @input Asset.JsonAsset catalog {"hint":"Bundled Assets/Models/catalog.json"}'
+    - '// @input Asset.ObjectPrefab[] modelPrefabs = {} {"hint":"GLB prefabs from Assets/Models; matched to catalog entries by file name"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'
-    - '// @input float roomWidth = 400 {"hint":"Room width (X), cm", "widget":"slider", "min":250, "max":800, "step":10}'
-    - '// @input float roomDepth = 500 {"hint":"Room depth (Z), cm", "widget":"slider", "min":250, "max":800, "step":10}'
     - '// @input float wallHeight = 250 {"hint":"Wall height, cm", "widget":"slider", "min":200, "max":350, "step":5}'
     - '// @input float startInsetCm = 30 {"hint":"How far the doorway wall line is behind the start position, cm", "widget":"slider", "min":10, "max":100, "step":1}'
     - '// @input float doorWidth = 90 {"hint":"Doorway opening width, cm", "widget":"slider", "min":60, "max":140, "step":1}'

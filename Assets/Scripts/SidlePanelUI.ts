@@ -2,11 +2,12 @@
  * SidlePanelUI — the Sidle control panel (passive view).
  *
  * Owns: a UIKit BackPlate panel with a header row (current piece name +
- * "piece is behind you" arrow) and a row of five UIKit Buttons:
+ * "piece is behind you" arrow), a detail line (PieceDetailLabel: source domain
+ * + dimensions, imported pieces only) and a row of five UIKit Buttons:
  *   NextButton, CompareButton, MeasureButton, RotateLeftButton, RotateRightButton
  * (those are the runtime SceneObject names, stable for tests).
  *
- * Main -> UI: setPieceName, setCompareEnabled, setMeasureOn, setBehindArrow.
+ * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setMeasureOn, setBehindArrow.
  * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight.
  *
  * Must not: hold domain state or make decisions (SidleController owns state).
@@ -106,6 +107,8 @@ export class SidlePanelUI extends BaseScriptComponent {
   }
 
   private nameText: Text | null = null
+  private detailText: Text | null = null
+  private pendingDetail = ""
   private arrowObj: SceneObject | null = null
   private compareButton: Button | null = null
   private measureButton: Button | null = null
@@ -119,6 +122,14 @@ export class SidlePanelUI extends BaseScriptComponent {
   // ── Public view API ────────────────────────────────────────────────────────
   setPieceName(name: string): void {
     if (this.nameText) this.nameText.text = name
+  }
+
+  /** Source domain + dimensions line; "" hides it (built-in pieces). */
+  setPieceDetail(detail: string): void {
+    this.pendingDetail = detail
+    if (!this.detailText) return
+    if (this.detailText.text !== detail) this.detailText.text = detail
+    this.detailText.getSceneObject().enabled = detail !== ""
   }
 
   setCompareEnabled(enabled: boolean): void {
@@ -145,8 +156,9 @@ export class SidlePanelUI extends BaseScriptComponent {
     const n = 5
     const rowW = n * this.buttonWidth + (n - 1) * this.buttonGap
     const headerH = 3.2
+    const detailH = 2.2
     const panelW = rowW + this.padding * 2
-    const panelH = headerH + this.buttonHeight + this.padding * 2 + 1.0
+    const panelH = headerH + detailH + this.buttonHeight + this.padding * 2 + 2.0
 
     this.sceneObject.createComponent("Component.Canvas")
     const plate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
@@ -205,6 +217,23 @@ export class SidlePanelUI extends BaseScriptComponent {
         arrow.enabled = false
         this.arrowObj = arrow
       })
+    })
+
+    // Detail line: source domain + W × D × H (imported pieces only)
+    this.flexChild(content, {w: rowW, h: detailH}, (detailCell) => {
+      const so = this.obj(detailCell, "PieceDetailLabel")
+      const t = so.createComponent("Component.Text") as Text
+      t.text = this.pendingDetail
+      t.depthTest = true
+      applyTextRole(t, "Caption", 100)
+      t.horizontalAlignment = HorizontalAlignment.Left
+      t.verticalAlignment = VerticalAlignment.Center
+      t.horizontalOverflow = HorizontalOverflow.Overflow
+      t.verticalOverflow = VerticalOverflow.Overflow
+      t.layoutRect = Rect.create(-rowW / 2, rowW / 2, -detailH / 2, detailH / 2)
+      t.textFill.color = new vec4(1, 1, 1, 0.75)
+      so.enabled = this.pendingDetail !== ""
+      this.detailText = t
     })
 
     // Button row

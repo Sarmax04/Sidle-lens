@@ -3,17 +3,19 @@
  *
  * Owns: current piece, its floor position + rotation, Measure toggle, drag
  * state, clearance result, gap-label fade, and the "piece behind you" arrow.
- * Builds the virtual stand-in room (walls, doorway, coffee table) and the four
- * box-shaped pieces under the authored roots it is given, and pushes view state
- * into SidlePanelUI / SidleLabelsUI.
+ * Builds the virtual stand-in room (walls, doorway, coffee table), the four
+ * box-shaped pieces and the imported catalog pieces (SidleCatalog) under the
+ * authored roots it is given, and pushes view state into SidlePanelUI /
+ * SidleLabelsUI. Every piece is built once and enabled/disabled on switch.
  *
  * Expects @inputs: VirtualRoom, Doorway, CoffeeTable, Piece, FloorOutline
- * SceneObjects; the two UI components; a lit + an unlit template material.
+ * SceneObjects; the two UI components; a lit + an unlit template material;
+ * the bundled catalog.json + the GLB prefabs from Assets/Models.
  * All math is VirtualRoom-local (floor at y = 0, doorway wall at +Z).
  *
  * Public API (for tests): nextPiece, compare, toggleMeasure, rotateLeft,
- * rotateRight, setPiecePosition(x, z), beginDrag, endDrag, refresh, plus the
- * read-only getters below.
+ * rotateRight, setPiecePosition(x, z), beginDrag, endDrag, refresh,
+ * loadCatalogText(text) (test hook), plus the read-only getters below.
  *
  * Must not: create text/UIKit directly (labels live in the UI modules).
  */
@@ -23,6 +25,7 @@ import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/
 import {SidlePanelUI} from "./SidlePanelUI"
 import {SidleLabelsUI} from "./SidleLabelsUI"
 import {MaterialCache, makeBox} from "./SidleBoxFactory"
+import {CatalogEntry, buildImportedVisual, glbBaseName, parseCatalog, warn} from "./SidleCatalog"
 import {
   ClearanceHit,
   EDGE_NAMES,
@@ -39,15 +42,18 @@ import {
 export type PieceKey = "SofaA" | "SofaB" | "Bed" | "DiningTable"
 
 interface PieceDef {
-  key: PieceKey
+  key: string // a PieceKey, or "Imported_<catalog id>"
   name: string
   w: number
   d: number
   h: number
+  entry?: CatalogEntry // imported pieces only
 }
 
+const IMPORTED_PREFIX = "Imported_"
+
 /** Sizes from the design brief (W × D × H, cm). */
-const PIECES: PieceDef[] = [
+const BUILT_IN: PieceDef[] = [
   {key: "SofaA", name: "Sofa A", w: 220, d: 90, h: 85},
   {key: "SofaB", name: "Sofa B", w: 180, d: 85, h: 85},
   {key: "Bed", name: "Bed", w: 160, d: 200, h: 55},
@@ -95,6 +101,19 @@ export class SidleController extends BaseScriptComponent {
   @input
   @hint("Unlit template material for the floor outline (cloned per color)")
   unlitMaterial!: Material
+  @ui.group_end
+
+  @ui.separator
+  @ui.group_start("Imported pieces")
+  @input
+  @hint("Bundled Assets/Models/catalog.json")
+  @allowUndefined
+  catalog: JsonAsset
+
+  @input
+  @hint("GLB prefabs from Assets/Models; matched to catalog entries by file name")
+  @allowUndefined
+  modelPrefabs: ObjectPrefab[] = []
   @ui.group_end
 
   @ui.separator
@@ -172,6 +191,7 @@ export class SidleController extends BaseScriptComponent {
   @ui.group_end
 
   // ── State (single source of truth) ─────────────────────────────────────────
+  private pieces: PieceDef[] = BUILT_IN.slice()
   private pieceIndex = 0
   private yawDeg = 0
   private posX = 0
@@ -191,6 +211,8 @@ export class SidleController extends BaseScriptComponent {
   private litCache!: MaterialCache
   private unlitCache!: MaterialCache
   private pieceVisuals: {[k: string]: SceneObject} = {}
+  private modelLoaded: {[k: string]: boolean} = {}
+  private _warnings: string[] = []
   private hitObj!: SceneObject
   private collider!: ColliderComponent
   private edges: SceneObject[] = []
@@ -218,6 +240,7 @@ export class SidleController extends BaseScriptComponent {
 
     this.buildRoom()
     this.buildPieces()
+    this.buildImportedPieces(this.bundledCatalogText())
     this.buildOutline()
     this.buildGrab()
     // UI components may not be initialized yet during onAwake (hierarchy order),
@@ -248,11 +271,11 @@ export class SidleController extends BaseScriptComponent {
   // Public API
   // ════════════════════════════════════════════════════════════════════════════
 
-  /** Sofa A → Bed → Dining table → Sofa A (Sofa B → Bed). */
+  /** Sofa A → Bed → Dining table → each enabled imported piece → Sofa A (Sofa B → Bed). */
   nextPiece(): void {
-    const key = this.currentPieceKey
-    const next: PieceKey = key === "SofaA" || key === "SofaB" ? "Bed" : key === "Bed" ? "DiningTable" : "SofaA"
-    this.showPiece(next)
+    const order = this.nextOrder()
+    const key = this.currentPieceKey === "SofaB" ? "SofaA" : this.currentPieceKey
+    this.showPiece(order[(order.indexOf(key) + 1) % order.length])
   }
 
   /** Sofa A ↔ Sofa B; does nothing for the bed or dining table. */
@@ -299,16 +322,67 @@ export class SidleController extends BaseScriptComponent {
     this.applyAll()
   }
 
+  /**
+   * Replace the imported pieces with ones built from `text` (catalog.json
+   * format); null reloads the bundled catalog. Test hook for missing/broken
+   * models. If an imported piece is showing, Sofa A is shown first.
+   */
+  loadCatalogText(text: string | null): void {
+    if (this.currentPieceIsImported) this.showPiece("SofaA")
+    for (const p of this.pieces) {
+      if (!p.entry) continue
+      this.pieceVisuals[p.key].destroy()
+      delete this.pieceVisuals[p.key]
+      delete this.modelLoaded[p.key]
+    }
+    const key = this.currentPieceKey
+    this.pieces = BUILT_IN.slice()
+    this.pieceIndex = this.pieces.findIndex((p) => p.key === key)
+    this._warnings = []
+    this.buildImportedPieces(text === null ? this.bundledCatalogText() : text)
+    this.applyAll()
+  }
+
   // ── Read-only state ────────────────────────────────────────────────────────
-  get currentPieceKey(): PieceKey {
-    return PIECES[this.pieceIndex].key
+  get currentPieceKey(): string {
+    return this.pieces[this.pieceIndex].key
   }
   get currentPieceName(): string {
-    return PIECES[this.pieceIndex].name
+    return this.pieces[this.pieceIndex].name
   }
   get currentDims(): {w: number; d: number; h: number} {
-    const p = PIECES[this.pieceIndex]
+    const p = this.pieces[this.pieceIndex]
     return {w: p.w, d: p.d, h: p.h}
+  }
+  get currentPieceIsImported(): boolean {
+    return !!this.pieces[this.pieceIndex].entry
+  }
+  /** Source domain of an imported piece; "" for built-in pieces. */
+  get currentPieceDomain(): string {
+    const e = this.pieces[this.pieceIndex].entry
+    return e ? e.domain : ""
+  }
+  /** Panel detail line: source domain + W × D × H for imported pieces; "" for built-ins. */
+  get currentPieceDetail(): string {
+    const p = this.pieces[this.pieceIndex]
+    if (!p.entry) return ""
+    return `${p.entry.domain} · ${Math.round(p.w)} × ${Math.round(p.d)} × ${Math.round(p.h)} cm`
+  }
+  /** Keys of the enabled imported pieces, in catalog order. */
+  get importedPieceKeys(): string[] {
+    return this.pieces.filter((p) => !!p.entry).map((p) => p.key)
+  }
+  /** Next-piece cycle, starting at Sofa A. */
+  get pieceCycle(): string[] {
+    return this.nextOrder()
+  }
+  /** False when an imported piece shows the plain fallback box instead of its model. */
+  modelLoadedFor(key: string): boolean {
+    return !!this.modelLoaded[key]
+  }
+  /** Warnings logged while loading the catalog and models. */
+  get loadWarnings(): string[] {
+    return this._warnings.slice()
   }
   get measureOn(): boolean {
     return this._measureOn
@@ -403,12 +477,16 @@ export class SidleController extends BaseScriptComponent {
   }
 
   private resolve(x: number, z: number, yaw: number): {x: number; z: number} {
-    const p = PIECES[this.pieceIndex]
+    const p = this.pieces[this.pieceIndex]
     return resolvePlacement(x, z, p.w, p.d, yaw, this.room3(), this.obstacles())
   }
 
-  private showPiece(key: PieceKey): void {
-    const idx = PIECES.findIndex((p) => p.key === key)
+  private nextOrder(): string[] {
+    return ["SofaA", "Bed", "DiningTable"].concat(this.importedPieceKeys)
+  }
+
+  private showPiece(key: string): void {
+    const idx = this.pieces.findIndex((p) => p.key === key)
     if (idx < 0 || idx === this.pieceIndex) return
     this.pieceIndex = idx
     // Same spot + facing; nudge to nearest valid spot if it would overlap.
@@ -479,14 +557,14 @@ export class SidleController extends BaseScriptComponent {
 
   private applyAll(): void {
     if (!this.ready) return
-    const def = PIECES[this.pieceIndex]
+    const def = this.pieces[this.pieceIndex]
     const yaw = this.yawRad()
 
     // Piece transform + visibility
     const pt = this.pieceRoot.getTransform()
     pt.setLocalPosition(new vec3(this.posX, 0, this.posZ))
     pt.setLocalRotation(quat.angleAxis(yaw, vec3.up()))
-    for (const p of PIECES) this.pieceVisuals[p.key].enabled = p.key === def.key
+    for (const p of this.pieces) this.pieceVisuals[p.key].enabled = p.key === def.key
     if (this.colliderKey !== def.key) {
       const shape = Shape.createBoxShape()
       shape.size = new vec3(def.w, def.h, def.d)
@@ -545,6 +623,7 @@ export class SidleController extends BaseScriptComponent {
 
     // Panel
     this.panelUI.setPieceName(def.name)
+    this.panelUI.setPieceDetail(this.currentPieceDetail)
     this.panelUI.setCompareEnabled(this.compareEnabled)
     this.panelUI.setMeasureOn(this._measureOn)
     this.updateBehindArrow()
@@ -677,8 +756,36 @@ export class SidleController extends BaseScriptComponent {
     }
   }
 
+  private bundledCatalogText(): string | null {
+    return this.catalog ? this.catalog.getString() : null
+  }
+
+  /** One hidden SceneObject per enabled catalog entry, built once, appended after the built-ins. */
+  private buildImportedPieces(text: string | null): void {
+    const {entries, warnings} = parseCatalog(text)
+    for (const w of warnings) this.addWarning(w)
+    const prefabs: {[name: string]: ObjectPrefab} = {}
+    for (const p of this.modelPrefabs ?? []) if (p) prefabs[p.name] = p
+    const fallback = this.lit(0.78, 0.78, 0.8)
+    for (const e of entries) {
+      const key = IMPORTED_PREFIX + e.id
+      const root = this.group(this.pieceRoot, `Piece_${key}`)
+      root.enabled = false
+      const r = buildImportedVisual(root, e, prefabs[glbBaseName(e.glb)] ?? null, fallback)
+      if (r.warning) this.addWarning(r.warning)
+      this.pieceVisuals[key] = root
+      this.modelLoaded[key] = r.model
+      this.pieces.push({key, name: e.name, w: e.widthCm, d: e.depthCm, h: e.heightCm, entry: e})
+    }
+  }
+
+  private addWarning(msg: string): void {
+    this._warnings.push(msg)
+    warn(msg)
+  }
+
   private buildPieces(): void {
-    for (const def of PIECES) {
+    for (const def of BUILT_IN) {
       const root = this.group(this.pieceRoot, `Piece_${def.key}`)
       this.pieceVisuals[def.key] = root
       if (def.key === "SofaA") this.buildSofa(root, def, [0.82, 0.82, 0.84], [0.9, 0.9, 0.92])

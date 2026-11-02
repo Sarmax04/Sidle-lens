@@ -25,9 +25,13 @@ export class C3IKPanelReachScenario extends Scenario {
 
     await ik.trigger(interactable("NextButton"))
     await sleep(400)
+    expect(c.currentPieceKey, "IK Next x2").toBe("DiningTable")
+    // Update 1: imported pieces sit between the table and Sofa A; skip them via the API
+    // (this scenario is about reach, which the IK pinches above and below cover).
+    for (let i = 0; i < c.importedPieceKeys.length; i++) c.nextPiece()
     await ik.trigger(interactable("NextButton"))
     await sleep(400)
-    expect(c.currentPieceKey, "IK Next x3 back to Sofa A").toBe("SofaA")
+    expect(c.currentPieceKey, "IK Next back to Sofa A").toBe("SofaA")
 
     await ik.trigger(interactable("CompareButton"))
     await sleep(400)

@@ -50,6 +50,60 @@ export async function tap(it: DefaultLeafInteractor, buttonName: string): Promis
   await sleep(250)
 }
 
+/**
+ * From the dining table, pinch Next through every enabled imported piece (Update 1),
+ * so the following Next lands on Sofa A again.
+ */
+export async function tapThroughImported(it: DefaultLeafInteractor, c: SidleController): Promise<void> {
+  expect(c.currentPieceKey, "tapThroughImported starts at the dining table").toBe("DiningTable")
+  for (const k of c.importedPieceKeys) {
+    await tap(it, "NextButton")
+    expect(c.currentPieceKey, "Next steps through imported pieces in catalog order").toBe(k)
+  }
+}
+
+/** AABB of every RenderMeshVisual under `root` (enabled or not), in `frame`'s local space. */
+export function meshBounds(root: SceneObject, frame: SceneObject): {min: vec3; max: vec3} | null {
+  const inv = frame.getTransform().getInvertedWorldTransform()
+  const lo = [Infinity, Infinity, Infinity]
+  const hi = [-Infinity, -Infinity, -Infinity]
+  let n = 0
+  const stack = [root]
+  while (stack.length) {
+    const so = stack.pop()!
+    for (const v of so.getComponents("Component.RenderMeshVisual") as RenderMeshVisual[]) {
+      if (!v.mesh) continue
+      const a = v.localAabbMin()
+      const b = v.localAabbMax()
+      const m = inv.mult(so.getTransform().getWorldTransform())
+      for (const x of [a.x, b.x])
+        for (const y of [a.y, b.y])
+          for (const z of [a.z, b.z]) {
+            const p = m.multiplyPoint(new vec3(x, y, z))
+            const q = [p.x, p.y, p.z]
+            for (let i = 0; i < 3; i++) {
+              lo[i] = Math.min(lo[i], q[i])
+              hi[i] = Math.max(hi[i], q[i])
+            }
+            n++
+          }
+    }
+    for (let i = 0; i < so.getChildrenCount(); i++) stack.push(so.getChild(i))
+  }
+  return n ? {min: new vec3(lo[0], lo[1], lo[2]), max: new vec3(hi[0], hi[1], hi[2])} : null
+}
+
+/** The bundled catalog, read independently of SidleController (enabled entries only). */
+export function bundledCatalog(): any[] {
+  const asset = requireAsset("../../Models/catalog.json") as JsonAsset
+  return (JSON.parse(asset.getString()) as any[]).filter((e) => e.enabled !== false)
+}
+
+export function panelText(name: string): string {
+  const t = obj(name).getComponent("Component.Text") as Text
+  return t ? t.text : ""
+}
+
 /** Grab PieceGrab and drag it; dragVector is world cm added per drag-update frame. */
 export async function dragPiece(it: DefaultLeafInteractor, perFrame: vec3, ms: number): Promise<void> {
   await it.drag(interactable("PieceGrab"), perFrame, ms)
@@ -131,7 +185,7 @@ export async function resetState(): Promise<SidleController> {
   const c = controller()
   if (c.isDragging) c.endDrag()
   let guard = 0
-  while (c.currentPieceKey !== "SofaA" && guard++ < 5) {
+  while (c.currentPieceKey !== "SofaA" && guard++ < 5 + c.importedPieceKeys.length) {
     if (c.currentPieceKey === "SofaB") c.compare()
     else c.nextPiece()
   }
