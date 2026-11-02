@@ -14,6 +14,7 @@ import {C8PanelSourceScenario} from "./C8PanelSourceScenario"
 import {C9MissingModelScenario} from "./C9MissingModelScenario"
 import {C10NoPlaceholdersScenario} from "./C10NoPlaceholdersScenario"
 import {C11WrapGreyedScenario} from "./C11WrapGreyedScenario"
+import {C12BedsChairsScenario} from "./C12BedsChairsScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -33,5 +34,6 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c9-missing-model", typename: C9MissingModelScenario.getTypeName()},
     {id: "c10-no-placeholders", typename: C10NoPlaceholdersScenario.getTypeName()},
     {id: "c11-wrap-greyed", typename: C11WrapGreyedScenario.getTypeName()},
+    {id: "c12-beds-chairs", typename: C12BedsChairsScenario.getTypeName()},
   ]
 }

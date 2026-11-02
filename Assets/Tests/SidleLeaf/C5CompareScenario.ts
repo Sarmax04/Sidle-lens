@@ -2,8 +2,12 @@
  * Done criterion 5 (Update 2) — CompareButton steps through the variants of the
  * current type in order (built-ins first, then imported in catalog order) and
  * wraps, in the same spot/facing; outline, labels and clearance update for
- * every variant. With a one-variant type (the bed) the button is greyed out
- * (UIKit Button.inactive) and a pinch does nothing.
+ * every variant. A variant that would stick through a wall at that spot is
+ * nudged to the nearest spot inside the room, and the following variants start
+ * from there (the spot is tracked, not reset). Types and variants come from the
+ * bundled catalog; a one-variant type (if the catalog has one) is greyed out
+ * (UIKit Button.inactive) and a pinch does nothing — C11 covers that rule with
+ * catalogs that are sure to have one.
  */
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
@@ -21,7 +25,9 @@ import {
   log,
   obj,
   offeredKeys,
+  overlapsCoffee,
   panelText,
+  placementValid,
   resetState,
   ROOM,
   tap,
@@ -57,9 +63,21 @@ function checkVariant(c: SidleController, v: ExpectedVariant, allKeys: string[],
   expect(h.includes(`${Math.round(dims.h)}`), `${key} height label "${h}"`).toBe(true)
 }
 
-/** Sofas sit at x = 110: the right-wall gap is 250 - 110 - w/2 for every sofa variant. */
-function checkSofaClearance(c: SidleController, v: ExpectedVariant): void {
-  const gap = ROOM.maxX - 110 - v.w / 2
+/**
+ * Where `v` must end up when it replaces the piece at `from` (rotation 0 or 180,
+ * so the footprint is axis aligned): the same spot if it fits, else pulled in
+ * just far enough to be inside the room. Worked out independently of the controller.
+ */
+function expectedSpot(v: ExpectedVariant, from: {x: number; z: number}): {x: number; z: number} {
+  const clamp = (val: number, lo: number, hi: number) => Math.min(Math.max(val, lo), hi)
+  const p = {x: clamp(from.x, ROOM.minX + v.w / 2, ROOM.maxX - v.w / 2), z: clamp(from.z, ROOM.minZ + v.d / 2, ROOM.maxZ - v.d / 2)}
+  if (overlapsCoffee(p.x, p.z, v.w, v.d)) throw new Error(`${v.key}: test spot overlaps the coffee table; pick another spot`)
+  return p
+}
+
+/** Sofas sit near the right wall: the right-wall gap is 250 - x - w/2 for every sofa variant. */
+function checkSofaClearance(c: SidleController, v: ExpectedVariant, pos: {x: number; z: number}): void {
+  const gap = Math.max(0, Math.round((ROOM.maxX - pos.x - v.w / 2) * 1e4) / 1e4)
   expect(gap < 80, `${v.key}: test spot is too close to the right wall (gap ${gap})`).toBe(true)
   expect(c.nearestObstacle, `${v.key} nearest obstacle`).toBe("RightWall")
   expect(c.nearestGapCm, `${v.key} clearance to right wall`).toBeCloseTo(gap, 1)
@@ -92,9 +110,18 @@ export class C5CompareScenario extends Scenario {
     expect(c.measureOn, "Measure on").toBe(true)
     c.setPiecePosition(ROOM.maxX - 140, -220) // Sofa A right edge 30 cm off the wall; Sofa B (180 wide) 50 cm
     await sleep(50)
-    const pos = c.piecePosition
+    let pos = c.piecePosition
     const rot = c.rotationDeg
     expect(pos.x, "sofa spot").toBeCloseTo(110, 1)
+    const nudged: string[] = []
+    /** Advance the tracked spot for the variant now shown, then check it. */
+    const check = (v: ExpectedVariant) => {
+      const want = expectedSpot(v, pos)
+      if (Math.abs(want.x - pos.x) > 0.01 || Math.abs(want.z - pos.z) > 0.01) nudged.push(`${v.key} ${JSON.stringify(pos)} -> ${JSON.stringify(want)}`)
+      pos = want
+      checkVariant(c, v, allKeys, pos, rot)
+      expect(placementValid(pos.x, pos.z, v.w, v.d, rot), `${v.key} placement valid`).toBe(true)
+    }
 
     for (let ti = 0; ti < offer.length; ti++) {
       const t = offer[ti]
@@ -103,7 +130,7 @@ export class C5CompareScenario extends Scenario {
       expect(c.variantKeys(t.type).join(","), `${t.type}: controller variant order`).toBe(t.variants.map((v) => v.key).join(","))
       if (t.variants.length === 1) {
         // one variant: greyed out and a pinch does nothing
-        checkVariant(c, t.variants[0], allKeys, pos, rot)
+        check(t.variants[0])
         await expectGreyedCompare(c, t.type)
         continue
       }
@@ -113,11 +140,12 @@ export class C5CompareScenario extends Scenario {
       for (let i = 0; i <= t.variants.length; i++) {
         if (i > 0) await tap(it, "CompareButton")
         const v = t.variants[i % t.variants.length]
-        checkVariant(c, v, allKeys, pos, rot)
-        if (t.type === "sofa") checkSofaClearance(c, v)
+        check(v)
+        if (t.type === "sofa") checkSofaClearance(c, v, pos)
       }
     }
-    expect(offer.some((t) => t.variants.length === 1), "bundled offer has a one-variant type (bed)").toBe(true)
+    log(`one-variant types in the bundled offer: [${offer.filter((t) => t.variants.length === 1).map((t) => t.type).join(",")}]`)
+    log(`nudged on swap: ${nudged.length ? nudged.join("; ") : "none"}`)
     expect(offer[0].variants.map((v) => v.key).slice(0, 2).join(","), "Sofa A then Sofa B").toBe("SofaA,SofaB")
 
     await tap(it, "NextButton") // wraps to the first type

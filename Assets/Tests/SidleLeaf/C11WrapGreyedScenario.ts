@@ -1,11 +1,14 @@
 /**
  * Update 2 wrap-around and greyed-out rules, with real button pinches:
- * - Next wraps from the last available type to the first (bed -> sofa with
- *   placeholders on; table -> sofa with them off, skipping the empty bed type).
+ * - Next wraps from the last available type to the first.
  * - Compare wraps from the last variant of a type to its first.
  * - Compare is greyed out (and a pinch does nothing) exactly when the current
- *   type has one variant: the table with placeholders off, the bed with them on.
+ *   type has one variant.
  * - An unknown catalog category becomes its own type after bed.
+ * Expected types/variants are derived from the bundled catalog, with
+ * placeholders on and off. The bundled catalog may have no one-variant type,
+ * so the greyed-out rule is also run on a reduced catalog (the first piece of
+ * each category), where it is sure to apply.
  * showPlaceholderPieces is switched through SidleController.setShowPlaceholderPieces
  * and switched back on at the end.
  */
@@ -54,21 +57,40 @@ export class C11WrapGreyedScenario extends Scenario {
     const it = new DefaultLeafInteractor("C11Interactor")
     const cat = bundledCatalog()
 
-    // Placeholders on: bed is the only one-variant type, Next wraps bed -> sofa.
+    const oneVariant = (o: ExpectedType[]) => o.filter((t) => t.variants.length === 1).map((t) => t.type)
+
+    // Bundled catalog, placeholders on.
     const on = expectedOffer(cat, true)
-    expect(on.filter((t) => t.variants.length === 1).map((t) => t.type).join(","), "on: one-variant types").toBe("bed")
+    log(`on: types ${on.map((t) => `${t.type}(${t.variants.length})`).join(" ")}, one-variant [${oneVariant(on).join(",")}]`)
     await checkRules(it, c, on, "on")
 
-    // Placeholders off: bed skipped, table has one variant, Next wraps table -> sofa.
+    // Bundled catalog, placeholders off.
     c.setShowPlaceholderPieces(false)
     await sleep(150)
     const off = expectedOffer(cat, false)
-    expect(off.map((t) => t.type).join(","), "off: types").toBe("sofa,chair,table")
-    expect(off.filter((t) => t.variants.length === 1).map((t) => t.type).join(","), "off: one-variant types").toBe("table")
+    log(`off: types ${off.map((t) => `${t.type}(${t.variants.length})`).join(" ")}, one-variant [${oneVariant(off).join(",")}]`)
     await checkRules(it, c, off, "off")
 
-    // Unknown category -> its own type after bed (placeholders on again).
+    // Reduced catalog (first piece of each category): every type has one variant
+    // with placeholders off; with them on, the types without a built-in do.
+    const firsts: any[] = []
+    for (const e of cat) {
+      const t = String(e.category).trim().toLowerCase()
+      if (!firsts.some((f) => String(f.category).trim().toLowerCase() === t)) firsts.push(e)
+    }
+    c.loadCatalogText(JSON.stringify(firsts))
+    await sleep(150)
+    const firstsOff = expectedOffer(firsts, false)
+    expect(oneVariant(firstsOff).length, "reduced, off: every type has one variant").toBe(firstsOff.length)
+    await checkRules(it, c, firstsOff, "reduced off")
     c.setShowPlaceholderPieces(true)
+    await sleep(150)
+    const firstsOn = expectedOffer(firsts, true)
+    log(`reduced on: one-variant [${oneVariant(firstsOn).join(",")}]`)
+    expect(oneVariant(firstsOn).length > 0, "reduced, on: at least one one-variant type to grey out").toBe(true)
+    await checkRules(it, c, firstsOn, "reduced on")
+
+    // Unknown category -> its own type after bed (placeholders on).
     const lamp = {id: "test_lamp", name: "Test Lamp", category: "Lamp", sourceUrl: "https://example.org/a/lamp", domain: "example.org",
       widthCm: 40, depthCm: 40, heightCm: 150, glb: "Models/armchair_01.glb", yawDeg: 0, credit: "test"}
     const withLamp = cat.concat([lamp])

@@ -5,7 +5,9 @@
  * falls back to the built-ins and logs a warning.
  * The Inspector checkbox is switched through the test hook
  * SidleController.setShowPlaceholderPieces (which re-applies the start rule)
- * and switched back on at the end.
+ * and switched back on at the end. Expected types come from the bundled
+ * catalog; since it may have every type, "skip an empty type" is also checked
+ * with the bundled catalog minus its beds.
  */
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
@@ -64,7 +66,7 @@ export class C10NoPlaceholdersScenario extends Scenario {
     const firstSofa = cat.find((e) => String(e.category).toLowerCase() === "sofa")
     expect(!!firstSofa, "bundled catalog has an imported sofa").toBe(true)
 
-    // Off: starts on the first imported sofa, bed (no imported bed) is skipped.
+    // Off: starts on the first imported sofa; types with no imported piece are skipped.
     c.setShowPlaceholderPieces(false)
     await sleep(150)
     const offer = expectedOffer(cat, false)
@@ -78,7 +80,9 @@ export class C10NoPlaceholdersScenario extends Scenario {
     expect(c.isClear, "start is clear").toBe(true)
     checkShown(c, offer[0].variants[0], domainOf(c.currentPieceKey))
     expect(c.availableTypes.join(","), "types with variants only").toBe(offer.map((t) => t.type).join(","))
-    expect(c.availableTypes.indexOf("bed"), "bed type skipped (no imported bed)").toBe(-1)
+    const builtInOnly = expectedOffer(cat, true).map((t) => t.type).filter((t) => !offer.some((o) => o.type === t))
+    log(`types with built-ins only (skipped when off): [${builtInOnly.join(",")}]`)
+    for (const t of builtInOnly) expect(c.availableTypes.indexOf(t), `${t} type skipped (no imported ${t})`).toBe(-1)
     for (const t of offer) expect(c.variantKeys(t.type).join(","), `${t.type} variants`).toBe(t.variants.map((v) => v.key).join(","))
     expectNoBuiltIn(c, "start")
 
@@ -99,6 +103,19 @@ export class C10NoPlaceholdersScenario extends Scenario {
       }
     }
     expect(Object.keys(seen).sort().join(","), "every imported piece reached").toBe(offeredKeys(offer).slice().sort().join(","))
+
+    // A type with no imported piece is skipped: the bundled catalog without its beds.
+    const noBeds = cat.filter((e) => String(e.category).trim().toLowerCase() !== "bed")
+    c.loadCatalogText(JSON.stringify(noBeds))
+    await sleep(150)
+    const noBedOffer = expectedOffer(noBeds, false)
+    expect(c.availableTypes.join(","), "no beds: types").toBe(noBedOffer.map((t) => t.type).join(","))
+    expect(c.availableTypes.indexOf("bed"), "no beds: bed type skipped").toBe(-1)
+    expect(c.placeholderFallbackActive, "no beds: no fallback").toBe(false)
+    expectNoBuiltIn(c, "no beds")
+    await tap(it, "NextButton")
+    for (let i = 1; i < noBedOffer.length; i++) await tap(it, "NextButton")
+    expect(c.currentPieceKey, "no beds: Next wraps past the empty bed type").toBe(noBedOffer[0].variants[0].key)
 
     // Nothing left to show -> falls back to the built-ins with a warning.
     c.loadCatalogText("[]")
