@@ -8,7 +8,7 @@ import sharp from "sharp"
 
 import {mapCategory} from "../lib/polyhaven.mjs"
 import {parseDimsFlag} from "../lib/dims.mjs"
-import {guessCategory} from "../import.mjs"
+import {guessCategory, joinCredit} from "../import.mjs"
 import {resolveModel} from "../lib/convert.mjs"
 import {classifyTexture, pickTextures, applyTextures} from "../lib/textures.mjs"
 import {RANGES, checkPlausible, orient, guessObjUnits} from "../lib/ranges.mjs"
@@ -44,6 +44,15 @@ test("category guess from local names (underscores count as spaces)", () => {
   assert.equal(guessCategory("sofa bed"), "sofa")
   assert.equal(guessCategory("bedside table"), "table")
   assert.equal(guessCategory("lamp_2"), "other")
+})
+
+test("credit + license: the license is not repeated when the credit already names it", () => {
+  assert.equal(joinCredit("Kirill Sannikov", "CC0"), "Kirill Sannikov, CC0")
+  assert.equal(joinCredit("Taha Arslan (ShareTextures), CC0", "CC0"), "Taha Arslan (ShareTextures), CC0")
+  assert.equal(joinCredit("Bed1 by Scopia (scopia.es), CC BY 3.0, via Sweet Home 3D", "CC-BY-3.0"), "Bed1 by Scopia (scopia.es), CC BY 3.0, via Sweet Home 3D")
+  assert.equal(joinCredit("Someone", "CC BY 4.0"), "Someone, CC BY 4.0")
+  assert.equal(joinCredit("", "CC0"), "CC0")
+  assert.equal(joinCredit("Someone", undefined), "Someone")
 })
 
 // --- 2. local mode ----------------------------------------------------------------------------

@@ -79,7 +79,7 @@ test("local OBJ with a sharetextures.com --source: imported from disk, source on
   assert.ok(Math.abs(sceneBox(doc).min[1]) < 1e-6, "stands on the floor")
   assert.match(r.out, /Name +\| Category \| W × D × H cm +\| Triangles before → after \| Texture +\| Thumbnail \| Warnings/)
   assert.match(r.out, /Test Sofa \| sofa +\| 220 × 90 × 85 +\| 12 → 12 /)
-  assert.match(await readFile(join(ws.models, "CREDITS.md"), "utf8"), /`test_sofa` — "Test Sofa" by Someone, CC0: https:\/\/www\.sharetextures\.com/)
+  assert.match(await readFile(join(ws.models, "CREDITS.md"), "utf8"), /`test_sofa` — "Test Sofa": Someone, CC0: https:\/\/www\.sharetextures\.com/)
 })
 
 test("a sharetextures.com or sketchfab.com page link is refused before any request", async (t) => {

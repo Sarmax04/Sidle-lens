@@ -80,7 +80,10 @@ function crossCheck(measured, reference, label) {
   return warnings
 }
 
-function joinCredit(credit, license) {
+/** "Author, License" — the license is left out when the credit already names it ("CC-BY-3.0" matches "CC BY 3.0"). */
+export function joinCredit(credit, license) {
+  const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, "")
+  if (credit && license && norm(credit).includes(norm(license))) return credit
   return [credit, license].filter(Boolean).join(", ")
 }
 
@@ -124,7 +127,7 @@ async function importPolyHaven(id, opts) {
       domain: "polyhaven.com",
       credit: joinCredit(author, license),
     },
-    creditLine: (e) => `- \`${e.id}\` — "${e.name}" by ${author}, ${license}, via Poly Haven: ${e.sourceUrl}`,
+    creditLine: (e) => `- \`${e.id}\` — "${e.name}" by ${joinCredit(author, license)}, via Poly Haven: ${e.sourceUrl}`,
   }
 }
 
@@ -283,7 +286,7 @@ async function importLocal(opts) {
       credit: credit || "unknown",
     },
     creditLine: (e) =>
-      `- \`${e.id}\` — "${e.name}"${opts.credit ? ` by ${opts.credit}` : ""}${opts.license ? `, ${opts.license}` : " (check its license)"}` +
+      `- \`${e.id}\` — "${e.name}"${credit ? `: ${credit}` : ""}${opts.license ? "" : " (check its license)"}` +
       `${opts.source ? `: ${opts.source}` : ""} (local file ${basename(local.file)})`,
   }
 }

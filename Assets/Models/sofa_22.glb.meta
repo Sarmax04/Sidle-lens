@@ -1,0 +1,495 @@
+- !<AssetImportMetadata/f43c2bd0-b8bb-49c2-bf37-cae57e28786d>
+  ImportedAssetIds:
+    .hidden/Material: !<reference> ecb43fd1-9760-4541-83aa-66bbd0804a71
+    07cda10e9aacaef5: !<reference> 10fab9e8-92e9-4bd4-9b91-c197715a547a
+    15376ff3105bd1e8: !<reference> 927d49ae-674d-42b8-93f8-9febf611a8ea
+    1be123cb50ba85ba: !<reference> 42cda002-c6c2-4093-9e6f-2aa6f9870492
+    1fdeda0fd2075b43: !<reference> 76c10260-eaa5-45a2-b458-e1e11a3f5d3a
+    21df3115d5bfabfa: !<reference> 185809fa-5602-4df8-89a8-a9f499266498
+    26ba073d67b9d0dd: !<reference> 079f360c-fb63-42ce-bfb4-5471bf93d35e
+    4fbe3dfb354c78aa: !<reference> 83733c98-782e-4991-802e-177d87e6804e
+    648194c2ac1eed08: !<reference> 9bdee57b-e9e7-4028-a9e3-892a8b1b5544
+    693c4fc9e8d161ff: !<reference> b4f19376-d711-4cf9-b9c4-966c9e5a072a
+    6bb2134e8af2960c: !<reference> ca528b33-a1bc-4dc6-97a9-effb13c36eea
+    7497a1850b99f117: !<reference> f8bc0941-67ca-4dfa-820a-1c0315abbfca
+    7c4ec60531598322: !<reference> 20394b7d-6e17-48a9-aff0-de9d91fa3c29
+    88ab437fd121cc69: !<reference> 7c4de5a0-fcb5-4734-9165-f36089aae890
+    933be7ec6888f784: !<reference> 4e8ba5f0-0814-411c-ad47-68e0bdfc638d
+    98165faae19d0b3d: !<reference> 5a7d2a5e-b6a2-411c-a228-048576de0c9e
+    9b2c3b814db2fef7: !<reference> d95d3db3-fd0c-4ad5-b7d6-a135738396fd
+    9db7d5574184394e: !<reference> bcee75e9-0025-4e79-bc66-88ece3891485
+    Materials/Material: !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+    Materials/Material|Material|GraphPassInfo: !<reference> cce29c9c-b361-4f5e-bfd3-0d85d5b8b90c
+    Meshes/Ayak098: !<reference> a7ab364e-876a-4000-93c5-f76e0135a0b0
+    Meshes/Kolcak020: !<reference> 70232c72-70d2-4a17-912d-af287523c5ec
+    Meshes/Kolcak021: !<reference> bcb661ff-5ded-4e29-9128-eea459379b99
+    Meshes/Minder Duz017: !<reference> f45e44e4-5c04-4831-90db-92bb9a54e823
+    Meshes/Minder Duz018: !<reference> b1b75a80-855c-4526-897c-e62baed8c870
+    Meshes/Minder Duz019: !<reference> 4a12f084-d0c3-4aad-b4da-642cdf876a5c
+    Meshes/Sirt024: !<reference> 789b02ba-0317-4cc7-a38a-06e7154bab4c
+    Meshes/Sirt025: !<reference> f56e53eb-5763-4ef5-b46e-de225b371725
+    Meshes/Sirt026: !<reference> a8caa5f7-56d9-4aab-b54d-f350fe558b26
+    Scene: !<reference> c9b1eb32-290f-478c-83c4-681b9f56cafa
+    Textures/baseColor: !<reference> ad50b216-d41e-42aa-b5bd-f21ef28bc1db
+    Textures/normal: !<reference> 7fb984b7-e3f4-4d02-bc8b-2e09eafa10f7
+    Textures/occlusionRoughnessMetallic: !<reference> 27d90e75-46be-4ec1-ae41-2913f8b64d40
+    a1c344b6e35be58d: !<reference> 9f4717b5-5002-454b-9915-e0cbaabba710
+    cb03133108a39f90: !<reference> 7df87b09-12c3-48ae-9a2b-34a661a2a96c
+    d22c8f8732b943dc: !<reference> 43812937-0cd7-4a21-a708-8c79cd5a1f14
+    d93fe147b4097ba7: !<reference> f0f92ea1-93ae-4568-aa5a-6940a6cf6c0a
+    dc5df9b20c67110c: !<reference> 2a3af582-f0bf-4276-a718-5a2cdb5bace3
+    e1158b3f0e1e9a8a: !<reference> 14da0ca4-8619-4420-bfae-ab101e3acecd
+    f6ec0ac495f73b5a: !<reference> b4978ec9-b7c7-4db0-b25b-852dcc8d6e0d
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> c9b1eb32-290f-478c-83c4-681b9f56cafa
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 24ff4bfb-66d4-464c-8958-312958d9acd4
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      png: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/079f360c-fb63-42ce-404b-ab8e406c2ca1>
+  PrefabRemaps:
+    []
+  Name: sofa_22
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 7c4de5a0-fcb5-4734-6e9a-0c9f7655176f
+  Components:
+    []
+- !<SceneObject/10fab9e8-92e9-4bd4-646e-3e688ea5ab85>
+  PrefabRemaps:
+    []
+  Name: RootNode
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> b4978ec9-b7c7-4db0-4da4-7ad2337291f2
+  Components:
+    []
+- !<SceneObject/14da0ca4-8619-4420-4051-54efe1c53132>
+  PrefabRemaps:
+    []
+  Name: Minder Duz019
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 76c10260-eaa5-45a2-4ba7-1e1ee5c0a2c5
+- !<SceneObject/185809fa-5602-4df8-7657-560b66d99b67>
+  PrefabRemaps:
+    []
+  Name: Root Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 2a3af582-f0bf-4276-58e7-a5d324a4531c
+  Components:
+    []
+- !<RenderMeshVisual/20394b7d-6e17-48a9-500f-21626e05c3d6>
+  PrefabRemaps:
+    []
+  Name: Minder Duz017
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> f45e44e4-5c04-4831-90db-92bb9a54e823
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<ObjectPrefabAssetData/24ff4bfb-66d4-464c-8958-312958d9acd4>
+  Prototype: !<ObjectOwner/331a5c7d-088f-4c8b-96ee-b0a3126b550f>
+    PackagePath: ""
+    objects:
+      - !<own> 079f360c-fb63-42ce-404b-ab8e406c2ca1
+- !<SceneObject/2a3af582-f0bf-4276-58e7-a5d324a4531c>
+  PrefabRemaps:
+    []
+  Name: SidleFit
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: -0.046518, y: -0.000002, z: 0.117378}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000163, y: 1.000260, z: 1.000465}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 10fab9e8-92e9-4bd4-646e-3e688ea5ab85
+  Components:
+    []
+- !<SceneObject/42cda002-c6c2-4093-6190-d5590678fb6d>
+  PrefabRemaps:
+    []
+  Name: Sirt026
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> ca528b33-a1bc-4dc6-6856-1004ec3c9115
+- !<SceneObject/43812937-0cd7-4a21-58f7-738632a5e0eb>
+  PrefabRemaps:
+    []
+  Name: Sirt024
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 83733c98-782e-4991-7fd1-e88278197fb1
+- !<SceneObject/4e8ba5f0-0814-411c-52b8-971f42039c72>
+  PrefabRemaps:
+    []
+  Name: Minder Duz018
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 7df87b09-12c3-48ae-65d4-cb599e5d5693
+- !<RenderMeshVisual/5a7d2a5e-b6a2-411c-5dd7-fb7a8921f361>
+  PrefabRemaps:
+    []
+  Name: Kolcak020
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> 70232c72-70d2-4a17-912d-af287523c5ec
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<RenderMeshVisual/76c10260-eaa5-45a2-4ba7-1e1ee5c0a2c5>
+  PrefabRemaps:
+    []
+  Name: Minder Duz019
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> 4a12f084-d0c3-4aad-b4da-642cdf876a5c
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/7c4de5a0-fcb5-4734-6e9a-0c9f7655176f>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 185809fa-5602-4df8-7657-560b66d99b67
+  Components:
+    []
+- !<RenderMeshVisual/7df87b09-12c3-48ae-65d4-cb599e5d5693>
+  PrefabRemaps:
+    []
+  Name: Minder Duz018
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> b1b75a80-855c-4526-897c-e62baed8c870
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<RenderMeshVisual/83733c98-782e-4991-7fd1-e88278197fb1>
+  PrefabRemaps:
+    []
+  Name: Sirt024
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> 789b02ba-0317-4cc7-a38a-06e7154bab4c
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/927d49ae-674d-42b8-6c07-601409ee5715>
+  PrefabRemaps:
+    []
+  Name: Sirt025
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> b4f19376-d711-4cf9-463b-699361a5f8d5
+- !<SceneObject/9bdee57b-e9e7-4028-561c-76d574e4aabb>
+  PrefabRemaps:
+    []
+  Name: Kolcak020
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 5a7d2a5e-b6a2-411c-5dd7-fb7a8921f361
+- !<RenderMeshVisual/9f4717b5-5002-454b-66ea-1f34554458ef>
+  PrefabRemaps:
+    []
+  Name: Ayak098
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> a7ab364e-876a-4000-93c5-f76e0135a0b0
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/b4978ec9-b7c7-4db0-4da4-7ad2337291f2>
+  PrefabRemaps:
+    []
+  Name: Sofa
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: -90.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> f0f92ea1-93ae-4568-55a5-96bf593093f5
+    - !<own> 9bdee57b-e9e7-4028-561c-76d574e4aabb
+    - !<own> f8bc0941-67ca-4dfa-7df5-e3fcea544035
+    - !<own> d95d3db3-fd0c-4ad5-4829-5eca8c7c6902
+    - !<own> 4e8ba5f0-0814-411c-52b8-971f42039c72
+    - !<own> 14da0ca4-8619-4420-4051-54efe1c53132
+    - !<own> 43812937-0cd7-4a21-58f7-738632a5e0eb
+    - !<own> 927d49ae-674d-42b8-6c07-601409ee5715
+    - !<own> 42cda002-c6c2-4093-6190-d5590678fb6d
+  Components:
+    []
+- !<RenderMeshVisual/b4f19376-d711-4cf9-463b-699361a5f8d5>
+  PrefabRemaps:
+    []
+  Name: Sirt025
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> f56e53eb-5763-4ef5-b46e-de225b371725
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<RenderMeshVisual/bcee75e9-0025-4e79-4399-77131c76eb7a>
+  PrefabRemaps:
+    []
+  Name: Kolcak021
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> bcb661ff-5ded-4e29-9128-eea459379b99
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<RenderMeshVisual/ca528b33-a1bc-4dc6-6856-1004ec3c9115>
+  PrefabRemaps:
+    []
+  Name: Sirt026
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 7b236a83-2c0c-4921-b17d-9ea044ee998e
+  Mesh: !<reference> a8caa5f7-56d9-4aab-b54d-f350fe558b26
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/d95d3db3-fd0c-4ad5-4829-5eca8c7c6902>
+  PrefabRemaps:
+    []
+  Name: Minder Duz017
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 20394b7d-6e17-48a9-500f-21626e05c3d6
+- !<SceneObject/f0f92ea1-93ae-4568-55a5-96bf593093f5>
+  PrefabRemaps:
+    []
+  Name: Ayak098
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 9f4717b5-5002-454b-66ea-1f34554458ef
+- !<SceneObject/f8bc0941-67ca-4dfa-7df5-e3fcea544035>
+  PrefabRemaps:
+    []
+  Name: Kolcak021
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> bcee75e9-0025-4e79-4399-77131c76eb7a

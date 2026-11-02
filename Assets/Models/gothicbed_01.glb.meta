@@ -1,0 +1,151 @@
+- !<AssetImportMetadata/c97d6b48-0325-47d1-8de6-d9c9c3e7d163>
+  ImportedAssetIds:
+    .hidden/GothicBed_01: !<reference> f13979c0-6bae-4254-bda8-a710c478d8f2
+    12ab5da84830f00f: !<reference> 55591a54-f09c-4119-beec-9ec3bb167e58
+    26ba073d67b9d0dd: !<reference> 75644875-f39a-43c5-afc8-15d639c4d86d
+    657c264db4d38ac9: !<reference> 19a9a4d3-0a28-4935-a9c9-30fb4309d27a
+    88ab437fd121cc69: !<reference> 70da6ebf-7e60-4d00-821a-6f64f530eab0
+    Materials/GothicBed_01: !<reference> d88312cb-1feb-40b9-8e9e-2ee101933cf3
+    Materials/GothicBed_01|GothicBed_01|GraphPassInfo: !<reference> bae2cb10-b0ec-4f7a-9d3a-33febfd73ceb
+    Meshes/Plane.004: !<reference> c3d4f325-377c-4086-b0d3-df3379e0eabd
+    Scene: !<reference> ec58ecc3-5305-41e8-9161-54c2b4b42deb
+    Textures/GothicBed_01_diff: !<reference> c908a856-af22-4e1f-b02e-0a9460bb4f4f
+    Textures/GothicBed_01_metallic-GothicBed_01_roughness: !<reference> c47e56d7-f903-402a-b0ca-0fc256053eff
+    Textures/GothicBed_01_nor_gl: !<reference> f0f87011-32ac-4ca4-a862-708bd49fb193
+    b44335183110c853: !<reference> 504ee35c-317a-42d6-b68b-3c9144d11f00
+    d1f753529b3a2380: !<reference> 4b8d9253-9c82-4302-9f68-2e20f8541191
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> ec58ecc3-5305-41e8-9161-54c2b4b42deb
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> d2b6021b-01f0-4dec-987b-0ebf8abcab1b
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      jpg: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/19a9a4d3-0a28-4935-5636-cf04bcf62d85>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 55591a54-f09c-4119-4113-613c44e981a7
+  Components:
+    []
+- !<RenderMeshVisual/4b8d9253-9c82-4302-6097-d1df07abee6e>
+  PrefabRemaps:
+    []
+  Name: Plane.004
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> d88312cb-1feb-40b9-8e9e-2ee101933cf3
+  Mesh: !<reference> c3d4f325-377c-4086-b0d3-df3379e0eabd
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/504ee35c-317a-42d6-4974-c36ebb2ee0ff>
+  PrefabRemaps:
+    []
+  Name: GothicBed_01
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 4b8d9253-9c82-4302-6097-d1df07abee6e
+- !<SceneObject/55591a54-f09c-4119-4113-613c44e981a7>
+  PrefabRemaps:
+    []
+  Name: SidleFit
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: -0.035574, y: 0.000000, z: 0.033105}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000166, y: 1.000104, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 504ee35c-317a-42d6-4974-c36ebb2ee0ff
+  Components:
+    []
+- !<SceneObject/70da6ebf-7e60-4d00-7de5-909b0acf154f>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 19a9a4d3-0a28-4935-5636-cf04bcf62d85
+  Components:
+    []
+- !<SceneObject/75644875-f39a-43c5-5037-ea29c63b2792>
+  PrefabRemaps:
+    []
+  Name: gothicbed_01
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 70da6ebf-7e60-4d00-7de5-909b0acf154f
+  Components:
+    []
+- !<ObjectPrefabAssetData/d2b6021b-01f0-4dec-987b-0ebf8abcab1b>
+  Prototype: !<ObjectOwner/d777a17a-4845-4a97-b269-b63b3beafb79>
+    PackagePath: ""
+    objects:
+      - !<own> 75644875-f39a-43c5-5037-ea29c63b2792

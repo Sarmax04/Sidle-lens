@@ -10,7 +10,8 @@
     "heightCm": 70.9,
     "glb": "Models/sofa_02.glb",
     "yawDeg": 0,
-    "credit": "Kirill Sannikov, CC0"
+    "credit": "Kirill Sannikov, CC0",
+    "thumbnail": "Models/thumbs/sofa_02.png"
   },
   {
     "id": "sofa_01",
@@ -23,7 +24,8 @@
     "heightCm": 79.7,
     "glb": "Models/sofa_01.glb",
     "yawDeg": 0,
-    "credit": "Kirill Sannikov, CC0"
+    "credit": "Kirill Sannikov, CC0",
+    "thumbnail": "Models/thumbs/sofa_01.png"
   },
   {
     "id": "sofa_03",
@@ -36,7 +38,8 @@
     "heightCm": 111.8,
     "glb": "Models/sofa_03.glb",
     "yawDeg": 0,
-    "credit": "Fran Calvente, CC0"
+    "credit": "Fran Calvente, CC0",
+    "thumbnail": "Models/thumbs/sofa_03.png"
   },
   {
     "id": "armchair_01",
@@ -49,7 +52,8 @@
     "heightCm": 106.5,
     "glb": "Models/armchair_01.glb",
     "yawDeg": 0,
-    "credit": "Kirill Sannikov, CC0"
+    "credit": "Kirill Sannikov, CC0",
+    "thumbnail": "Models/thumbs/armchair_01.png"
   },
   {
     "id": "painted_wooden_chair_01",
@@ -62,7 +66,8 @@
     "heightCm": 95.6,
     "glb": "Models/painted_wooden_chair_01.glb",
     "yawDeg": 0,
-    "credit": "Kuutti Siitonen, CC0"
+    "credit": "Kuutti Siitonen, CC0",
+    "thumbnail": "Models/thumbs/painted_wooden_chair_01.png"
   },
   {
     "id": "dining_table",
@@ -75,6 +80,133 @@
     "heightCm": 87.7,
     "glb": "Models/dining_table.glb",
     "yawDeg": 0,
-    "credit": "Aron Łyczek, CC0"
+    "credit": "Aron Łyczek, CC0",
+    "thumbnail": "Models/thumbs/dining_table.png"
+  },
+  {
+    "id": "sofa_4",
+    "name": "Sofa 4",
+    "category": "sofa",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 234.1,
+    "depthCm": 101.2,
+    "heightCm": 88.9,
+    "glb": "Models/sofa_4.glb",
+    "yawDeg": 0,
+    "credit": "Taha Arslan (ShareTextures), CC0",
+    "thumbnail": "Models/thumbs/sofa_4.png"
+  },
+  {
+    "id": "sofa_22",
+    "name": "Sofa 22",
+    "category": "sofa",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 283.5,
+    "depthCm": 90.4,
+    "heightCm": 70.2,
+    "glb": "Models/sofa_22.glb",
+    "yawDeg": 0,
+    "credit": "Taha Arslan (ShareTextures), CC0",
+    "thumbnail": "Models/thumbs/sofa_22.png"
+  },
+  {
+    "id": "sofa_17",
+    "name": "Sofa 17",
+    "category": "sofa",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 240.4,
+    "depthCm": 91.4,
+    "heightCm": 78.6,
+    "glb": "Models/sofa_17.glb",
+    "yawDeg": 0,
+    "credit": "Taha Arslan (ShareTextures), CC0",
+    "thumbnail": "Models/thumbs/sofa_17.png"
+  },
+  {
+    "id": "armchair_16",
+    "name": "Armchair 16",
+    "category": "chair",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 77.9,
+    "depthCm": 75.7,
+    "heightCm": 76.4,
+    "glb": "Models/armchair_16.glb",
+    "yawDeg": 0,
+    "credit": "Taha Arslan (ShareTextures), CC0",
+    "thumbnail": "Models/thumbs/armchair_16.png"
+  },
+  {
+    "id": "table_3",
+    "name": "Table 3",
+    "category": "table",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 120,
+    "depthCm": 120.8,
+    "heightCm": 80,
+    "glb": "Models/table_3.glb",
+    "yawDeg": 0,
+    "credit": "Taha Arslan (ShareTextures), CC0",
+    "thumbnail": "Models/thumbs/table_3.png"
+  },
+  {
+    "id": "table_4",
+    "name": "Table 4",
+    "category": "table",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 120,
+    "depthCm": 60,
+    "heightCm": 90,
+    "glb": "Models/table_4.glb",
+    "yawDeg": 0,
+    "credit": "Taha Arslan (ShareTextures), CC0",
+    "thumbnail": "Models/thumbs/table_4.png"
+  },
+  {
+    "id": "classic_bed",
+    "name": "Classic Bed",
+    "category": "bed",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 168.6,
+    "depthCm": 216.4,
+    "heightCm": 110.8,
+    "glb": "Models/classic_bed.glb",
+    "yawDeg": 0,
+    "credit": "Bed1 by Scopia Visual Interfaces Systems, s.l. (scopia.es), CC BY 3.0, via Sweet Home 3D free models",
+    "thumbnail": "Models/thumbs/classic_bed.png"
+  },
+  {
+    "id": "single_bed",
+    "name": "Single Bed",
+    "category": "bed",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 91.8,
+    "depthCm": 205.3,
+    "heightCm": 87.4,
+    "glb": "Models/single_bed.glb",
+    "yawDeg": 90,
+    "credit": "Children bed by Scopia Visual Interfaces Systems, s.l. (scopia.es), CC BY 3.0, via Sweet Home 3D free models",
+    "thumbnail": "Models/thumbs/single_bed.png"
+  },
+  {
+    "id": "gothicbed_01",
+    "name": "Gothic Bed 01",
+    "category": "bed",
+    "sourceUrl": "https://polyhaven.com/a/GothicBed_01",
+    "domain": "polyhaven.com",
+    "widthCm": 149.4,
+    "depthCm": 204,
+    "heightCm": 153.4,
+    "glb": "Models/gothicbed_01.glb",
+    "yawDeg": 0,
+    "credit": "Kirill Sannikov, CC0",
+    "thumbnail": "Models/thumbs/gothicbed_01.png"
   }
 ]

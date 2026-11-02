@@ -1,0 +1,300 @@
+- !<AssetImportMetadata/34e1e6a2-9e70-4479-a4f9-63fdf80ca104>
+  ImportedAssetIds:
+    .hidden/Material: !<reference> 3312c38f-cf22-4cde-bec3-be7b8f271f80
+    0080d40e92e123b6: !<reference> ecea2365-900f-4aeb-8af4-9b5f26e6f4c1
+    07cda10e9aacaef5: !<reference> 55c5ead0-775c-4582-8328-0df2e2de47fe
+    21df3115d5bfabfa: !<reference> 8cacb6e4-2275-4ed7-95d6-285685005137
+    222bfa2b931f5c74: !<reference> 51191ab9-2c90-4661-9e08-6f7f91748847
+    26ba073d67b9d0dd: !<reference> f2802be0-4d49-4277-a594-5c45f3b932b8
+    309c41381790c084: !<reference> fa9e7d47-bcf9-4a72-85d0-8e1e54c9f862
+    39ddcf1e4d2980c8: !<reference> 1eaeab81-13e4-47bd-adcf-6d6b75574f71
+    3a40cc42678abde0: !<reference> fe49473d-b48e-4b44-96db-78bee73253a1
+    6e77432b77227fde: !<reference> 1d3d6059-7ece-4765-8f37-ca705488ec8e
+    88ab437fd121cc69: !<reference> efc5a70f-705b-4b55-8b37-39c3154e6749
+    9cb29940282233a8: !<reference> 6916d0bd-e279-43fb-9af0-32061b978f18
+    Materials/Material: !<reference> c93e988d-1687-4dfb-813d-d0bfe5bf3813
+    Materials/Material|Material|GraphPassInfo: !<reference> 6c8ce764-4d05-4c28-9605-c885f5a601d9
+    Meshes/food_prep_table: !<reference> 980fdd15-b5c8-4012-aedf-85884c930bca
+    Meshes/food_prep_table.001: !<reference> cbbd1d1e-65cc-42a6-b984-409d31d540a8
+    Meshes/food_prep_table.002: !<reference> d407ec2d-fcbf-41be-87c5-8f49e86c5c1f
+    Meshes/food_prep_table.003: !<reference> 62601c5d-5bb2-4066-aa04-bcfe46cfffe8
+    Scene: !<reference> 2b2c2979-106b-4e5f-afd4-247fbac9a61e
+    Textures/baseColor: !<reference> bbdf088f-447e-45ee-b3c4-01b6e56fe0b1
+    Textures/normal: !<reference> 9da03c28-5e00-4840-82f3-a928211b7825
+    Textures/occlusionRoughnessMetallic: !<reference> 3d48bd37-3bf9-4cc9-b873-166605742798
+    abda154bc35e6c65: !<reference> 9caa5988-3191-4acc-bd2b-2ffc3adb663f
+    c6649a4f7ac21673: !<reference> cde2898f-93d6-4110-bf42-e4019968118b
+    dc5df9b20c67110c: !<reference> 28bbf50d-fc48-4228-9cd8-26718371bb57
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> 2b2c2979-106b-4e5f-afd4-247fbac9a61e
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 99ce41d3-05fa-4de4-9c30-4ee0cc4eaa7c
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      png: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/1d3d6059-7ece-4765-70c8-358fab771371>
+  PrefabRemaps:
+    []
+  Name: food_prep_table.003
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> cde2898f-93d6-4110-40bd-1bfe6697ee74
+- !<SceneObject/1eaeab81-13e4-47bd-5230-92948aa8b08e>
+  PrefabRemaps:
+    []
+  Name: food_prep_table.002
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 9caa5988-3191-4acc-42d4-d003c52499c0
+- !<SceneObject/28bbf50d-fc48-4228-6327-d98e7c8e44a8>
+  PrefabRemaps:
+    []
+  Name: SidleFit
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 55c5ead0-775c-4582-7cd7-f20d1d21b801
+  Components:
+    []
+- !<SceneObject/51191ab9-2c90-4661-61f7-90806e8b77b8>
+  PrefabRemaps:
+    []
+  Name: Food Prep Table
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: -90.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> fe49473d-b48e-4b44-6924-874118cdac5e
+    - !<own> ecea2365-900f-4aeb-750b-64a0d9190b3e
+    - !<own> 1eaeab81-13e4-47bd-5230-92948aa8b08e
+    - !<own> 1d3d6059-7ece-4765-70c8-358fab771371
+  Components:
+    []
+- !<SceneObject/55c5ead0-775c-4582-7cd7-f20d1d21b801>
+  PrefabRemaps:
+    []
+  Name: RootNode
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 51191ab9-2c90-4661-61f7-90806e8b77b8
+  Components:
+    []
+- !<RenderMeshVisual/6916d0bd-e279-43fb-650f-cdf9e46870e7>
+  PrefabRemaps:
+    []
+  Name: food_prep_table.001
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> c93e988d-1687-4dfb-813d-d0bfe5bf3813
+  Mesh: !<reference> cbbd1d1e-65cc-42a6-b984-409d31d540a8
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/8cacb6e4-2275-4ed7-6a29-d7a97affaec8>
+  PrefabRemaps:
+    []
+  Name: Root Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 28bbf50d-fc48-4228-6327-d98e7c8e44a8
+  Components:
+    []
+- !<ObjectPrefabAssetData/99ce41d3-05fa-4de4-9c30-4ee0cc4eaa7c>
+  Prototype: !<ObjectOwner/793c06de-906f-4416-9d2b-711b8d59335e>
+    PackagePath: ""
+    objects:
+      - !<own> f2802be0-4d49-4277-5a6b-a3ba0c46cd47
+- !<RenderMeshVisual/9caa5988-3191-4acc-42d4-d003c52499c0>
+  PrefabRemaps:
+    []
+  Name: food_prep_table.002
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> c93e988d-1687-4dfb-813d-d0bfe5bf3813
+  Mesh: !<reference> d407ec2d-fcbf-41be-87c5-8f49e86c5c1f
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<RenderMeshVisual/cde2898f-93d6-4110-40bd-1bfe6697ee74>
+  PrefabRemaps:
+    []
+  Name: food_prep_table.003
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> c93e988d-1687-4dfb-813d-d0bfe5bf3813
+  Mesh: !<reference> 62601c5d-5bb2-4066-aa04-bcfe46cfffe8
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/ecea2365-900f-4aeb-750b-64a0d9190b3e>
+  PrefabRemaps:
+    []
+  Name: food_prep_table.001
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6916d0bd-e279-43fb-650f-cdf9e46870e7
+- !<SceneObject/efc5a70f-705b-4b55-74c8-c63ceab198b6>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 8cacb6e4-2275-4ed7-6a29-d7a97affaec8
+  Components:
+    []
+- !<SceneObject/f2802be0-4d49-4277-5a6b-a3ba0c46cd47>
+  PrefabRemaps:
+    []
+  Name: table_4
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> efc5a70f-705b-4b55-74c8-c63ceab198b6
+  Components:
+    []
+- !<RenderMeshVisual/fa9e7d47-bcf9-4a72-7a2f-71e1ab36079d>
+  PrefabRemaps:
+    []
+  Name: food_prep_table
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> c93e988d-1687-4dfb-813d-d0bfe5bf3813
+  Mesh: !<reference> 980fdd15-b5c8-4012-aedf-85884c930bca
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/fe49473d-b48e-4b44-6924-874118cdac5e>
+  PrefabRemaps:
+    []
+  Name: food_prep_table
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> fa9e7d47-bcf9-4a72-7a2f-71e1ab36079d
