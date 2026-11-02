@@ -1,0 +1,80 @@
+[
+  {
+    "id": "sofa_02",
+    "name": "Sofa 02",
+    "category": "sofa",
+    "sourceUrl": "https://polyhaven.com/a/sofa_02",
+    "domain": "polyhaven.com",
+    "widthCm": 180.7,
+    "depthCm": 81.8,
+    "heightCm": 70.9,
+    "glb": "Models/sofa_02.glb",
+    "yawDeg": 0,
+    "credit": "Kirill Sannikov, CC0"
+  },
+  {
+    "id": "sofa_01",
+    "name": "Sofa 01",
+    "category": "sofa",
+    "sourceUrl": "https://polyhaven.com/a/Sofa_01",
+    "domain": "polyhaven.com",
+    "widthCm": 157.1,
+    "depthCm": 65.8,
+    "heightCm": 79.7,
+    "glb": "Models/sofa_01.glb",
+    "yawDeg": 0,
+    "credit": "Kirill Sannikov, CC0"
+  },
+  {
+    "id": "sofa_03",
+    "name": "Sofa 03",
+    "category": "sofa",
+    "sourceUrl": "https://polyhaven.com/a/sofa_03",
+    "domain": "polyhaven.com",
+    "widthCm": 273.1,
+    "depthCm": 92.5,
+    "heightCm": 111.8,
+    "glb": "Models/sofa_03.glb",
+    "yawDeg": 0,
+    "credit": "Fran Calvente, CC0"
+  },
+  {
+    "id": "armchair_01",
+    "name": "Arm Chair 01",
+    "category": "chair",
+    "sourceUrl": "https://polyhaven.com/a/ArmChair_01",
+    "domain": "polyhaven.com",
+    "widthCm": 84.8,
+    "depthCm": 76.6,
+    "heightCm": 106.5,
+    "glb": "Models/armchair_01.glb",
+    "yawDeg": 0,
+    "credit": "Kirill Sannikov, CC0"
+  },
+  {
+    "id": "painted_wooden_chair_01",
+    "name": "Painted Wooden Chair 01",
+    "category": "chair",
+    "sourceUrl": "https://polyhaven.com/a/painted_wooden_chair_01",
+    "domain": "polyhaven.com",
+    "widthCm": 43.2,
+    "depthCm": 54,
+    "heightCm": 95.6,
+    "glb": "Models/painted_wooden_chair_01.glb",
+    "yawDeg": 0,
+    "credit": "Kuutti Siitonen, CC0"
+  },
+  {
+    "id": "dining_table",
+    "name": "Dining Table",
+    "category": "table",
+    "sourceUrl": "https://polyhaven.com/a/dining_table",
+    "domain": "polyhaven.com",
+    "widthCm": 225.6,
+    "depthCm": 139,
+    "heightCm": 87.7,
+    "glb": "Models/dining_table.glb",
+    "yawDeg": 0,
+    "credit": "Aron Łyczek, CC0"
+  }
+]

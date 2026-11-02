@@ -1,0 +1,174 @@
+- !<AssetImportMetadata/4c8049f4-ef58-4dce-84c6-25bef5565035>
+  ImportedAssetIds:
+    .hidden/sofa_02: !<reference> 24f5135f-112b-48be-b5c4-53d31130aefa
+    26ba073d67b9d0dd: !<reference> 613ecb4c-de9a-4267-8fb6-ccd8bb142de8
+    4cb5ea424b628352: !<reference> c162f311-7f94-4a1d-8ee1-c03c4cd84fb9
+    55db44d9698fafec: !<reference> 76961750-f6c4-4a36-919e-876625f756f7
+    657c264db4d38ac9: !<reference> 2ce2794f-6cb4-429d-883e-b58bb328d305
+    88ab437fd121cc69: !<reference> 7c660fcb-07d2-4a8c-be0f-ed016435193d
+    Materials/sofa_02: !<reference> 94506743-3dc4-4f98-a92a-acf17937d49c
+    Materials/sofa_02|sofa_02|GraphPassInfo: !<reference> 8778b6f6-5e9c-4589-ba5d-60b6ccc7420b
+    Meshes/Mesh.007: !<reference> ded3d170-1387-4e4b-9ddf-ebbe8941b83d
+    Meshes/Plane.001: !<reference> 189625a3-94c6-4e4d-9987-13e68847eac9
+    Scene: !<reference> 9fcb282f-7d29-42c7-8e37-1f9458a327d7
+    Textures/sofa_02_diff: !<reference> aa5bc04a-afb1-4b4d-866e-527b6f1e6ad0
+    Textures/sofa_02_metallic-sofa_02_roughness: !<reference> 62dbd919-1759-4781-9be6-b2d74457095d
+    Textures/sofa_02_nor_gl: !<reference> be11786f-3b60-4019-bf06-0f3b14b7fe6c
+    b19d1b3286e741bc: !<reference> a97e69d7-b0ff-462f-99f7-87d46898f6dd
+    fe959ae6d6f1af0d: !<reference> cc9bf8ba-1071-413e-80ad-ebfdce4a542e
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> 9fcb282f-7d29-42c7-8e37-1f9458a327d7
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 12336852-aaf9-40cd-bd5c-cee4f3cc956e
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      jpg: Performance Compression
+    Overrides:
+      {}
+- !<ObjectPrefabAssetData/12336852-aaf9-40cd-bd5c-cee4f3cc956e>
+  Prototype: !<ObjectOwner/b12a9eae-f494-4182-a8f1-24b48f3c438f>
+    PackagePath: ""
+    objects:
+      - !<own> 613ecb4c-de9a-4267-7049-332744ebd217
+- !<SceneObject/2ce2794f-6cb4-429d-77c1-4a744cd72cfa>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> c162f311-7f94-4a1d-711e-3fc3b327b046
+    - !<own> 76961750-f6c4-4a36-6e61-7899da08a908
+  Components:
+    []
+- !<SceneObject/613ecb4c-de9a-4267-7049-332744ebd217>
+  PrefabRemaps:
+    []
+  Name: sofa_02
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 7c660fcb-07d2-4a8c-41f0-12fe9bcae6c2
+  Components:
+    []
+- !<SceneObject/76961750-f6c4-4a36-6e61-7899da08a908>
+  PrefabRemaps:
+    []
+  Name: sofa_02_Seat
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000267, y: 0.000206, z: 0.031265}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> cc9bf8ba-1071-413e-7f52-140231b5abd1
+- !<SceneObject/7c660fcb-07d2-4a8c-41f0-12fe9bcae6c2>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 2ce2794f-6cb4-429d-77c1-4a744cd72cfa
+  Components:
+    []
+- !<RenderMeshVisual/a97e69d7-b0ff-462f-6608-782b97670922>
+  PrefabRemaps:
+    []
+  Name: Plane.001
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 94506743-3dc4-4f98-a92a-acf17937d49c
+  Mesh: !<reference> 189625a3-94c6-4e4d-9987-13e68847eac9
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/c162f311-7f94-4a1d-711e-3fc3b327b046>
+  PrefabRemaps:
+    []
+  Name: sofa_02_Base
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000267, y: 0.000206, z: 0.031265}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> a97e69d7-b0ff-462f-6608-782b97670922
+- !<RenderMeshVisual/cc9bf8ba-1071-413e-7f52-140231b5abd1>
+  PrefabRemaps:
+    []
+  Name: Mesh.007
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 94506743-3dc4-4f98-a92a-acf17937d49c
+  Mesh: !<reference> ded3d170-1387-4e4b-9ddf-ebbe8941b83d
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}

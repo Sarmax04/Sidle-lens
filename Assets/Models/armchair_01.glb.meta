@@ -1,0 +1,135 @@
+- !<AssetImportMetadata/772a525f-8438-4a9d-a3c9-64143391ec46>
+  ImportedAssetIds:
+    .hidden/Armchair_01: !<reference> ff71dda3-bfa8-4428-9fce-f4a2cf934277
+    207b4a96c6f5eab7: !<reference> 0105c1df-512b-4d29-b355-310c6545a602
+    26ba073d67b9d0dd: !<reference> 686e802f-2991-458e-b281-6418e380501d
+    586503f0865031b9: !<reference> 5d3372d8-e725-4b05-8b5a-f71666c84d73
+    657c264db4d38ac9: !<reference> 345959f8-12d8-4f34-a400-f287d383ef82
+    88ab437fd121cc69: !<reference> 59e675fb-f66c-44b3-98b5-aa3570bc600c
+    Materials/Armchair_01: !<reference> 72ca4e3b-09d1-4d8a-bc6f-66f12e9e2abb
+    Materials/Armchair_01|Armchair_01|GraphPassInfo: !<reference> 20cc4628-2333-4267-864e-5e57e6cb00c5
+    Meshes/Cylinder.001: !<reference> 02dee3c9-08f1-4862-bd32-9ef8b116c818
+    Scene: !<reference> 5ac49a89-09f0-482f-ab02-9f58ab602912
+    Textures/Armchair_01_arm: !<reference> ff0a3da2-8b6c-4807-a462-766841f2e675
+    Textures/Armchair_01_diff: !<reference> 7ab99b49-8114-4496-8286-35d1110a7e29
+    Textures/Armchair_01_nor_gl: !<reference> 7650d4a2-b2ef-49cb-b697-ba118f871cb4
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> 5ac49a89-09f0-482f-ab02-9f58ab602912
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 021b5983-803a-4b64-a5de-33fffcb20f35
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      jpg: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/0105c1df-512b-4d29-4caa-cef39aba59fd>
+  PrefabRemaps:
+    []
+  Name: ArmChair_01
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 5d3372d8-e725-4b05-74a5-08e99937b28c
+- !<ObjectPrefabAssetData/021b5983-803a-4b64-a5de-33fffcb20f35>
+  Prototype: !<ObjectOwner/92813221-2aaf-4b27-a14c-6e4a070b4a24>
+    PackagePath: ""
+    objects:
+      - !<own> 686e802f-2991-458e-4d7e-9be71c7fafe2
+- !<SceneObject/345959f8-12d8-4f34-5bff-0d782c7c107d>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 0105c1df-512b-4d29-4caa-cef39aba59fd
+  Components:
+    []
+- !<SceneObject/59e675fb-f66c-44b3-674a-55ca8f439ff3>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 345959f8-12d8-4f34-5bff-0d782c7c107d
+  Components:
+    []
+- !<RenderMeshVisual/5d3372d8-e725-4b05-74a5-08e99937b28c>
+  PrefabRemaps:
+    []
+  Name: Cylinder.001
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 72ca4e3b-09d1-4d8a-bc6f-66f12e9e2abb
+  Mesh: !<reference> 02dee3c9-08f1-4862-bd32-9ef8b116c818
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/686e802f-2991-458e-4d7e-9be71c7fafe2>
+  PrefabRemaps:
+    []
+  Name: armchair_01
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 59e675fb-f66c-44b3-674a-55ca8f439ff3
+  Components:
+    []

@@ -1,0 +1,174 @@
+- !<AssetImportMetadata/cee06fcd-b73d-4e8a-bc24-1a21ba0d992b>
+  ImportedAssetIds:
+    .hidden/dining_table: !<reference> 47a44de0-f9d0-44a4-96ab-6e509cd91b7e
+    1474d90535c295d8: !<reference> ba33cc22-5920-40db-8d4a-5a182a06d227
+    26ba073d67b9d0dd: !<reference> 4e1fb777-8b7f-46b5-bb77-6fd36868ef44
+    657c264db4d38ac9: !<reference> 0241aae8-3ce7-4f57-8382-e5007de53fc4
+    68c49b23774dfd2c: !<reference> d223f99e-bdf3-4289-a563-f09c45ec78e2
+    88ab437fd121cc69: !<reference> 21740111-7a93-4906-b02a-94fd33dbc7d6
+    Materials/dining_table: !<reference> 5f23fbf1-0199-4686-a843-2bb60d42925b
+    Materials/dining_table|dining_table|GraphPassInfo: !<reference> d1edc38f-fe3c-452c-974c-1967c43e626d
+    Meshes/table1.001: !<reference> eb1575c2-78d8-42ba-8391-33b3b81c869b
+    Meshes/table1_cloth.001: !<reference> 897dfb2f-2d6c-4bb0-8d35-27ebb83d0277
+    Scene: !<reference> 7f16f3f1-e1e3-498c-9e46-c793a4c0b54e
+    Textures/dining_table_diff: !<reference> e3768823-d85b-4be3-bb66-dacdd54a3425
+    Textures/dining_table_nor_gl: !<reference> 1b435a73-d101-4003-983b-9d8fa915d7a7
+    Textures/dining_table_rough: !<reference> fc45be99-500e-48e1-b3be-8a38df014eb1
+    bbcca23433153af4: !<reference> 5b7c4c57-67dc-466c-b4f6-24d2e2db10de
+    f9cdc3ab854b202b: !<reference> 22a450cf-d9f3-4386-9354-3edbbc359b23
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> 7f16f3f1-e1e3-498c-9e46-c793a4c0b54e
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 67125c37-16c4-483b-9951-b17cdef6a65b
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      jpg: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/0241aae8-3ce7-4f57-7c7d-1aff821ac03b>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 5b7c4c57-67dc-466c-4b09-db2d1d24ef21
+    - !<own> 22a450cf-d9f3-4386-6cab-c12443ca64dc
+  Components:
+    []
+- !<SceneObject/21740111-7a93-4906-4fd5-6b02cc243829>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 0241aae8-3ce7-4f57-7c7d-1aff821ac03b
+  Components:
+    []
+- !<SceneObject/22a450cf-d9f3-4386-6cab-c12443ca64dc>
+  PrefabRemaps:
+    []
+  Name: dining_table_cloth
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> d223f99e-bdf3-4289-5a9c-0f63ba13871d
+- !<SceneObject/4e1fb777-8b7f-46b5-4488-902c979710bb>
+  PrefabRemaps:
+    []
+  Name: dining_table
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 21740111-7a93-4906-4fd5-6b02cc243829
+  Components:
+    []
+- !<SceneObject/5b7c4c57-67dc-466c-4b09-db2d1d24ef21>
+  PrefabRemaps:
+    []
+  Name: dining_table
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> ba33cc22-5920-40db-72b5-a5e7d5f92dd8
+- !<ObjectPrefabAssetData/67125c37-16c4-483b-9951-b17cdef6a65b>
+  Prototype: !<ObjectOwner/eb88a95d-7123-4042-b2f9-e8163c16061e>
+    PackagePath: ""
+    objects:
+      - !<own> 4e1fb777-8b7f-46b5-4488-902c979710bb
+- !<RenderMeshVisual/ba33cc22-5920-40db-72b5-a5e7d5f92dd8>
+  PrefabRemaps:
+    []
+  Name: table1.001
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 5f23fbf1-0199-4686-a843-2bb60d42925b
+  Mesh: !<reference> eb1575c2-78d8-42ba-8391-33b3b81c869b
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<RenderMeshVisual/d223f99e-bdf3-4289-5a9c-0f63ba13871d>
+  PrefabRemaps:
+    []
+  Name: table1_cloth.001
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 5f23fbf1-0199-4686-a843-2bb60d42925b
+  Mesh: !<reference> 897dfb2f-2d6c-4bb0-8d35-27ebb83d0277
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}

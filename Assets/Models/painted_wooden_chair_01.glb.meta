@@ -1,0 +1,135 @@
+- !<AssetImportMetadata/de8bce24-b961-4474-a3cb-661330eaec71>
+  ImportedAssetIds:
+    .hidden/painted_wooden_chair_01: !<reference> 3bbc838d-ba81-417d-a3cc-ad67c2159cdf
+    26ba073d67b9d0dd: !<reference> 1f1f411e-0362-4da1-8664-4e49616b294e
+    363c002824dadb21: !<reference> c7fe4698-cb99-4ad0-9f12-dc955a87a0c6
+    657c264db4d38ac9: !<reference> 924daa95-3f08-4840-a46e-c093f76bf46a
+    7b23c373b1d8e834: !<reference> a4aba2ba-4562-40fe-a6c3-e7eff28e10dc
+    88ab437fd121cc69: !<reference> 20e50163-91a0-4e34-b5b6-9bbd0e83534b
+    Materials/painted_wooden_chair_01: !<reference> f25f6a5d-4426-4800-a306-9618a824914c
+    Materials/painted_wooden_chair_01|painted_wooden_chair_01|GraphPassInfo: !<reference> db158dbb-a692-49d5-a272-8dbdb8e0db48
+    Meshes/Box.041: !<reference> 19f55f5f-066d-4513-8a30-a4c36d6642da
+    Scene: !<reference> b727d5eb-a173-479f-b7e6-a4a74795c9b6
+    Textures/painted_wooden_chair_01_diff: !<reference> cd629ab2-4228-4e90-b33f-b9cdb322bd42
+    Textures/painted_wooden_chair_01_metal-painted_wooden_chair_01_rough: !<reference> 9ea03957-deec-4c1f-95b7-5be6e9dd8080
+    Textures/painted_wooden_chair_01_nor_gl: !<reference> edd2f940-b677-43b0-903e-c54b0671d8b7
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> b727d5eb-a173-479f-b7e6-a4a74795c9b6
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> f99bb8ed-2c71-4fa0-bd1b-cde017d3fb73
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      jpg: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/1f1f411e-0362-4da1-799b-b1b69e94d6b1>
+  PrefabRemaps:
+    []
+  Name: painted_wooden_chair_01
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 20e50163-91a0-4e34-4a49-6442f17cacb4
+  Components:
+    []
+- !<SceneObject/20e50163-91a0-4e34-4a49-6442f17cacb4>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 924daa95-3f08-4840-5b91-3f6c08940b95
+  Components:
+    []
+- !<SceneObject/924daa95-3f08-4840-5b91-3f6c08940b95>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> c7fe4698-cb99-4ad0-60ed-236aa5785f39
+  Components:
+    []
+- !<RenderMeshVisual/a4aba2ba-4562-40fe-593c-18100d71ef23>
+  PrefabRemaps:
+    []
+  Name: Box.041
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> f25f6a5d-4426-4800-a306-9618a824914c
+  Mesh: !<reference> 19f55f5f-066d-4513-8a30-a4c36d6642da
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/c7fe4698-cb99-4ad0-60ed-236aa5785f39>
+  PrefabRemaps:
+    []
+  Name: painted_wooden_chair_01
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> a4aba2ba-4562-40fe-593c-18100d71ef23
+- !<ObjectPrefabAssetData/f99bb8ed-2c71-4fa0-bd1b-cde017d3fb73>
+  Prototype: !<ObjectOwner/5d6c9bb0-808d-4ba9-99b0-7c7f4f04a5bc>
+    PackagePath: ""
+    objects:
+      - !<own> 1f1f411e-0362-4da1-799b-b1b69e94d6b1

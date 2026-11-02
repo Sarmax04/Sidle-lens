@@ -1,0 +1,22 @@
+{
+  "name": "sidle-importer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Imports furniture models and real-world dimensions into the Sidle Lens catalog. Not part of the Lens.",
+  "type": "module",
+  "bin": {
+    "sidle-import": "./import.mjs"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "stats": "node stats.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "cheerio": "^1.2.0"
+  }
+}
