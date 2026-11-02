@@ -243,9 +243,15 @@ export function extractDimensions(html) {
   return complete(merged) ? {...merged, source: used.join("+")} : null
 }
 
-/** Parses the --dims flag: "220x90x85" (cm), or with a unit, e.g. "2200x900x850mm", "86x35x33in". */
+/**
+ * Parses the --dims flag: "220x90x85" or "220,90,85" (cm), or with a unit, e.g. "2200x900x850mm",
+ * "86x35x33in". In the comma form the decimal separator is a point ("180.5,81.8,70.9").
+ */
 export function parseDimsFlag(s) {
-  const m = String(s).trim().match(new RegExp(`^(${NUM})${SEP}(${NUM})${SEP}(${NUM})\\s*(${UNIT})?$`, "i"))
+  const D = String.raw`\d+(?:\.\d+)?`
+  const m =
+    String(s).trim().match(new RegExp(`^(${D})\\s*,\\s*(${D})\\s*,\\s*(${D})\\s*(${UNIT})?$`, "i")) ||
+    String(s).trim().match(new RegExp(`^(${NUM})${SEP}(${NUM})${SEP}(${NUM})\\s*(${UNIT})?$`, "i"))
   if (!m) return null
   const unit = m[4] || "cm"
   const [width, depth, height] = [m[1], m[2], m[3]].map((n) => toCm(parseNumber(n), unit))

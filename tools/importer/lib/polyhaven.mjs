@@ -5,6 +5,7 @@
 import {createHash} from "node:crypto"
 import {mkdir, writeFile, readFile} from "node:fs/promises"
 import {dirname, join} from "node:path"
+import {safeFetch} from "./net.mjs"
 
 export const USER_AGENT = "Sidle-Importer/1.0 (Sidle Lens furniture importer; Node CLI)"
 const API = "https://api.polyhaven.com"
@@ -26,7 +27,7 @@ export function polyHavenId(url) {
 }
 
 async function get(url) {
-  const res = await fetch(url, {headers: {"User-Agent": USER_AGENT}})
+  const res = await safeFetch(url, {headers: {"User-Agent": USER_AGENT}})
   await sleep(PAUSE_MS)
   if (res.status === 429) {
     const wait = Number(res.headers.get("retry-after") || 5) * 1000
@@ -94,13 +95,13 @@ export async function downloadGltf(files, dir, resolution = "1k") {
   return mainPath
 }
 
-/** Poly Haven category path → Sidle category. */
+/** Poly Haven category path → Sidle category. Anything that is not a sofa, chair or table ("other") maps to bed. */
 export function mapCategory(category) {
   const parts = String(category || "").toLowerCase().split("/")
   if (parts.some((p) => /\bsofas?\b/.test(p))) return "sofa"
   if (parts.some((p) => /\bchairs?\b/.test(p))) return "chair"
   if (parts.some((p) => /\btables?\b/.test(p))) return "table"
-  return "other"
+  return "bed"
 }
 
 /** API dimensions are millimetres in Blender axes [x, y, z] = [width, depth, height]. */

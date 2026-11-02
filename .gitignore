@@ -34,3 +34,6 @@ ls-live-instance.json.tmp
 
 # Added by Lens Studio (LEAF plugin)
 leaf_plugin_settings.json
+
+# Local model drop folder for --model imports (never committed)
+tools/importer/inbox/

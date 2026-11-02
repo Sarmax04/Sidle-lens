@@ -1,25 +1,44 @@
 // glTF helpers: pack .gltf → .glb, measure the bounding box, count triangles.
 
 import {NodeIO, getBounds, Primitive} from "@gltf-transform/core"
+import {ALL_EXTENSIONS} from "@gltf-transform/extensions"
 
-const io = new NodeIO()
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
 
 export async function readDocument(path) {
   return io.read(path)
 }
 
+export async function writeDocument(path, doc) {
+  await io.write(path, doc)
+}
+
+/** Bounding box of the default scene in file units: {x, y, z} sizes plus min/max. */
+export function sceneBox(doc) {
+  const root = doc.getRoot()
+  const {min, max} = getBounds(root.getDefaultScene() || root.listScenes()[0])
+  return {x: max[0] - min[0], y: max[1] - min[1], z: max[2] - min[2], min, max}
+}
+
 /** Packs a .gltf (with external .bin/textures resolved relative to it) into one .glb, without altering content. */
 export async function packToGlb(gltfPath, glbPath) {
   const doc = await io.read(gltfPath)
-  // one buffer is required for GLB output
+  singleBuffer(doc)
+  await io.write(glbPath, doc)
+}
+
+/** GLB output needs exactly one buffer: moves every accessor onto the first one. */
+export function singleBuffer(doc) {
   const root = doc.getRoot()
   const buffers = root.listBuffers()
   if (buffers.length > 1) {
     const [keep, ...rest] = buffers
     for (const acc of root.listAccessors()) acc.setBuffer(keep)
     rest.forEach((b) => b.dispose())
+  } else if (!buffers.length) {
+    const b = doc.createBuffer()
+    for (const acc of root.listAccessors()) acc.setBuffer(b)
   }
-  await io.write(glbPath, doc)
 }
 
 /**
