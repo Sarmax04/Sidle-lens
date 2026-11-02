@@ -7,9 +7,9 @@
     - !<own> 8e3a9a80-ea77-4e78-b618-e6547f0905bf
     - !<own> ad9aba06-e6ae-4aae-a1e2-ed5e787519db
     - !<own> e857a34f-2ecc-4cbf-a87f-ce0a56cc711c
-    - !<own> c3c118f5-c2c4-44c7-9863-ff498b18974b
     - !<own> 2a8cee4d-e8da-4af3-9787-cdd774fb39fb
     - !<own> 5710fbb5-7c89-4513-a1bd-2224d58fe16c
+    - !<own> cae8a860-7492-4f4c-8aff-7a7a71f539f7
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -1704,6 +1704,22 @@
     []
   Components:
     - !<own> 26006b78-6ef2-4474-bd4f-c32593b049dc
+- !<ScriptComponent/8ede4240-cbed-489c-85fa-ef9b5e02c20a>
+  PrefabRemaps:
+    []
+  Name: AgentInspectScript
+  Enabled: true
+  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/8fe2a532-9bf3-4cde-b598-04ce5470718d>
   PrefabRemaps:
     []
@@ -1809,6 +1825,8 @@
     padding: true
     iconSize: true
     arrowColor: true
+    grabBarWidth: true
+    grabBarHeight: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1819,6 +1837,8 @@
       padding: 1.600000
       iconSize: 2.400000
       arrowColor: !<Vec4> {x: 1.000000, y: 0.820000, z: 0.450000, w: 1.000000}
+      grabBarWidth: !<float> 14.000000
+      grabBarHeight: 2.500000
   ScriptTypes:
     "":
       {}
@@ -2041,22 +2061,6 @@
     - !<own> 73ed8e46-5c4f-4bb2-b20f-49004b1461c8
   Components:
     []
-- !<ScriptComponent/afaecd3a-38d8-4a6f-8535-39159383d9a2>
-  PrefabRemaps:
-    []
-  Name: AgentInspectScript
-  Enabled: true
-  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/b22d97e6-4c06-4135-af29-d26adb2b9d86>
   PrefabRemaps:
     []
@@ -2124,16 +2128,14 @@
   Enabled: true
   ScriptAsset: !<reference> 61b4ae99-fa56-4d57-ace7-e78781fd7151
   ScriptInputsDefault:
-    distanceCm: true
-    dropCm: true
     followSpeed: true
     deadZoneCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      distanceCm: !<float> 100.000000
-      dropCm: !<float> 20.000000
+      panelDistanceCm: !<float> 110.000000
+      panelDropDeg: !<float> 30.000000
       followSpeed: 2.500000
       deadZoneCm: !<float> 8.000000
   ScriptTypes:
@@ -2259,21 +2261,6 @@
     []
   Components:
     []
-- !<SceneObject/c3c118f5-c2c4-44c7-9863-ff498b18974b>
-  PrefabRemaps:
-    []
-  Name: AiPreviewAgent Handler
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> afaecd3a-38d8-4a6f-8535-39159383d9a2
 - !<ScriptComponent/c8e031d3-a8a1-468a-a419-427f8556de4c>
   PrefabRemaps:
     []
@@ -2317,6 +2304,21 @@
     - !<own> 0a0e1d78-8246-4f5b-ab1a-fdc51837956d
   Components:
     []
+- !<SceneObject/cae8a860-7492-4f4c-8aff-7a7a71f539f7>
+  PrefabRemaps:
+    []
+  Name: AiPreviewAgent Handler
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 8ede4240-cbed-489c-85fa-ef9b5e02c20a
 - !<Skin/ccf4d3bc-d3c2-4580-b9c5-62f164ef7eef>
   PrefabRemaps:
     []

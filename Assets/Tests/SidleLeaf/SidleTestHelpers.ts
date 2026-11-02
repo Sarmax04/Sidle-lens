@@ -6,7 +6,8 @@
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {findSceneObjectByName, sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
+import {findSceneObjectByName, nextFrame, sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
+import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {SidleController} from "../../Scripts/SidleController"
@@ -297,6 +298,7 @@ export async function resetState(): Promise<SidleController> {
   guard = 0
   while (c.rotationDeg > 0.01 && c.rotationDeg < 359.99 && guard++ < 30) c.rotateLeft()
   if (c.measureOn) c.toggleMeasure()
+  c.resetPanelOffset()
   c.setPiecePosition(START.x, START.z)
   await sleep(1400)
   expect(c.currentPieceKey, "reset: piece").toBe("SofaA")
@@ -348,4 +350,150 @@ export function placementValid(x: number, z: number, w: number, d: number, yawDe
     if (ov <= e) return true // separated (touching allowed)
   }
   return false
+}
+
+// ── Head + panel (Update 3) ──────────────────────────────────────────────────
+
+export function cameraTransform(): Transform {
+  return WorldCameraFinderProvider.getInstance().getTransform()
+}
+
+/** Gravity-aligned head frame, worked out independently of SidlePanelOffset. */
+export function levelHeadFrame(): {pos: vec3; fwd: vec3; right: vec3; pitchDeg: number} {
+  const t = cameraTransform()
+  const back = t.back // view direction (camera looks along -Z)
+  const flat = new vec3(back.x, 0, back.z).normalize()
+  return {
+    pos: t.getWorldPosition(),
+    fwd: flat,
+    right: new vec3(-flat.z, 0, flat.x), // 90° clockwise seen from above
+    pitchDeg: (Math.asin(Math.max(-1, Math.min(1, back.y))) * 180) / Math.PI,
+  }
+}
+
+/** Measured head-space offset of a world point: distance, horizontal (+ right) and vertical (+ up) angle. */
+export function headOffsetOf(p: vec3): {distanceCm: number; horizontalDeg: number; verticalDeg: number} {
+  const f = levelHeadFrame()
+  const rel = p.sub(f.pos)
+  const d = rel.length
+  return {
+    distanceCm: d,
+    horizontalDeg: (Math.atan2(rel.dot(f.right), rel.dot(f.fwd)) * 180) / Math.PI,
+    verticalDeg: (Math.asin(rel.y / d) * 180) / Math.PI,
+  }
+}
+
+export function fmtOffset(o: {distanceCm: number; horizontalDeg: number; verticalDeg: number}): string {
+  return `${o.distanceCm.toFixed(1)} cm, h ${o.horizontalDeg.toFixed(1)}°, v ${o.verticalDeg.toFixed(1)}°`
+}
+
+/** The control panel root (the SidlePanelUI SceneObject; label backings are also called "Panel"). */
+export function panelObj(c: SidleController): SceneObject {
+  return c.panelUI.getSceneObject()
+}
+
+/**
+ * Holds the head (camera) at a pose until stop(): the camera's DeviceTracking
+ * is switched off meanwhile (so preview navigation can't move it) and the pose
+ * is re-applied every frame; stop() turns tracking back on and puts the
+ * original pose back.
+ */
+export class HeadHold {
+  private active = true
+  private pos: vec3
+  private rot: quat
+  private readonly origPos: vec3
+  private readonly origRot: quat
+  private readonly tracking: Component | null
+  private readonly trackingWasEnabled: boolean
+  constructor(pos: vec3, yawDeg: number) {
+    const t = cameraTransform()
+    this.origPos = t.getWorldPosition()
+    this.origRot = t.getWorldRotation()
+    this.tracking = t.getSceneObject().getComponent("Component.DeviceTracking") as Component | null
+    this.trackingWasEnabled = !!this.tracking && this.tracking.enabled
+    if (this.tracking) this.tracking.enabled = false
+    this.pos = pos
+    this.rot = quat.angleAxis((-yawDeg * Math.PI) / 180, vec3.up())
+    this.apply()
+    this.loop()
+  }
+  /** yawDeg > 0 turns the head to the right (clockwise seen from above). */
+  set(pos: vec3, yawDeg: number): void {
+    this.pos = pos
+    this.rot = quat.angleAxis((-yawDeg * Math.PI) / 180, vec3.up())
+    this.apply()
+  }
+  async stop(): Promise<void> {
+    this.active = false
+    await nextFrame()
+    const t = cameraTransform()
+    t.setWorldPosition(this.origPos)
+    t.setWorldRotation(this.origRot)
+    if (this.tracking) this.tracking.enabled = this.trackingWasEnabled
+  }
+  private apply(): void {
+    const t = cameraTransform()
+    t.setWorldPosition(this.pos)
+    t.setWorldRotation(this.rot)
+  }
+  private async loop(): Promise<void> {
+    while (this.active) {
+      this.apply()
+      await nextFrame()
+    }
+  }
+}
+
+/** Head pose at the start: the scene's camera origin, level, facing into the room (-Z). */
+export const START_HEAD = {pos: new vec3(0, 0, 0), yawDeg: 0}
+
+/** Names of objects whose visual corners were not finite in the last visualCorners() calls (debug). */
+export const skippedVisuals: string[] = []
+
+/** World-space corners of the local AABB of every mesh visual (RenderMeshVisual, Text, Image) under `root`. */
+export function visualCorners(root: SceneObject, enabledOnly: boolean = false): vec3[] {
+  const out: vec3[] = []
+  const stack = [root]
+  while (stack.length) {
+    const so = stack.pop()!
+    if (enabledOnly && !so.isEnabledInHierarchy) continue
+    for (const type of ["Component.RenderMeshVisual", "Component.Text", "Component.Image"]) {
+      for (const v of so.getComponents(type as any) as any[]) {
+        if (!v || typeof v.localAabbMin !== "function") continue
+        if (type === "Component.RenderMeshVisual" && !v.mesh) continue
+        const a: vec3 = v.localAabbMin()
+        const b: vec3 = v.localAabbMax()
+        // Empty text etc. reports a non-finite box: it covers nothing.
+        if (![a.x, a.y, a.z, b.x, b.y, b.z].every((n) => isFinite(n))) continue
+        const m = so.getTransform().getWorldTransform()
+        for (const x of [a.x, b.x])
+          for (const y of [a.y, b.y])
+            for (const z of [a.z, b.z]) {
+              const q = m.multiplyPoint(new vec3(x, y, z))
+              if (isFinite(q.x) && isFinite(q.y) && isFinite(q.z)) out.push(q)
+              else if (skippedVisuals.indexOf(so.name) < 0) skippedVisuals.push(so.name)
+            }
+      }
+    }
+    for (let i = 0; i < so.getChildrenCount(); i++) stack.push(so.getChild(i))
+  }
+  return out
+}
+
+/** Angular box (head-level frame, degrees) covered by a set of world points. */
+export function angularBox(points: vec3[]): {hMin: number; hMax: number; vMin: number; vMax: number} {
+  let hMin = Infinity, hMax = -Infinity, vMin = Infinity, vMax = -Infinity
+  for (const p of points) {
+    const o = headOffsetOf(p)
+    hMin = Math.min(hMin, o.horizontalDeg)
+    hMax = Math.max(hMax, o.horizontalDeg)
+    vMin = Math.min(vMin, o.verticalDeg)
+    vMax = Math.max(vMax, o.verticalDeg)
+  }
+  return {hMin, hMax, vMin, vMax}
+}
+
+export function fmtBox(b: {hMin: number; hMax: number; vMin: number; vMax: number}): string {
+  return `h ${b.hMin.toFixed(1)}..${b.hMax.toFixed(1)}°, v ${b.vMin.toFixed(1)}..${b.vMax.toFixed(1)}°`
 }

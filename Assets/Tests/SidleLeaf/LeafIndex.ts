@@ -15,6 +15,9 @@ import {C9MissingModelScenario} from "./C9MissingModelScenario"
 import {C10NoPlaceholdersScenario} from "./C10NoPlaceholdersScenario"
 import {C11WrapGreyedScenario} from "./C11WrapGreyedScenario"
 import {C12BedsChairsScenario} from "./C12BedsChairsScenario"
+import {C13PanelDefaultScenario} from "./C13PanelDefaultScenario"
+import {C14PanelDragScenario} from "./C14PanelDragScenario"
+import {C15GapLabelViewScenario} from "./C15GapLabelViewScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -35,5 +38,8 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c10-no-placeholders", typename: C10NoPlaceholdersScenario.getTypeName()},
     {id: "c11-wrap-greyed", typename: C11WrapGreyedScenario.getTypeName()},
     {id: "c12-beds-chairs", typename: C12BedsChairsScenario.getTypeName()},
+    {id: "c13-panel-default", typename: C13PanelDefaultScenario.getTypeName()},
+    {id: "c14-panel-drag", typename: C14PanelDragScenario.getTypeName()},
+    {id: "c15-gap-label-view", typename: C15GapLabelViewScenario.getTypeName()},
   ]
 }

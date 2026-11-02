@@ -2,7 +2,9 @@
  * SidleController — the single owner of Sidle state (testable via LEAF).
  *
  * Owns: current piece, its floor position + rotation, Measure toggle, drag
- * state, clearance result, gap-label fade, and the "piece behind you" arrow.
+ * state, clearance result, gap-label fade, the "piece behind you" arrow, and
+ * the control panel's head-space offset + panel drag (Update 3; the panel's
+ * SidleLazyFollow only follows the offset pushed from here).
  * Pieces are grouped into types (sofa, chair, table, bed, then any unknown
  * catalog category); Next piece moves between types, Compare between the
  * variants of the current type (built-ins first, then catalog order).
@@ -18,8 +20,8 @@
  *
  * Public API (for tests): nextPiece, compare, toggleMeasure, rotateLeft,
  * rotateRight, setPiecePosition(x, z), beginDrag, endDrag, refresh,
- * loadCatalogText(text) and setShowPlaceholderPieces(on) (test hooks), plus
- * the read-only getters below.
+ * loadCatalogText(text), setShowPlaceholderPieces(on) and resetPanelOffset()
+ * (test hooks), plus the read-only getters below (panelOffset, panelDragging).
  *
  * Must not: create text/UIKit directly (labels live in the UI modules).
  */
@@ -27,6 +29,8 @@ import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interactio
 import {InteractorEvent} from "SpectaclesInteractionKit.lspkg/Core/Interactor/InteractorEvent"
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
 import {SidlePanelUI} from "./SidlePanelUI"
+import {SidleLazyFollow} from "./SidleLazyFollow"
+import {PanelOffset, clampOffset, headFrame, worldToOffset} from "./SidlePanelOffset"
 import {SidleLabelsUI} from "./SidleLabelsUI"
 import {MaterialCache, makeBox} from "./SidleBoxFactory"
 import {CatalogEntry, buildImportedVisual, glbBaseName, parseCatalog, warn} from "./SidleCatalog"
@@ -221,6 +225,11 @@ export class SidleController extends BaseScriptComponent {
   private lastGapPos = new vec3(0, 0, 0)
   private _behind = false
   private _behindAngle = 0
+  /** Control panel offset from the head (Update 3); starts at the Inspector defaults every session. */
+  private _panelOffset: PanelOffset = {distanceCm: 110, horizontalDeg: 0, verticalDeg: -30}
+  private _panelDragging = false
+  private panelGrab: {rayDist: number; startOffset: PanelOffset; startPoint: PanelOffset} | null = null
+  private panelFollow: SidleLazyFollow | null = null
 
   // ── Scene handles ──────────────────────────────────────────────────────────
   private litCache!: MaterialCache
@@ -265,11 +274,18 @@ export class SidleController extends BaseScriptComponent {
 
     this.createEvent("OnStartEvent").bind(() => {
       this.camT = WorldCameraFinderProvider.getInstance().getTransform()
+      // SidleLazyFollow sits lower in the hierarchy: only initialized from OnStart on.
+      this.panelFollow = this.panelUI.getSceneObject().getComponent(SidleLazyFollow.getTypeName()) as SidleLazyFollow | null
+      if (!this.panelFollow) warn("SidleLazyFollow not found on the panel; the panel cannot be placed or moved")
+      this.resetPanelOffset()
       this.panelUI.onNext.add(() => this.nextPiece())
       this.panelUI.onCompare.add(() => this.compare())
       this.panelUI.onMeasure.add(() => this.toggleMeasure())
       this.panelUI.onRotateLeft.add(() => this.rotateLeft())
       this.panelUI.onRotateRight.add(() => this.rotateRight())
+      this.panelUI.onGrabBarStart.add((e: InteractorEvent) => this.onPanelGrabStart(e))
+      this.panelUI.onGrabBarUpdate.add((e: InteractorEvent) => this.onPanelGrabUpdate(e))
+      this.panelUI.onGrabBarEnd.add(() => this.onPanelGrabEnd())
 
       const inter = this.hitObj.getComponent(Interactable.getTypeName()) as Interactable
       inter.onTriggerStart.add((e: InteractorEvent) => this.onGrabStart(e))
@@ -331,6 +347,18 @@ export class SidleController extends BaseScriptComponent {
     this._dragging = false
     this.dragOffset = null
     this.applyAll()
+  }
+
+  /**
+   * Put the control panel back at the Inspector default offset (SidleLazyFollow
+   * panelDistanceCm / panelDropDeg), placed there at once. Runs at every start;
+   * also a test hook.
+   */
+  resetPanelOffset(): void {
+    this._panelDragging = false
+    this.panelGrab = null
+    if (this.panelFollow) this._panelOffset = this.panelFollow.defaultOffset
+    this.pushPanelOffset(true)
   }
 
   /** Re-run clearance + view sync (also runs every frame). */
@@ -424,6 +452,14 @@ export class SidleController extends BaseScriptComponent {
   /** Warnings logged while loading the catalog and models. */
   get loadWarnings(): string[] {
     return this._warnings.slice()
+  }
+  /** Control panel offset from the head: distance (cm), horizontal and vertical angle (deg; + = right / above). */
+  get panelOffset(): PanelOffset {
+    return {distanceCm: this._panelOffset.distanceCm, horizontalDeg: this._panelOffset.horizontalDeg, verticalDeg: this._panelOffset.verticalDeg}
+  }
+  /** True while the panel's grab bar is held. */
+  get panelDragging(): boolean {
+    return this._panelDragging
   }
   get measureOn(): boolean {
     return this._measureOn
@@ -619,6 +655,56 @@ export class SidleController extends BaseScriptComponent {
     const hit = this.floorHit(e)
     if (!hit) return
     this.setPiecePosition(hit.x + this.dragOffset.x, hit.z + this.dragOffset.z)
+  }
+
+  // ── Panel drag (grab bar) ──────────────────────────────────────────────────
+  /** World point the interactor holds: the grab point carried along the current ray. */
+  private panelRayPoint(e: InteractorEvent, rayDist: number): vec3 | null {
+    const it = e.interactor
+    if (!it || !it.startPoint || !it.direction) return null
+    return it.startPoint.add(it.direction.normalize().uniformScale(rayDist))
+  }
+
+  private onPanelGrabStart(e: InteractorEvent): void {
+    const it = e.interactor
+    if (!it || !it.startPoint || !this.camT) return
+    const hit = it.targetHitInfo?.hit?.position ?? this.panelUI.getSceneObject().getTransform().getWorldPosition()
+    const rayDist = Math.max(1, hit.distance(it.startPoint))
+    const p = this.panelRayPoint(e, rayDist)
+    if (!p) return
+    this.panelGrab = {rayDist, startOffset: this.panelOffset, startPoint: worldToOffset(headFrame(this.camT), p)}
+    this._panelDragging = true
+    this.panelUI.setGrabBarActive(true)
+  }
+
+  private onPanelGrabUpdate(e: InteractorEvent): void {
+    if (!this._panelDragging || !this.panelGrab || !this.camT) return
+    const p = this.panelRayPoint(e, this.panelGrab.rayDist)
+    if (!p) return
+    const now = worldToOffset(headFrame(this.camT), p)
+    const g = this.panelGrab
+    let dh = now.horizontalDeg - g.startPoint.horizontalDeg
+    if (dh > 180) dh -= 360
+    if (dh < -180) dh += 360
+    this._panelOffset = clampOffset({
+      distanceCm: g.startOffset.distanceCm + (now.distanceCm - g.startPoint.distanceCm),
+      horizontalDeg: g.startOffset.horizontalDeg + dh,
+      verticalDeg: g.startOffset.verticalDeg + (now.verticalDeg - g.startPoint.verticalDeg),
+    })
+    this.pushPanelOffset(true)
+  }
+
+  /** Release: keep the new offset; the panel follows at it with the usual delay. */
+  private onPanelGrabEnd(): void {
+    if (!this._panelDragging) return
+    this._panelDragging = false
+    this.panelGrab = null
+    this.panelUI.setGrabBarActive(false)
+    this.pushPanelOffset(false)
+  }
+
+  private pushPanelOffset(snap: boolean): void {
+    if (this.panelFollow) this.panelFollow.setOffset(this._panelOffset, snap)
   }
 
   // ── Per-frame view sync ────────────────────────────────────────────────────

@@ -29,9 +29,9 @@
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
     deadZoneCm: false
-    distanceCm: false
-    dropCm: false
     followSpeed: false
+    panelDistanceCm: false
+    panelDropDeg: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -41,8 +41,8 @@
   Attachments:
     []
   DefaultScriptInputs:
-    - distanceCm: !<float> 100.000000
-      dropCm: !<float> 20.000000
+    - panelDistanceCm: !<float> 60.000000
+      panelDropDeg: !<float> 28.000000
       followSpeed: 2.500000
       deadZoneCm: !<float> 8.000000
   ScriptTypes:
@@ -52,8 +52,8 @@
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SidleLazyFollow – lazy head-follow</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - '// @input float distanceCm = 100 {"hint":"Distance in front of the user, cm", "widget":"slider", "min":40, "max":200, "step":1}'
-    - '// @input float dropCm = 20 {"hint":"How far below eye level, cm", "widget":"slider", "min":0, "max":60, "step":1}'
+    - '// @input float panelDistanceCm = 110 {"hint":"Default distance from the head, cm (brief: 110; limits 60-140)", "widget":"slider", "min":60, "max":140, "step":1}'
+    - "// @input float panelDropDeg = 30 {\"hint\":\"Default angle below the head's forward direction, degrees (brief: 30; limits 10 above to 50 below)\", \"widget\":\"slider\", \"min\":-10, \"max\":50, \"step\":1}"
     - '// @input float followSpeed = 2.5 {"hint":"Follow responsiveness (higher = snappier, lower = lazier)", "widget":"slider", "min":0.5, "max":10, "step":0.1}'
     - '// @input float deadZoneCm = 8 {"hint":"Panel does not move until its target drifts farther than this, cm", "widget":"slider", "min":0, "max":40, "step":1}'
     - '// @ui {"widget":"group_end"}'

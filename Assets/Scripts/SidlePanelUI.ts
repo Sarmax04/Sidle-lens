@@ -5,15 +5,22 @@
  * "piece is behind you" arrow), a detail line (PieceDetailLabel: source domain
  * + dimensions, imported pieces only) and a row of five UIKit Buttons:
  *   NextButton, CompareButton, MeasureButton, RotateLeftButton, RotateRightButton
+ * plus a grab bar along the top edge (PanelGrabBar: a light pill with its own
+ * collider + SIK Interactable, so pinching it never reaches a button)
  * (those are the runtime SceneObject names, stable for tests).
  *
- * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setMeasureOn, setBehindArrow.
- * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight.
+ * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setMeasureOn, setBehindArrow,
+ *             setGrabBarActive.
+ * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight,
+ *             onGrabBarStart(e), onGrabBarUpdate(e), onGrabBarEnd.
  *
  * Must not: hold domain state or make decisions (SidleController owns state).
  * Positioning/follow is done by SidleLazyFollow on the same SceneObject.
  */
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
+import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
+import {InteractorEvent} from "SpectaclesInteractionKit.lspkg/Core/Interactor/InteractorEvent"
+import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexAlign, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
@@ -83,6 +90,16 @@ export class SidlePanelUI extends BaseScriptComponent {
   @hint("Color of the 'piece is behind you' arrow")
   @widget(new ColorWidget())
   arrowColor: vec4 = new vec4(1.0, 0.82, 0.45, 1.0)
+
+  @input
+  @hint("Grab bar width in cm (brief: at least 12)")
+  @widget(new SliderWidget(12, 24, 0.5))
+  grabBarWidth: number = 14
+
+  @input
+  @hint("Grab bar height in cm (brief: at least 2.5)")
+  @widget(new SliderWidget(2.5, 5, 0.1))
+  grabBarHeight: number = 2.5
   @ui.group_end
 
   private _onNext = new Event<void>()
@@ -105,6 +122,18 @@ export class SidlePanelUI extends BaseScriptComponent {
   get onRotateRight(): PublicApi<void> {
     return this._onRotateRight.publicApi()
   }
+  private _onGrabBarStart = new Event<InteractorEvent>()
+  private _onGrabBarUpdate = new Event<InteractorEvent>()
+  private _onGrabBarEnd = new Event<void>()
+  get onGrabBarStart(): PublicApi<InteractorEvent> {
+    return this._onGrabBarStart.publicApi()
+  }
+  get onGrabBarUpdate(): PublicApi<InteractorEvent> {
+    return this._onGrabBarUpdate.publicApi()
+  }
+  get onGrabBarEnd(): PublicApi<void> {
+    return this._onGrabBarEnd.publicApi()
+  }
 
   private nameText: Text | null = null
   private detailText: Text | null = null
@@ -114,6 +143,9 @@ export class SidlePanelUI extends BaseScriptComponent {
   private measureButton: Button | null = null
   private pendingCompareEnabled = true
   private pendingMeasureOn = false
+  private grabBarShape: RoundedRectangle | null = null
+  private grabBarHovered = false
+  private grabBarActive = false
 
   onAwake() {
     this.build()
@@ -140,6 +172,12 @@ export class SidlePanelUI extends BaseScriptComponent {
   setMeasureOn(on: boolean): void {
     this.pendingMeasureOn = on
     if (this.measureButton && this.measureButton.isOn !== on) this.measureButton.isOn = on
+  }
+
+  /** Grab bar shown as held (brighter) while the panel is being dragged. */
+  setGrabBarActive(active: boolean): void {
+    this.grabBarActive = active
+    this.updateGrabBarColor()
   }
 
   /** angleDeg: in-plane rotation of an up-pointing arrow (0 = up/ahead, +CCW). */
@@ -260,6 +298,48 @@ export class SidlePanelUI extends BaseScriptComponent {
 
     this.compareButton!.inactive = !this.pendingCompareEnabled
     this.measureButton!.isOn = this.pendingMeasureOn
+
+    this.buildGrabBar(panelH)
+  }
+
+  /** Light pill just above the top edge; its own collider + Interactable (no overlap with the buttons). */
+  private buildGrabBar(panelH: number): void {
+    const w = this.grabBarWidth
+    const h = this.grabBarHeight
+    const bar = this.obj(this.sceneObject, "PanelGrabBar", new vec3(0, panelH / 2 + 1.0 + h / 2, 0.6))
+    const shape = bar.createComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
+    shape.size = new vec2(w, h)
+    shape.cornerRadius = h / 2
+    this.grabBarShape = shape
+    this.updateGrabBarColor()
+
+    const collider = bar.createComponent("Physics.ColliderComponent") as ColliderComponent
+    const box = Shape.createBoxShape()
+    box.size = new vec3(w + 1.0, h + 1.0, 1.5) // a little larger than the pill: easier to pinch
+    collider.shape = box
+    collider.fitVisual = false
+
+    const inter = bar.createComponent(Interactable.getTypeName()) as Interactable
+    inter.onHoverEnter.add(() => {
+      this.grabBarHovered = true
+      this.updateGrabBarColor()
+    })
+    inter.onHoverExit.add(() => {
+      this.grabBarHovered = false
+      this.updateGrabBarColor()
+    })
+    inter.onTriggerStart.add((e: InteractorEvent) => this._onGrabBarStart.invoke(e))
+    inter.onTriggerUpdate.add((e: InteractorEvent) => this._onGrabBarUpdate.invoke(e))
+    inter.onTriggerEnd.add(() => this._onGrabBarEnd.invoke())
+    inter.onTriggerEndOutside.add(() => this._onGrabBarEnd.invoke())
+    inter.onTriggerCanceled.add(() => this._onGrabBarEnd.invoke())
+  }
+
+  private updateGrabBarColor(): void {
+    if (!this.grabBarShape) return
+    const a = this.grabBarActive ? 1.0 : this.grabBarHovered ? 0.95 : 0.7
+    const c = this.grabBarActive || this.grabBarHovered ? 0.95 : 0.82
+    this.grabBarShape.backgroundColor = new vec4(c, c, c, a)
   }
 
   private addButton(parent: SceneObject, name: string, label: string, icon: Texture, onClick: () => void): Button {

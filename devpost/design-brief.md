@@ -111,15 +111,15 @@ This update replaces the "Control panel" line under "Where things live".
 
 Problem: the control panel follows the user and sits in the middle of the view, so it covers the piece the user is looking at.
 
-1. Default position: the panel sits below the line of sight. Defaults (Inspector-tunable): 60 cm from the head, centred horizontally, 28 degrees below the head's forward direction, tilted to face the user. At the default, no part of the panel is within 10 degrees below the forward direction, so the piece in front of the user is never covered.
+1. Default position: the panel sits below the line of sight. Defaults (Inspector-tunable): 110 cm from the head, centred horizontally, 30 degrees below the head's forward direction, tilted to face the user. At that distance the panel is no wider than 28 degrees, so it fits inside the display's horizontal field of view, and no part of it is within 10 degrees below the forward direction.
 2. Grab bar: a visible bar along the top edge of the panel, at least 12 cm wide and 2.5 cm tall, can be grabbed with a pinch and dragged. While dragging, the panel follows the hand and keeps facing the user.
 3. The new place is kept: when released, the panel stays at that offset from the head (distance, horizontal angle, vertical angle) and keeps following the user at that offset, with the same slight delay as before.
-4. Limits so it cannot be lost: distance 40 to 90 cm, horizontal angle within 40 degrees of forward, vertical angle between 10 degrees above and 50 degrees below forward. Dragging past a limit stops at the limit.
+4. Limits so it cannot be lost: distance 60 to 140 cm, horizontal angle within 40 degrees of forward, vertical angle between 10 degrees above and 50 degrees below forward. Dragging past a limit stops at the limit.
 5. Dragging the panel never moves the piece, changes Measure, or presses a button. Pinching a button works as before.
 6. The offset is not saved between sessions: every start uses the defaults.
 - Done criteria:
-  11. At the start, the panel is 60 cm away and 28 degrees below forward, and no part of it is within 10 degrees below forward.
-  12. Dragging the grab bar moves the panel; after release it stays at the new offset while the head turns and moves; limits hold when dragged past them; the piece, Measure state and buttons are unaffected.
+  11. At the start, the panel is 110 cm away and 30 degrees below forward, is at most 28 degrees wide as seen from the head, and no part of it is within 10 degrees below forward.
+  12. Dragging the grab bar moves the panel; after release it stays at the new offset while the head turns and moves; limits (60-140 cm, 40 degrees sideways, 10 up to 50 down) hold when dragged past them; the piece, Measure state and buttons are unaffected.
 
 ## Update 4: Gallery
 Problem: stepping through pieces with Next piece and Compare is blind; the user wants to see all pieces and choose one.
