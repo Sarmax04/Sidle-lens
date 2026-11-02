@@ -1,38 +1,56 @@
 /**
- * Done criterion 6 — pinch NextButton: Sofa A, Bed, Dining table, then every
- * enabled catalog piece in catalog order, then back to Sofa A. Each piece keeps
- * the spot and facing; only the current piece is enabled; Compare is greyed out
- * for imported pieces. Also: an entry with enabled:false is skipped.
+ * Done criterion 6 (Update 2) — imported pieces appear as variants of their
+ * type (catalog category) after the built-ins, in catalog order. Every piece is
+ * reached with real NextButton/CompareButton pinches; each keeps the spot and
+ * facing, only the current piece is enabled and the panel shows its name.
+ * Also: an entry with enabled:false is skipped.
  */
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {SidleController} from "../../Scripts/SidleController"
-import {bundledCatalog, log, obj, panelText, resetState, tap} from "./SidleTestHelpers"
+import {bundledCatalog, expectedOffer, ExpectedType, log, obj, offeredKeys, panelText, resetState, tap} from "./SidleTestHelpers"
 
-async function cycleOnce(it: DefaultLeafInteractor, c: SidleController, expected: string[], names: string[]): Promise<void> {
+/** Imported keys of `type`, straight from the catalog in its order. */
+function importedOfType(cat: any[], type: string): string[] {
+  return cat.filter((e) => String(e.category).trim().toLowerCase() === type).map((e) => `Imported_${e.id}`)
+}
+
+function checkOffer(c: SidleController, cat: any[], offer: ExpectedType[]): void {
+  expect(c.availableTypes.join(","), "controller types").toBe(offer.map((t) => t.type).join(","))
+  for (const t of offer) {
+    const keys = c.variantKeys(t.type)
+    expect(keys.join(","), `${t.type}: variant order`).toBe(t.variants.map((v) => v.key).join(","))
+    const imported = keys.filter((k) => k.indexOf("Imported_") === 0)
+    expect(imported.join(","), `${t.type}: imported variants in catalog order`).toBe(importedOfType(cat, t.type).join(","))
+    expect(keys.slice(0, keys.length - imported.length).every((k) => k.indexOf("Imported_") < 0), `${t.type}: built-ins first`).toBe(true)
+  }
+  expect(c.importedPieceKeys.join(","), "imported pieces").toBe(cat.map((e) => `Imported_${e.id}`).join(","))
+}
+
+/** Visit every offered piece via buttons, starting at Sofa A, and end back on Sofa A. */
+async function walk(it: DefaultLeafInteractor, c: SidleController, offer: ExpectedType[]): Promise<void> {
   const pos = c.piecePosition
   const rot = c.rotationDeg
-  const cmp = obj("CompareButton").getComponent(Button.getTypeName()) as Button
-  expect(c.currentPieceKey, "cycle starts at Sofa A").toBe("SofaA")
-  for (let i = 1; i <= expected.length; i++) {
-    await tap(it, "NextButton")
-    const key = expected[i % expected.length]
-    expect(c.currentPieceKey, `Next #${i}`).toBe(key)
-    for (const k of expected) expect(obj(`Piece_${k}`).enabled, `Piece_${k} enabled after Next #${i}`).toBe(k === key)
-    expect(c.piecePosition.x, `${key}: same spot x`).toBeCloseTo(pos.x, 1)
-    expect(c.piecePosition.z, `${key}: same spot z`).toBeCloseTo(pos.z, 1)
-    expect(c.rotationDeg, `${key}: same facing`).toBeCloseTo(rot, 1)
-    expect(panelText("PieceNameLabel"), `${key}: panel name`).toBe(names[i % expected.length])
-    if (key.indexOf("Imported_") === 0) {
-      expect(c.compareEnabled, `${key}: compare disabled`).toBe(false)
-      expect(cmp.inactive, `${key}: CompareButton greyed out`).toBe(true)
-      c.compare()
-      expect(c.currentPieceKey, `${key}: compare() is a no-op`).toBe(key)
+  const allKeys = offeredKeys(offer)
+  expect(c.currentPieceKey, "walk starts at Sofa A").toBe("SofaA")
+  for (let ti = 0; ti < offer.length; ti++) {
+    for (let vi = 0; vi < offer[ti].variants.length; vi++) {
+      if (vi > 0) await tap(it, "CompareButton")
+      else if (ti > 0) await tap(it, "NextButton")
+      const v = offer[ti].variants[vi]
+      expect(c.currentPieceKey, `${offer[ti].type} variant #${vi + 1}`).toBe(v.key)
+      expect(c.currentPieceType, `${v.key}: type`).toBe(offer[ti].type)
+      for (const k of allKeys) expect(obj(`Piece_${k}`).enabled, `Piece_${k} enabled at ${v.key}`).toBe(k === v.key)
+      expect(c.piecePosition.x, `${v.key}: same spot x`).toBeCloseTo(pos.x, 1)
+      expect(c.piecePosition.z, `${v.key}: same spot z`).toBeCloseTo(pos.z, 1)
+      expect(c.rotationDeg, `${v.key}: same facing`).toBeCloseTo(rot, 1)
+      expect(panelText("PieceNameLabel"), `${v.key}: panel name`).toBe(v.name)
     }
   }
+  await tap(it, "NextButton")
+  expect(c.currentPieceKey, "wraps to Sofa A").toBe("SofaA")
 }
 
 @component
@@ -44,30 +62,26 @@ export class C6ImportedCycleScenario extends Scenario {
 
     const cat = bundledCatalog()
     expect(cat.length > 0, "bundled catalog has enabled entries").toBe(true)
-    const expected = ["SofaA", "Bed", "DiningTable"].concat(cat.map((e) => `Imported_${e.id}`))
-    const names = ["Sofa A", "Bed", "Dining table"].concat(cat.map((e) => e.name))
-    log(`expected cycle ${expected.join(" -> ")}`)
-    expect(c.pieceCycle.join(","), "controller cycle").toBe(expected.join(","))
+    const offer = expectedOffer(cat, true)
+    log(`expected ${offer.map((t) => `${t.type}[${t.variants.map((v) => v.key).join(",")}]`).join(" ")}`)
+    checkOffer(c, cat, offer)
 
     await tap(it, "RotateLeftButton") // 15° so "same facing" is meaningful
-    await cycleOnce(it, c, expected, names)
+    await walk(it, c, offer)
 
     // enabled:false entries are skipped (catalog swapped through the test hook)
     const raw = JSON.parse(JSON.stringify(cat))
     raw[1].enabled = false
     c.loadCatalogText(JSON.stringify(raw))
     await sleep(100)
-    const skipped = expected.filter((k) => k !== `Imported_${raw[1].id}`)
-    expect(c.pieceCycle.join(","), "cycle without the disabled entry").toBe(skipped.join(","))
-    await cycleOnce(
-      it,
-      c,
-      skipped,
-      names.filter((_, i) => i !== 4),
-    )
+    const kept = cat.filter((_, i) => i !== 1)
+    const offer2 = expectedOffer(kept, true)
+    expect(offeredKeys(offer2).indexOf(`Imported_${raw[1].id}`), "disabled entry not expected").toBe(-1)
+    checkOffer(c, kept, offer2)
+    await walk(it, c, offer2)
 
     c.loadCatalogText(null) // back to the bundled catalog
-    expect(c.pieceCycle.join(","), "bundled catalog restored").toBe(expected.join(","))
+    checkOffer(c, cat, offer)
     await resetState()
     log("C6 done")
   }

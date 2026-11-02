@@ -12,6 +12,8 @@ import {C6ImportedCycleScenario} from "./C6ImportedCycleScenario"
 import {C7ImportedFitScenario} from "./C7ImportedFitScenario"
 import {C8PanelSourceScenario} from "./C8PanelSourceScenario"
 import {C9MissingModelScenario} from "./C9MissingModelScenario"
+import {C10NoPlaceholdersScenario} from "./C10NoPlaceholdersScenario"
+import {C11WrapGreyedScenario} from "./C11WrapGreyedScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -29,5 +31,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c7-imported-fit", typename: C7ImportedFitScenario.getTypeName()},
     {id: "c8-panel-source", typename: C8PanelSourceScenario.getTypeName()},
     {id: "c9-missing-model", typename: C9MissingModelScenario.getTypeName()},
+    {id: "c10-no-placeholders", typename: C10NoPlaceholdersScenario.getTypeName()},
+    {id: "c11-wrap-greyed", typename: C11WrapGreyedScenario.getTypeName()},
   ]
 }

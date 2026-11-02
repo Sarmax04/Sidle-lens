@@ -6,8 +6,9 @@
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
+import {findSceneObjectByName, sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
+import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {SidleController} from "../../Scripts/SidleController"
 import {ROOM_DEPTH_CM, ROOM_WIDTH_CM} from "../../Scripts/SidleGeometry"
 
@@ -51,14 +52,116 @@ export async function tap(it: DefaultLeafInteractor, buttonName: string): Promis
 }
 
 /**
- * From the dining table, pinch Next through every enabled imported piece (Update 1),
- * so the following Next lands on Sofa A again.
+ * Compare is greyed out (UIKit Button.inactive, interactable disabled), a real
+ * pinch with a separate interactor does not register, and compare() is a no-op.
  */
-export async function tapThroughImported(it: DefaultLeafInteractor, c: SidleController): Promise<void> {
-  expect(c.currentPieceKey, "tapThroughImported starts at the dining table").toBe("DiningTable")
-  for (const k of c.importedPieceKeys) {
+export async function expectGreyedCompare(c: SidleController, ctx: string): Promise<void> {
+  const cmpBtn = obj("CompareButton").getComponent(Button.getTypeName()) as Button
+  expect(c.compareEnabled, `${ctx}: compareEnabled`).toBe(false)
+  expect(cmpBtn.inactive, `${ctx}: CompareButton.inactive (greyed out)`).toBe(true)
+  const inter = interactable("CompareButton")
+  expect(inter.enabled, `${ctx}: Compare interactable disabled`).toBe(false)
+  const key = c.currentPieceKey
+  const before = JSON.stringify([c.currentPieceKey, c.piecePosition, c.rotationDeg])
+  // Attempt a real pinch with a separate interactor: it can't even hover a disabled target.
+  const probe = new DefaultLeafInteractor(`Probe_${ctx}_${Date.now()}`)
+  let pinchLanded = true
+  try {
+    await withTimeout(probe.trigger(inter), 1500, "no hover")
+  } catch (e) {
+    pinchLanded = false
+    // Drop the probe's pending target so it can't fire later when Compare re-activates.
+    ;(probe as unknown as {overrideInteractable?: unknown}).overrideInteractable = undefined
+  }
+  await sleep(200)
+  log(`${ctx}: pinch on greyed Compare landed=${pinchLanded}`)
+  expect(pinchLanded, `${ctx}: pinch on greyed-out Compare does not register`).toBe(false)
+  expect(JSON.stringify([c.currentPieceKey, c.piecePosition, c.rotationDeg]), `${ctx}: unchanged after pinch`).toBe(before)
+  c.compare() // API path must also be a no-op
+  expect(c.currentPieceKey, `${ctx}: compare() API no-op`).toBe(key)
+}
+
+/** Built-in pieces from the brief, in their fixed order, with type and size (W × D × H cm). */
+export const BUILT_INS = [
+  {key: "SofaA", name: "Sofa A", type: "sofa", w: 220, d: 90, h: 85},
+  {key: "SofaB", name: "Sofa B", type: "sofa", w: 180, d: 85, h: 85},
+  {key: "Bed", name: "Bed", type: "bed", w: 160, d: 200, h: 55},
+  {key: "DiningTable", name: "Dining table", type: "table", w: 160, d: 90, h: 75},
+]
+export const BUILT_IN_KEYS = BUILT_INS.map((b) => b.key)
+
+export interface ExpectedVariant {
+  key: string
+  name: string
+  w: number
+  d: number
+  h: number
+  imported: boolean
+}
+export interface ExpectedType {
+  type: string
+  variants: ExpectedVariant[]
+}
+
+/**
+ * Update 2 order, worked out independently of SidleController: types sofa,
+ * chair, table, bed, then unknown categories in catalog order; within a type,
+ * built-ins first (when offered), then imported pieces in catalog order;
+ * types with no variant are left out. `catalog` holds enabled entries only.
+ */
+export function expectedOffer(catalog: any[], placeholders: boolean): ExpectedType[] {
+  const all: (ExpectedVariant & {type: string})[] = []
+  if (placeholders) for (const b of BUILT_INS) all.push({...b, imported: false})
+  for (const e of catalog) {
+    all.push({
+      key: `Imported_${e.id}`,
+      name: e.name,
+      type: String(e.category).trim().toLowerCase() || "other",
+      w: e.widthCm,
+      d: e.depthCm,
+      h: e.heightCm,
+      imported: true,
+    })
+  }
+  const order = ["sofa", "chair", "table", "bed"]
+  for (const v of all) if (order.indexOf(v.type) < 0) order.push(v.type)
+  return order
+    .map((type) => ({type, variants: all.filter((v) => v.type === type).map(({type: _t, ...v}) => v)}))
+    .filter((t) => t.variants.length > 0)
+}
+
+/** Type of `key` in an expected offer, or "" if it is not offered. */
+export function typeOfKey(offer: ExpectedType[], key: string): string {
+  for (const t of offer) if (t.variants.some((v) => v.key === key)) return t.type
+  return ""
+}
+
+/** All offered keys flattened in Next/Compare order. */
+export function offeredKeys(offer: ExpectedType[]): string[] {
+  const out: string[] = []
+  for (const t of offer) for (const v of t.variants) out.push(v.key)
+  return out
+}
+
+/**
+ * Reach `key` with real button pinches only: Next until its type shows (each
+ * Next must land on that type's first variant), then Compare until it shows.
+ */
+export async function goTo(it: DefaultLeafInteractor, c: SidleController, offer: ExpectedType[], key: string): Promise<void> {
+  const type = typeOfKey(offer, key)
+  if (!type) throw new Error(`goTo: "${key}" is not offered`)
+  let guard = 0
+  while (typeOfKey(offer, c.currentPieceKey) !== type) {
+    if (guard++ > offer.length) throw new Error(`goTo: Next never reached type "${type}"`)
     await tap(it, "NextButton")
-    expect(c.currentPieceKey, "Next steps through imported pieces in catalog order").toBe(k)
+    const t = offer.find((o) => o.type === typeOfKey(offer, c.currentPieceKey))
+    expect(!!t && c.currentPieceKey === t.variants[0].key, `goTo: Next shows the first variant of its type (got ${c.currentPieceKey})`).toBe(true)
+  }
+  const variants = offer.find((o) => o.type === type)!.variants
+  guard = 0
+  while (c.currentPieceKey !== key) {
+    if (guard++ > variants.length) throw new Error(`goTo: Compare never reached "${key}"`)
+    await tap(it, "CompareButton")
   }
 }
 
@@ -179,14 +282,16 @@ export function expectEdges(c: SidleController, expected: string[], ctx: string)
 
 /**
  * Put the Lens back into a known state via the controller API (test setup only):
- * Sofa A, 0°, Measure off, not dragging, at the start spot; waits out any gap fade.
+ * placeholder pieces on, Sofa A, 0°, Measure off, not dragging, at the start spot;
+ * waits out any gap fade.
  */
 export async function resetState(): Promise<SidleController> {
   const c = controller()
   if (c.isDragging) c.endDrag()
+  if (!c.showPlaceholderPieces) c.setShowPlaceholderPieces(true)
   let guard = 0
-  while (c.currentPieceKey !== "SofaA" && guard++ < 5 + c.importedPieceKeys.length) {
-    if (c.currentPieceKey === "SofaB") c.compare()
+  while (c.currentPieceKey !== "SofaA" && guard++ < 10 + c.importedPieceKeys.length) {
+    if (c.currentPieceType === "sofa") c.compare()
     else c.nextPiece()
   }
   guard = 0

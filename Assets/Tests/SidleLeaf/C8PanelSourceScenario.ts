@@ -8,7 +8,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {bundledCatalog, log, obj, panelText, resetState, tap} from "./SidleTestHelpers"
+import {BUILT_INS, bundledCatalog, expectedOffer, goTo, log, obj, offeredKeys, panelText, resetState, tap} from "./SidleTestHelpers"
 
 function expectBuiltIn(c: SidleController, name: string): void {
   expect(panelText("PieceNameLabel"), "panel name").toBe(name)
@@ -26,16 +26,19 @@ export class C8PanelSourceScenario extends Scenario {
     const it = new DefaultLeafInteractor("C8Interactor")
     const cat = bundledCatalog()
 
+    // Update 2: visit every piece in Next/Compare order (built-ins sit among the imported ones).
+    const offer = expectedOffer(cat, true)
+    const builtIns = BUILT_INS.map((b) => b.key)
     expectBuiltIn(c, "Sofa A")
-    await tap(it, "CompareButton")
-    expectBuiltIn(c, "Sofa B")
-    await tap(it, "NextButton")
-    expectBuiltIn(c, "Bed")
-    await tap(it, "NextButton")
-    expectBuiltIn(c, "Dining table")
-
-    for (const e of cat) {
-      await tap(it, "NextButton")
+    for (const key of offeredKeys(offer)) {
+      await goTo(it, c, offer, key)
+      const b = BUILT_INS.find((x) => x.key === key)
+      if (b) {
+        expectBuiltIn(c, b.name)
+        builtIns.splice(builtIns.indexOf(key), 1)
+        continue
+      }
+      const e = cat.find((x) => `Imported_${x.id}` === key)
       const t = panelText("PieceDetailLabel")
       log(`${e.id}: panel "${panelText("PieceNameLabel")}" / "${t}"`)
       expect(panelText("PieceNameLabel"), `${e.id}: name`).toBe(e.name)
@@ -44,6 +47,7 @@ export class C8PanelSourceScenario extends Scenario {
       const dims = `${Math.round(e.widthCm)} × ${Math.round(e.depthCm)} × ${Math.round(e.heightCm)} cm`
       expect(t.includes(dims), `${e.id}: shows "${dims}"`).toBe(true)
     }
+    expect(builtIns.join(","), "every built-in piece was checked").toBe("")
 
     await tap(it, "NextButton")
     expectBuiltIn(c, "Sofa A")

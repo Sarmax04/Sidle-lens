@@ -10,7 +10,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {bundledCatalog, log, meshBounds, obj, panelText, resetState, tap} from "./SidleTestHelpers"
+import {bundledCatalog, expectedOffer, goTo, log, meshBounds, obj, panelText, resetState, tap} from "./SidleTestHelpers"
 
 const BROKEN = [
   {id: "missing_box", name: "Missing Model", category: "sofa", sourceUrl: "https://example.org/a/missing", domain: "example.org",
@@ -52,10 +52,10 @@ export class C9MissingModelScenario extends Scenario {
     for (const e of BROKEN) {
       expect(c.loadWarnings.some((w) => w.includes(e.id)), `warning logged for ${e.id}`).toBe(true)
     }
-    await tap(it, "NextButton")
-    await tap(it, "NextButton")
+    // Update 2: missing_box is a sofa variant, not_a_model a table variant
+    const offer = expectedOffer(BROKEN, true)
     for (const e of BROKEN) {
-      await tap(it, "NextButton")
+      await goTo(it, c, offer, `Imported_${e.id}`)
       checkBox(c, e)
     }
     // Keeps working: rotate, move with clearance, then wrap to Sofa A
@@ -66,7 +66,8 @@ export class C9MissingModelScenario extends Scenario {
     expect(c.isClear, "clearance still evaluated (too close to the right wall)").toBe(false)
     expect(c.nearestObstacle, "nearest obstacle").toBe("RightWall")
     await tap(it, "RotateRightButton")
-    await tap(it, "NextButton")
+    const ti = offer.findIndex((t) => t.type === c.currentPieceType)
+    for (let i = ti; i < offer.length; i++) await tap(it, "NextButton") // remaining types, then wrap
     expect(c.currentPieceKey, "wraps back to Sofa A").toBe("SofaA")
 
     // Unreadable catalog -> only built-ins, no crash

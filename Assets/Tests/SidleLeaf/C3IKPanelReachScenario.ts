@@ -8,7 +8,7 @@ import {createIKInteractor} from "Leaf.lspkg/Interactors/interactor/ik/visualize
 import {DiagnosticRecorder} from "Leaf.lspkg/Diagnostic/DiagnosticRecorder"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {interactable, log, resetState} from "./SidleTestHelpers"
+import {bundledCatalog, expectedOffer, interactable, log, resetState} from "./SidleTestHelpers"
 
 @component
 export class C3IKPanelReachScenario extends Scenario {
@@ -18,17 +18,19 @@ export class C3IKPanelReachScenario extends Scenario {
     const ik = createIKInteractor()
     await sleep(500)
 
+    // Update 2: Next goes sofa -> chair -> table -> bed, each type's first variant.
+    const offer = expectedOffer(bundledCatalog(), true)
     await ik.trigger(interactable("NextButton"))
     await sleep(400)
     log(`IK Next -> ${c.currentPieceKey}; diagnostics: ${DiagnosticRecorder.getInstance().toReport()}`)
-    expect(c.currentPieceKey, "IK pinch on Next").toBe("Bed")
+    expect(c.currentPieceKey, "IK pinch on Next").toBe(offer[1].variants[0].key)
 
     await ik.trigger(interactable("NextButton"))
     await sleep(400)
-    expect(c.currentPieceKey, "IK Next x2").toBe("DiningTable")
-    // Update 1: imported pieces sit between the table and Sofa A; skip them via the API
-    // (this scenario is about reach, which the IK pinches above and below cover).
-    for (let i = 0; i < c.importedPieceKeys.length; i++) c.nextPiece()
+    expect(c.currentPieceKey, "IK Next x2").toBe(offer[2].variants[0].key)
+    // Skip the remaining types via the API (this scenario is about reach,
+    // which the IK pinches above and below cover).
+    for (let i = 3; i < offer.length; i++) c.nextPiece()
     await ik.trigger(interactable("NextButton"))
     await sleep(400)
     expect(c.currentPieceKey, "IK Next back to Sofa A").toBe("SofaA")

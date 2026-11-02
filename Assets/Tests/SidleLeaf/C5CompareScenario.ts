@@ -1,27 +1,48 @@
 /**
- * Done criterion 5 — CompareButton flips Sofa A <-> Sofa B in the same spot/facing,
- * outline, labels and clearance update; with the bed or the table the button is
- * greyed out (UIKit Button.inactive) and a pinch does nothing.
+ * Done criterion 5 (Update 2) — CompareButton steps through the variants of the
+ * current type in order (built-ins first, then imported in catalog order) and
+ * wraps, in the same spot/facing; outline, labels and clearance update for
+ * every variant. With a one-variant type (the bed) the button is greyed out
+ * (UIKit Button.inactive) and a pinch does nothing.
  */
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {sleep, withTimeout} from "Leaf.lspkg/Utils/common/Utils"
+import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, expectEdges, interactable, log, obj, resetState, ROOM, tap, tapThroughImported, textOf, yawOf} from "./SidleTestHelpers"
+import {
+  angDiffDeg,
+  bundledCatalog,
+  expectEdges,
+  expectedOffer,
+  ExpectedVariant,
+  expectGreyedCompare,
+  log,
+  obj,
+  offeredKeys,
+  panelText,
+  resetState,
+  ROOM,
+  tap,
+  textOf,
+  yawOf,
+} from "./SidleTestHelpers"
 
 function baseColor(key: string): vec4 {
   const base = obj(`Piece_${key}`).getChild(0)
   return (base.getComponent("Component.RenderMeshVisual") as RenderMeshVisual).mainMaterial.mainPass.baseColor
 }
 
-function checkSofa(c: SidleController, key: "SofaA" | "SofaB", pos: {x: number; z: number}, rot: number, gap: number): void {
-  const dims = key === "SofaA" ? {w: 220, d: 90, h: 85} : {w: 180, d: 85, h: 85}
+/** Same spot/facing, only this variant visible, outline + labels match its size. */
+function checkVariant(c: SidleController, v: ExpectedVariant, allKeys: string[], pos: {x: number; z: number}, rot: number): void {
+  const key = v.key
+  const dims = {w: v.w, d: v.d, h: v.h}
   expect(c.currentPieceKey, "piece").toBe(key)
   expect(JSON.stringify(c.currentDims), `${key} dims`).toBe(JSON.stringify(dims))
-  expect(obj("Piece_SofaA").enabled, "Piece_SofaA visible?").toBe(key === "SofaA")
-  expect(obj("Piece_SofaB").enabled, "Piece_SofaB visible?").toBe(key === "SofaB")
+  expect(panelText("PieceNameLabel"), `${key} panel name`).toBe(v.name)
+  for (const k of allKeys) expect(obj(`Piece_${k}`).enabled, `Piece_${k} visible?`).toBe(k === key)
+  if (v.imported) expect(c.modelLoadedFor(key), `${key} shows its model`).toBe(true)
   expect(c.piecePosition.x, `${key} same spot x`).toBeCloseTo(pos.x, 1)
   expect(c.piecePosition.z, `${key} same spot z`).toBeCloseTo(pos.z, 1)
   expect(angDiffDeg(c.rotationDeg, rot) < 0.01, `${key} same facing`).toBe(true)
@@ -30,17 +51,27 @@ function checkSofa(c: SidleController, key: "SofaA" | "SofaB", pos: {x: number; 
   expect(obj("Edge_Right").getTransform().getLocalScale().z, `${key} outline depth`).toBeCloseTo(dims.d + 4, 1)
   const w = textOf("WidthLabel")
   const d = textOf("DepthLabel")
-  expect(w.includes(`${dims.w}`), `${key} width label "${w}"`).toBe(true)
-  expect(d.includes(`${dims.d}`), `${key} depth label "${d}"`).toBe(true)
-  expect(c.nearestObstacle, `${key} nearest obstacle`).toBe("RightWall")
-  expect(c.nearestGapCm, `${key} clearance to right wall`).toBeCloseTo(gap, 1)
-  expect(c.gapLabelText, `${key} gap text`).toBe(`${Math.floor(gap)} cm`)
-  expectEdges(c, ["green", "red", "green", "green"], `${key} near right wall`)
-  const col = baseColor(key)
-  log(`${key} base color ${col}`)
-  if (key === "SofaA") {
+  const h = textOf("HeightLabel")
+  expect(w.includes(`${Math.round(dims.w)}`), `${key} width label "${w}"`).toBe(true)
+  expect(d.includes(`${Math.round(dims.d)}`), `${key} depth label "${d}"`).toBe(true)
+  expect(h.includes(`${Math.round(dims.h)}`), `${key} height label "${h}"`).toBe(true)
+}
+
+/** Sofas sit at x = 110: the right-wall gap is 250 - 110 - w/2 for every sofa variant. */
+function checkSofaClearance(c: SidleController, v: ExpectedVariant): void {
+  const gap = ROOM.maxX - 110 - v.w / 2
+  expect(gap < 80, `${v.key}: test spot is too close to the right wall (gap ${gap})`).toBe(true)
+  expect(c.nearestObstacle, `${v.key} nearest obstacle`).toBe("RightWall")
+  expect(c.nearestGapCm, `${v.key} clearance to right wall`).toBeCloseTo(gap, 1)
+  expect(c.gapLabelText, `${v.key} gap text`).toBe(`${Math.floor(gap)} cm`)
+  expectEdges(c, ["green", "red", "green", "green"], `${v.key} near right wall`)
+  if (v.key === "SofaA") {
+    const col = baseColor("SofaA")
+    log(`Sofa A base color ${col}`)
     expect(Math.max(col.x, col.y, col.z) - Math.min(col.x, col.y, col.z) < 0.06 && col.x > 0.7, `Sofa A light gray (${col})`).toBe(true)
-  } else {
+  } else if (v.key === "SofaB") {
+    const col = baseColor("SofaB")
+    log(`Sofa B base color ${col}`)
     expect(col.x > 0.75 && col.x > col.y && col.y > col.z && col.x - col.z > 0.15, `Sofa B warm beige (${col})`).toBe(true)
   }
 }
@@ -51,6 +82,9 @@ export class C5CompareScenario extends Scenario {
     await sleep(1000)
     const c = await resetState()
     const it = new DefaultLeafInteractor("C5Interactor")
+    const offer = expectedOffer(bundledCatalog(), true)
+    const allKeys = offeredKeys(offer)
+    const cmpBtn = obj("CompareButton").getComponent(Button.getTypeName()) as Button
 
     // Setup: Measure on (real button) so labels are inspectable; move (API) so Sofa A
     // is 30 cm from the right wall at 0° for exact clearance numbers.
@@ -60,45 +94,33 @@ export class C5CompareScenario extends Scenario {
     await sleep(50)
     const pos = c.piecePosition
     const rot = c.rotationDeg
-    expect(c.compareEnabled, "compare enabled with a sofa").toBe(true)
-    const cmpBtn = obj("CompareButton").getComponent(Button.getTypeName()) as Button
-    expect(cmpBtn.inactive, "CompareButton active with sofa").toBe(false)
-    checkSofa(c, "SofaA", pos, rot, 30)
+    expect(pos.x, "sofa spot").toBeCloseTo(110, 1)
 
-    await tap(it, "CompareButton")
-    checkSofa(c, "SofaB", pos, rot, 50)
-    await tap(it, "CompareButton")
-    checkSofa(c, "SofaA", pos, rot, 30)
-
-    // Bed + dining table: greyed out and a pinch does nothing
-    for (const key of ["Bed", "DiningTable"]) {
-      await tap(it, "NextButton")
-      expect(c.currentPieceKey, "piece after Next").toBe(key)
-      expect(c.compareEnabled, `${key}: compareEnabled`).toBe(false)
-      expect(cmpBtn.inactive, `${key}: CompareButton.inactive (greyed out)`).toBe(true)
-      const inter = interactable("CompareButton")
-      expect(inter.enabled, `${key}: Compare interactable disabled`).toBe(false)
-      const before = JSON.stringify([c.currentPieceKey, c.piecePosition, c.rotationDeg])
-      // Attempt a real pinch with a separate interactor: it can't even hover a disabled target.
-      const probe = new DefaultLeafInteractor(`C5Probe_${key}`)
-      let pinchLanded = true
-      try {
-        await withTimeout(probe.trigger(inter), 1500, "no hover")
-      } catch (e) {
-        pinchLanded = false
-        // Drop the probe's pending target so it can't fire later when Compare re-activates.
-        ;(probe as unknown as {overrideInteractable?: unknown}).overrideInteractable = undefined
+    for (let ti = 0; ti < offer.length; ti++) {
+      const t = offer[ti]
+      if (ti > 0) await tap(it, "NextButton")
+      expect(c.currentPieceType, "type after Next").toBe(t.type)
+      expect(c.variantKeys(t.type).join(","), `${t.type}: controller variant order`).toBe(t.variants.map((v) => v.key).join(","))
+      if (t.variants.length === 1) {
+        // one variant: greyed out and a pinch does nothing
+        checkVariant(c, t.variants[0], allKeys, pos, rot)
+        await expectGreyedCompare(c, t.type)
+        continue
       }
-      await sleep(200)
-      log(`${key}: pinch on greyed Compare landed=${pinchLanded}`)
-      expect(pinchLanded, `${key}: pinch on greyed-out Compare does not register`).toBe(false)
-      expect(JSON.stringify([c.currentPieceKey, c.piecePosition, c.rotationDeg]), `${key}: unchanged after pinch`).toBe(before)
-      c.compare() // API path must also be a no-op
-      expect(c.currentPieceKey, `${key}: compare() API no-op`).toBe(key)
+      expect(c.compareEnabled, `${t.type}: compare enabled`).toBe(true)
+      expect(cmpBtn.inactive, `${t.type}: CompareButton active`).toBe(false)
+      // all variants in order, then wrap back to the first
+      for (let i = 0; i <= t.variants.length; i++) {
+        if (i > 0) await tap(it, "CompareButton")
+        const v = t.variants[i % t.variants.length]
+        checkVariant(c, v, allKeys, pos, rot)
+        if (t.type === "sofa") checkSofaClearance(c, v)
+      }
     }
+    expect(offer.some((t) => t.variants.length === 1), "bundled offer has a one-variant type (bed)").toBe(true)
+    expect(offer[0].variants.map((v) => v.key).slice(0, 2).join(","), "Sofa A then Sofa B").toBe("SofaA,SofaB")
 
-    await tapThroughImported(it, c) // Update 1: imported pieces sit between the table and Sofa A
-    await tap(it, "NextButton") // back to Sofa A
+    await tap(it, "NextButton") // wraps to the first type
     expect(c.currentPieceKey, "back to Sofa A").toBe("SofaA")
     expect(cmpBtn.inactive, "Compare active again with Sofa A").toBe(false)
     await tap(it, "MeasureButton")

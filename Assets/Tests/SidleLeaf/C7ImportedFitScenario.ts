@@ -9,7 +9,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, bundledCatalog, log, meshBounds, obj, resetState, tap, textOf, yawOf} from "./SidleTestHelpers"
+import {angDiffDeg, bundledCatalog, expectedOffer, goTo, log, meshBounds, obj, resetState, tap, textOf, yawOf} from "./SidleTestHelpers"
 
 function checkFit(c: SidleController, e: any, rotDeg: number): void {
   const key = `Imported_${e.id}`
@@ -53,10 +53,9 @@ export class C7ImportedFitScenario extends Scenario {
     const it = new DefaultLeafInteractor("C7Interactor")
     const cat = bundledCatalog()
     await tap(it, "MeasureButton") // labels on so their text can be checked
-    await tap(it, "NextButton")
-    await tap(it, "NextButton")
+    const offer = expectedOffer(cat, true)
     for (const e of cat) {
-      await tap(it, "NextButton")
+      await goTo(it, c, offer, `Imported_${e.id}`) // Update 2: Next to its type, then Compare
       checkFit(c, e, 0)
       await tap(it, "RotateLeftButton")
       checkFit(c, e, 15)

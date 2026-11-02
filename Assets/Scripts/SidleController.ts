@@ -3,6 +3,9 @@
  *
  * Owns: current piece, its floor position + rotation, Measure toggle, drag
  * state, clearance result, gap-label fade, and the "piece behind you" arrow.
+ * Pieces are grouped into types (sofa, chair, table, bed, then any unknown
+ * catalog category); Next piece moves between types, Compare between the
+ * variants of the current type (built-ins first, then catalog order).
  * Builds the virtual stand-in room (walls, doorway, coffee table), the four
  * box-shaped pieces and the imported catalog pieces (SidleCatalog) under the
  * authored roots it is given, and pushes view state into SidlePanelUI /
@@ -15,7 +18,8 @@
  *
  * Public API (for tests): nextPiece, compare, toggleMeasure, rotateLeft,
  * rotateRight, setPiecePosition(x, z), beginDrag, endDrag, refresh,
- * loadCatalogText(text) (test hook), plus the read-only getters below.
+ * loadCatalogText(text) and setShowPlaceholderPieces(on) (test hooks), plus
+ * the read-only getters below.
  *
  * Must not: create text/UIKit directly (labels live in the UI modules).
  */
@@ -44,6 +48,7 @@ export type PieceKey = "SofaA" | "SofaB" | "Bed" | "DiningTable"
 interface PieceDef {
   key: string // a PieceKey, or "Imported_<catalog id>"
   name: string
+  type: string // "sofa" | "chair" | "table" | "bed" | an unknown catalog category
   w: number
   d: number
   h: number
@@ -52,12 +57,15 @@ interface PieceDef {
 
 const IMPORTED_PREFIX = "Imported_"
 
+/** Known types in Next-piece order; unknown catalog categories follow in catalog order. */
+const TYPE_ORDER = ["sofa", "chair", "table", "bed"]
+
 /** Sizes from the design brief (W × D × H, cm). */
 const BUILT_IN: PieceDef[] = [
-  {key: "SofaA", name: "Sofa A", w: 220, d: 90, h: 85},
-  {key: "SofaB", name: "Sofa B", w: 180, d: 85, h: 85},
-  {key: "Bed", name: "Bed", w: 160, d: 200, h: 55},
-  {key: "DiningTable", name: "Dining table", w: 160, d: 90, h: 75},
+  {key: "SofaA", name: "Sofa A", type: "sofa", w: 220, d: 90, h: 85},
+  {key: "SofaB", name: "Sofa B", type: "sofa", w: 180, d: 85, h: 85},
+  {key: "Bed", name: "Bed", type: "bed", w: 160, d: 200, h: 55},
+  {key: "DiningTable", name: "Dining table", type: "table", w: 160, d: 90, h: 75},
 ]
 const COFFEE_TABLE = {w: 100, d: 50, h: 45}
 
@@ -114,6 +122,10 @@ export class SidleController extends BaseScriptComponent {
   @hint("GLB prefabs from Assets/Models; matched to catalog entries by file name")
   @allowUndefined
   modelPrefabs: ObjectPrefab[] = []
+
+  @input
+  @hint("Offer the built-in box pieces (Sofa A/B, bed, dining table). Off: imported pieces only; falls back to the built-ins if there are none")
+  showPlaceholderPieces: boolean = true
   @ui.group_end
 
   @ui.separator
@@ -193,6 +205,9 @@ export class SidleController extends BaseScriptComponent {
   // ── State (single source of truth) ─────────────────────────────────────────
   private pieces: PieceDef[] = BUILT_IN.slice()
   private pieceIndex = 0
+  /** Offered types in Next order, each with its variant keys in Compare order. */
+  private types: {type: string; keys: string[]}[] = []
+  private _placeholderFallback = false
   private yawDeg = 0
   private posX = 0
   private posZ = -220
@@ -241,6 +256,8 @@ export class SidleController extends BaseScriptComponent {
     this.buildRoom()
     this.buildPieces()
     this.buildImportedPieces(this.bundledCatalogText())
+    this.rebuildOffer()
+    this.select(this.firstKey())
     this.buildOutline()
     this.buildGrab()
     // UI components may not be initialized yet during onAwake (hierarchy order),
@@ -271,18 +288,17 @@ export class SidleController extends BaseScriptComponent {
   // Public API
   // ════════════════════════════════════════════════════════════════════════════
 
-  /** Sofa A → Bed → Dining table → each enabled imported piece → Sofa A (Sofa B → Bed). */
+  /** First variant of the next offered type, wrapping around. */
   nextPiece(): void {
-    const order = this.nextOrder()
-    const key = this.currentPieceKey === "SofaB" ? "SofaA" : this.currentPieceKey
-    this.showPiece(order[(order.indexOf(key) + 1) % order.length])
+    const ti = this.currentTypeIndex()
+    this.showPiece(this.types[(ti + 1) % this.types.length].keys[0])
   }
 
-  /** Sofa A ↔ Sofa B; does nothing for the bed or dining table. */
+  /** Next variant of the current type, wrapping around; does nothing for a one-variant type. */
   compare(): void {
-    const key = this.currentPieceKey
-    if (key === "SofaA") this.showPiece("SofaB")
-    else if (key === "SofaB") this.showPiece("SofaA")
+    const g = this.types[this.currentTypeIndex()]
+    if (!g || g.keys.length < 2) return
+    this.showPiece(g.keys[(g.keys.indexOf(this.currentPieceKey) + 1) % g.keys.length])
   }
 
   toggleMeasure(): void {
@@ -325,21 +341,34 @@ export class SidleController extends BaseScriptComponent {
   /**
    * Replace the imported pieces with ones built from `text` (catalog.json
    * format); null reloads the bundled catalog. Test hook for missing/broken
-   * models. If an imported piece is showing, Sofa A is shown first.
+   * models. Keeps the current piece if it is still offered, otherwise shows
+   * the first variant of the first type.
    */
   loadCatalogText(text: string | null): void {
-    if (this.currentPieceIsImported) this.showPiece("SofaA")
+    const key = this.currentPieceKey
     for (const p of this.pieces) {
       if (!p.entry) continue
       this.pieceVisuals[p.key].destroy()
       delete this.pieceVisuals[p.key]
       delete this.modelLoaded[p.key]
     }
-    const key = this.currentPieceKey
     this.pieces = BUILT_IN.slice()
-    this.pieceIndex = this.pieces.findIndex((p) => p.key === key)
     this._warnings = []
     this.buildImportedPieces(text === null ? this.bundledCatalogText() : text)
+    this.rebuildOffer()
+    this.select(this.isOffered(key) ? key : this.firstKey())
+    this.applyAll()
+  }
+
+  /**
+   * Test hook for the showPlaceholderPieces Inspector checkbox: sets it and
+   * shows the first variant of the first available type, as at Lens start
+   * (same spot and facing).
+   */
+  setShowPlaceholderPieces(on: boolean): void {
+    this.showPlaceholderPieces = on
+    this.rebuildOffer()
+    this.select(this.firstKey())
     this.applyAll()
   }
 
@@ -372,9 +401,21 @@ export class SidleController extends BaseScriptComponent {
   get importedPieceKeys(): string[] {
     return this.pieces.filter((p) => !!p.entry).map((p) => p.key)
   }
-  /** Next-piece cycle, starting at Sofa A. */
-  get pieceCycle(): string[] {
-    return this.nextOrder()
+  get currentPieceType(): string {
+    return this.pieces[this.pieceIndex].type
+  }
+  /** Offered types in Next-piece order. */
+  get availableTypes(): string[] {
+    return this.types.map((g) => g.type)
+  }
+  /** Offered variant keys of `type`, in Compare order ([] if the type is not offered). */
+  variantKeys(type: string): string[] {
+    const g = this.types.find((t) => t.type === type)
+    return g ? g.keys.slice() : []
+  }
+  /** True when showPlaceholderPieces is off but there is no imported piece, so the built-ins are offered anyway. */
+  get placeholderFallbackActive(): boolean {
+    return this._placeholderFallback
   }
   /** False when an imported piece shows the plain fallback box instead of its model. */
   modelLoadedFor(key: string): boolean {
@@ -394,10 +435,10 @@ export class SidleController extends BaseScriptComponent {
   get labelsVisible(): boolean {
     return this._measureOn || this._dragging
   }
-  /** Compare is only enabled while a sofa is showing. */
+  /** Compare is enabled when the current type has more than one variant. */
   get compareEnabled(): boolean {
-    const k = this.currentPieceKey
-    return k === "SofaA" || k === "SofaB"
+    const g = this.types[this.currentTypeIndex()]
+    return !!g && g.keys.length > 1
   }
   /** Rotation in degrees, normalized to [0, 360). Positive = rotated left (counter-clockwise from above). */
   get rotationDeg(): number {
@@ -481,18 +522,53 @@ export class SidleController extends BaseScriptComponent {
     return resolvePlacement(x, z, p.w, p.d, yaw, this.room3(), this.obstacles())
   }
 
-  private nextOrder(): string[] {
-    return ["SofaA", "Bed", "DiningTable"].concat(this.importedPieceKeys)
+  /**
+   * Group the offered pieces into types. Built-ins are offered when
+   * showPlaceholderPieces is on, or (with a warning) when there is no imported piece.
+   */
+  private rebuildOffer(): void {
+    let placeholders = this.showPlaceholderPieces
+    this._placeholderFallback = false
+    if (!placeholders && !this.pieces.some((p) => !!p.entry)) {
+      this.addWarning("showPlaceholderPieces is off but no imported piece is available; falling back to the built-in pieces")
+      placeholders = true
+      this._placeholderFallback = true
+    }
+    // this.pieces is built-ins first, then catalog order, so filtering keeps the variant order.
+    const offered = this.pieces.filter((p) => placeholders || !!p.entry)
+    const order = TYPE_ORDER.slice()
+    for (const p of offered) if (order.indexOf(p.type) < 0) order.push(p.type)
+    this.types = order
+      .map((type) => ({type, keys: offered.filter((p) => p.type === type).map((p) => p.key)}))
+      .filter((g) => g.keys.length > 0)
+  }
+
+  private firstKey(): string {
+    return this.types[0].keys[0]
+  }
+
+  private isOffered(key: string): boolean {
+    return this.types.some((g) => g.keys.indexOf(key) >= 0)
+  }
+
+  /** Index of the current piece's type in `types`; -1 if it is not offered. */
+  private currentTypeIndex(): number {
+    const key = this.currentPieceKey
+    return this.types.findIndex((g) => g.keys.indexOf(key) >= 0)
+  }
+
+  /** Make `key` current in the same spot + facing, nudged to the nearest valid spot if it would overlap. */
+  private select(key: string): void {
+    this.pieceIndex = this.pieces.findIndex((p) => p.key === key)
+    const p = this.resolve(this.posX, this.posZ, this.yawRad())
+    this.posX = p.x
+    this.posZ = p.z
   }
 
   private showPiece(key: string): void {
     const idx = this.pieces.findIndex((p) => p.key === key)
     if (idx < 0 || idx === this.pieceIndex) return
-    this.pieceIndex = idx
-    // Same spot + facing; nudge to nearest valid spot if it would overlap.
-    const p = this.resolve(this.posX, this.posZ, this.yawRad())
-    this.posX = p.x
-    this.posZ = p.z
+    this.select(key)
     this.applyAll()
   }
 
@@ -775,7 +851,8 @@ export class SidleController extends BaseScriptComponent {
       if (r.warning) this.addWarning(r.warning)
       this.pieceVisuals[key] = root
       this.modelLoaded[key] = r.model
-      this.pieces.push({key, name: e.name, w: e.widthCm, d: e.depthCm, h: e.heightCm, entry: e})
+      const type = e.category.trim().toLowerCase() || "other"
+      this.pieces.push({key, name: e.name, type, w: e.widthCm, d: e.depthCm, h: e.heightCm, entry: e})
     }
   }
 
