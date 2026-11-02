@@ -47,6 +47,7 @@
     pieceRoot: false
     room: false
     rotateStepDeg: false
+    showPlaceholderPieces: false
     startInsetCm: false
     tooCloseColor: false
     unlitMaterial: false
@@ -73,6 +74,7 @@
       catalog: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
       modelPrefabs: !<reference.ObjectPrefab[]>
         []
+      showPlaceholderPieces: true
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
       doorWidth: !<float> 90.000000
@@ -107,6 +109,7 @@
     - '// @ui {"widget":"group_start", "label":"Imported pieces"}'
     - '// @input Asset.JsonAsset catalog {"hint":"Bundled Assets/Models/catalog.json"}'
     - '// @input Asset.ObjectPrefab[] modelPrefabs = {} {"hint":"GLB prefabs from Assets/Models; matched to catalog entries by file name"}'
+    - '// @input bool showPlaceholderPieces = true {"hint":"Offer the built-in box pieces (Sofa A/B, bed, dining table). Off: imported pieces only; falls back to the built-ins if there are none"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'

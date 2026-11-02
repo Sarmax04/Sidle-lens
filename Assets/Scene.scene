@@ -621,6 +621,7 @@
   Enabled: true
   ScriptAsset: !<reference> eac29fc6-7fc2-41f4-997b-e36aa5343cf0
   ScriptInputsDefault:
+    showPlaceholderPieces: true
     wallHeight: true
     startInsetCm: true
     doorWidth: true
@@ -655,6 +656,7 @@
         - !<reference> 5ac49a89-09f0-482f-ab02-9f58ab602912
         - !<reference> b727d5eb-a173-479f-b7e6-a4a74795c9b6
         - !<reference> 7f16f3f1-e1e3-498c-9e46-c793a4c0b54e
+      showPlaceholderPieces: true
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
       doorWidth: !<float> 90.000000
