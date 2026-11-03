@@ -300,6 +300,7 @@ export async function resetState(): Promise<SidleController> {
   while (c.rotationDeg > 0.01 && c.rotationDeg < 359.99 && guard++ < 30) c.rotateLeft()
   if (c.measureOn) c.toggleMeasure()
   c.resetPanelOffset()
+  c.resetPanelScale()
   c.setPiecePosition(START.x, START.z)
   await sleep(1400)
   expect(c.currentPieceKey, "reset: piece").toBe("SofaA")

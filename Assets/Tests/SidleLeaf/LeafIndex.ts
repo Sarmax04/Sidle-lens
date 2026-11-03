@@ -22,6 +22,8 @@ import {C16GalleryOpenScenario} from "./C16GalleryOpenScenario"
 import {C17GalleryTabsScenario} from "./C17GalleryTabsScenario"
 import {C18GallerySelectScenario} from "./C18GallerySelectScenario"
 import {C19GalleryThumbsScenario} from "./C19GalleryThumbsScenario"
+import {C20PanelSizeScenario} from "./C20PanelSizeScenario"
+import {C21PanelSizeGalleryScenario} from "./C21PanelSizeGalleryScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -49,5 +51,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c17-gallery-tabs", typename: C17GalleryTabsScenario.getTypeName()},
     {id: "c18-gallery-select", typename: C18GallerySelectScenario.getTypeName()},
     {id: "c19-gallery-thumbs", typename: C19GalleryThumbsScenario.getTypeName()},
+    {id: "c20-panel-size", typename: C20PanelSizeScenario.getTypeName()},
+    {id: "c21-panel-size-gallery", typename: C21PanelSizeGalleryScenario.getTypeName()},
   ]
 }

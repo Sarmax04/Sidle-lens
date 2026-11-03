@@ -9,7 +9,8 @@
  *   GalleryPrevButton, GalleryNextButton (greyed out at the first / last page)
  *   GalleryPageLabel ("1 / 2"), GalleryCloseButton
  *
- * Main -> UI: render(view), setVisible(on).
+ * Main -> UI: render(view), setVisible(on), setScale(scale) (Update 5: the
+ *             gallery opens at the panel's size; uniform scale around its centre).
  * UI -> Main: onTab(type), onTile(key), onPrevPage, onNextPage, onClose.
  * Positioning/follow is done by a SidleLazyFollow on the same SceneObject.
  *
@@ -146,6 +147,10 @@ export class SidleGalleryUI extends BaseScriptComponent {
   }
 
   // ── Public view API ────────────────────────────────────────────────────────
+  setScale(scale: number): void {
+    this.sceneObject.getTransform().setLocalScale(new vec3(scale, scale, scale))
+  }
+
   setVisible(on: boolean): void {
     if (this.root) this.root.enabled = on
   }

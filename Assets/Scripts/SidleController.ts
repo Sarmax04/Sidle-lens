@@ -18,6 +18,9 @@
  * the bundled catalog.json + the GLB prefabs from Assets/Models.
  * All math is VirtualRoom-local (floor at y = 0, doorway wall at +Z).
  *
+ * Panel size (Update 5): panelScaleUp, panelScaleDown, resetPanelScale and the
+ * panelScale getter; four sizes (PANEL_SCALES), 100% at every start.
+ *
  * Gallery (Update 4): openGallery, closeGallery, selectFromGallery(key),
  * galleryShowType(type), galleryNextPage, galleryPrevPage; while it is open the
  * control panel is hidden and SidleGalleryUI is shown at the panel's offset.
@@ -76,6 +79,10 @@ const BUILT_IN: PieceDef[] = [
   {key: "Bed", name: "Bed", type: "bed", w: 160, d: 200, h: 55},
   {key: "DiningTable", name: "Dining table", type: "table", w: 160, d: 90, h: 75},
 ]
+/** Panel sizes (Update 5), smallest to biggest; index 1 (100%) at every start. */
+export const PANEL_SCALES = [0.75, 1.0, 1.25, 1.5]
+const PANEL_SCALE_DEFAULT_INDEX = 1
+
 /** Gallery swatch colours: the built-ins' main colour; imported pieces without a thumbnail use the fallback-box grey. */
 const SWATCH: {[key: string]: number[]} = {
   SofaA: [0.82, 0.82, 0.84],
@@ -254,6 +261,7 @@ export class SidleController extends BaseScriptComponent {
   private panelGrab: {rayDist: number; startOffset: PanelOffset; startPoint: PanelOffset} | null = null
   private panelFollow: SidleLazyFollow | null = null
   private galleryFollow: SidleLazyFollow | null = null
+  private panelScaleIndex = PANEL_SCALE_DEFAULT_INDEX
   private _galleryOpen = false
   private _galleryType = ""
   private _galleryPage = 0
@@ -317,6 +325,9 @@ export class SidleController extends BaseScriptComponent {
         warn("galleryUI not wired; the Gallery button does nothing")
       }
       this.resetPanelOffset()
+      this.resetPanelScale()
+      this.panelUI.onSmaller.add(() => this.panelScaleDown())
+      this.panelUI.onBigger.add(() => this.panelScaleUp())
       this.panelUI.onGallery.add(() => this.openGallery())
       this.panelUI.onNext.add(() => this.nextPiece())
       this.panelUI.onCompare.add(() => this.compare())
@@ -401,6 +412,34 @@ export class SidleController extends BaseScriptComponent {
     this.pushPanelOffset(true)
   }
 
+  // -- Panel size (Update 5) ---------------------------------------------------
+
+  /** One size step bigger ("+"); does nothing at the biggest size. */
+  panelScaleUp(): void {
+    if (this.panelScaleIndex >= PANEL_SCALES.length - 1) return
+    this.panelScaleIndex++
+    this.pushPanelScale()
+  }
+
+  /** One size step smaller ("-"); does nothing at the smallest size. */
+  panelScaleDown(): void {
+    if (this.panelScaleIndex <= 0) return
+    this.panelScaleIndex--
+    this.pushPanelScale()
+  }
+
+  /** Back to 100% (runs at every start; also a test hook). */
+  resetPanelScale(): void {
+    this.panelScaleIndex = PANEL_SCALE_DEFAULT_INDEX
+    this.pushPanelScale()
+  }
+
+  private pushPanelScale(): void {
+    const i = this.panelScaleIndex
+    this.panelUI.setPanelScale(PANEL_SCALES[i], i > 0, i < PANEL_SCALES.length - 1)
+    if (this.galleryUI) this.galleryUI.setScale(PANEL_SCALES[i])
+  }
+
   // -- Gallery (Update 4) ------------------------------------------------------
 
   /** Open the gallery on the current piece's type and the page that holds it; the panel is hidden meanwhile. */
@@ -411,6 +450,7 @@ export class SidleController extends BaseScriptComponent {
     this._galleryType = type
     this._galleryPage = Math.max(0, Math.floor(keys.indexOf(this.currentPieceKey) / GALLERY_TILES_PER_PAGE))
     this._galleryOpen = true
+    this.galleryUI.setScale(this.panelScale) // opens at the panel's size
     this.panelUI.getSceneObject().enabled = false
     if (this.galleryFollow) this.galleryFollow.setOffset(this._panelOffset, true)
     this.galleryUI.setVisible(true)
@@ -561,6 +601,16 @@ export class SidleController extends BaseScriptComponent {
   /** True while the panel's grab bar is held. */
   get panelDragging(): boolean {
     return this._panelDragging
+  }
+  /** Panel size as a fraction of the default: 0.75, 1, 1.25 or 1.5. */
+  get panelScale(): number {
+    return PANEL_SCALES[this.panelScaleIndex]
+  }
+  get canScaleUp(): boolean {
+    return this.panelScaleIndex < PANEL_SCALES.length - 1
+  }
+  get canScaleDown(): boolean {
+    return this.panelScaleIndex > 0
   }
   get galleryOpen(): boolean {
     return this._galleryOpen
@@ -950,6 +1000,8 @@ export class SidleController extends BaseScriptComponent {
     this.panelUI.setPieceName(def.name)
     this.panelUI.setPieceDetail(this.currentPieceDetail)
     this.panelUI.setCompareEnabled(this.compareEnabled)
+    // Size view in step every frame (keeps "-"/"+" greyed out after the panel was hidden by the gallery)
+    this.panelUI.setPanelScale(this.panelScale, this.canScaleDown, this.canScaleUp)
     this.panelUI.setMeasureOn(this._measureOn)
     this.updateBehindArrow()
   }

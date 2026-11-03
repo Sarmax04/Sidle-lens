@@ -7,12 +7,17 @@
  * row, or two rows of three when one row would be wider than 45 cm:
  *   NextButton, CompareButton, MeasureButton, RotateLeftButton, RotateRightButton, GalleryButton
  * plus a grab bar along the top edge (PanelGrabBar: a light pill with its own
- * collider + SIK Interactable, so pinching it never reaches a button)
+ * collider + SIK Interactable, so pinching it never reaches a button) and, on
+ * the grab bar row, PanelSmallerButton ("-") and PanelBiggerButton ("+")
+ * (Update 5)
  * (those are the runtime SceneObject names, stable for tests).
  *
  * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setMeasureOn, setBehindArrow,
- *             setGrabBarActive.
+ *             setGrabBarActive, setPanelScale(scale, canSmaller, canBigger) (uniform
+ *             scale of this SceneObject around its centre; SidleLazyFollow only sets
+ *             position and rotation).
  * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight, onGallery,
+ *             onSmaller, onBigger,
  *             onGrabBarStart(e), onGrabBarUpdate(e), onGrabBarEnd.
  *
  * Must not: hold domain state or make decisions (SidleController owns state).
@@ -123,6 +128,11 @@ export class SidlePanelUI extends BaseScriptComponent {
   @hint("Grab bar height in cm (brief: at least 2.5)")
   @widget(new SliderWidget(2.5, 5, 0.1))
   grabBarHeight: number = 2.5
+
+  @input
+  @hint("Size of the '-' / '+' panel size buttons in cm (brief: at least 3)")
+  @widget(new SliderWidget(3, 5, 0.1))
+  sizeButtonSize: number = 3.2
   @ui.group_end
 
   private _onNext = new Event<void>()
@@ -133,6 +143,14 @@ export class SidlePanelUI extends BaseScriptComponent {
   private _onGallery = new Event<void>()
   get onGallery(): PublicApi<void> {
     return this._onGallery.publicApi()
+  }
+  private _onSmaller = new Event<void>()
+  private _onBigger = new Event<void>()
+  get onSmaller(): PublicApi<void> {
+    return this._onSmaller.publicApi()
+  }
+  get onBigger(): PublicApi<void> {
+    return this._onBigger.publicApi()
   }
   get onNext(): PublicApi<void> {
     return this._onNext.publicApi()
@@ -171,6 +189,10 @@ export class SidlePanelUI extends BaseScriptComponent {
   private pendingCompareEnabled = true
   private pendingMeasureOn = false
   private grabBarShape: RoundedRectangle | null = null
+  private smallerButton: Button | null = null
+  private biggerButton: Button | null = null
+  private canSmaller = true
+  private canBigger = true
   private grabBarHovered = false
   private grabBarActive = false
 
@@ -199,6 +221,22 @@ export class SidlePanelUI extends BaseScriptComponent {
   setMeasureOn(on: boolean): void {
     this.pendingMeasureOn = on
     if (this.measureButton && this.measureButton.isOn !== on) this.measureButton.isOn = on
+  }
+
+  /**
+   * Panel size (Update 5): uniform scale of the whole panel around its centre
+   * (this SceneObject's origin); "-" / "+" greyed out at the ends.
+   */
+  setPanelScale(scale: number, canSmaller: boolean, canBigger: boolean): void {
+    const t = this.sceneObject.getTransform()
+    const cur = t.getLocalScale()
+    if (Math.abs(cur.x - scale) > 1e-6 || Math.abs(cur.y - scale) > 1e-6 || Math.abs(cur.z - scale) > 1e-6) {
+      t.setLocalScale(new vec3(scale, scale, scale))
+    }
+    this.canSmaller = canSmaller
+    this.canBigger = canBigger
+    if (this.smallerButton) applyInactive(this.smallerButton, !canSmaller)
+    if (this.biggerButton) applyInactive(this.biggerButton, !canBigger)
   }
 
   /** Grab bar shown as held (brighter) while the panel is being dragged. */
@@ -383,6 +421,39 @@ export class SidlePanelUI extends BaseScriptComponent {
     inter.onTriggerEnd.add(() => this._onGrabBarEnd.invoke())
     inter.onTriggerEndOutside.add(() => this._onGrabBarEnd.invoke())
     inter.onTriggerCanceled.add(() => this._onGrabBarEnd.invoke())
+
+    // "-" and "+" at the ends of the grab bar row, 1.5 cm from the bar (outside its collider)
+    const s = this.sizeButtonSize
+    const x = w / 2 + 1.5 + s / 2
+    const y = panelH / 2 + 1.0 + h / 2
+    this.smallerButton = this.sizeButton("PanelSmallerButton", "-", new vec3(-x, y, 0.6), () => this._onSmaller.invoke())
+    this.biggerButton = this.sizeButton("PanelBiggerButton", "+", new vec3(x, y, 0.6), () => this._onBigger.invoke())
+    this.smallerButton.inactive = !this.canSmaller
+    this.biggerButton.inactive = !this.canBigger
+  }
+
+  private sizeButton(name: string, label: string, pos: vec3, onClick: () => void): Button {
+    const s = this.sizeButtonSize
+    const so = this.obj(this.sceneObject, name, pos)
+    const btn = so.createComponent(Button.getTypeName()) as Button
+    btn.size = new vec3(s, s, 1)
+    const capSO = this.obj(so, "Label", new vec3(0, 0.15, BUTTON_FACE_Z))
+    const t = capSO.createComponent("Component.Text") as Text
+    t.text = label
+    t.depthTest = true
+    t.size = 70
+    ;(t as Text & {weight?: number}).weight = 700
+    t.horizontalAlignment = HorizontalAlignment.Center
+    t.verticalAlignment = VerticalAlignment.Center
+    t.horizontalOverflow = HorizontalOverflow.Overflow
+    t.verticalOverflow = VerticalOverflow.Overflow
+    t.layoutRect = Rect.create(-s / 2, s / 2, -s / 2, s / 2)
+    t.textFill.color = new vec4(1, 1, 1, 0.95)
+    btn.onTriggerUp.add(() => {
+      if (btn.inactive) return
+      onClick()
+    })
+    return btn
   }
 
   private updateGrabBarColor(): void {

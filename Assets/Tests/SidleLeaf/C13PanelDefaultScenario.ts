@@ -98,7 +98,15 @@ export class C13PanelDefaultScenario extends Scenario {
       const barInPanel = meshBounds(bar, panel)!
       const barCentre = (barInPanel.min.x + barInPanel.max.x) / 2
       expect(Math.abs(barCentre) < 0.5, "grab bar centred on the top edge").toBe(true)
-      expect(barInPanel.max.y >= plate!.max.y - 0.01, "grab bar is the top-most part of the panel").toBe(true)
+      // Update 5 puts the "-" / "+" size buttons on the grab bar's row; apart from them nothing is above the bar.
+      const toPanel = panel.getTransform().getInvertedWorldTransform()
+      let topOthers = -Infinity
+      for (let i = 0; i < panel.getChildrenCount(); i++) {
+        const ch = panel.getChild(i)
+        if (ch === bar || ch.name === "PanelSmallerButton" || ch.name === "PanelBiggerButton") continue
+        for (const p of visualCorners(ch)) topOthers = Math.max(topOthers, toPanel.multiplyPoint(p).y)
+      }
+      expect(barInPanel.max.y >= topOthers - 0.01, `grab bar is on the top row (bar top ${barInPanel.max.y.toFixed(2)}, rest ${topOthers.toFixed(2)})`).toBe(true)
       const others = visualCorners(panel).map((p) => panel.getTransform().getInvertedWorldTransform().multiplyPoint(p))
       const barCorners = visualCorners(bar).map((p) => panel.getTransform().getInvertedWorldTransform().multiplyPoint(p))
       const belowBar = others.filter((p) => p.y < barInPanel.min.y - 0.01)
