@@ -151,6 +151,27 @@ Problem: the panel is fixed in size; some users want it smaller to stay out of t
   17. The "+" and "-" buttons step the panel through 75%, 100%, 125% and 150%; the end buttons are greyed out and a pinch on them does nothing; the panel keeps its offset from the head and its buttons still work at every size.
   18. The gallery opens at the panel's current size; changing the size does not move the piece or change Measure; the Lens starts at 100%.
 
+## Update 6: Several pieces in the room
+This update changes the rule that the Lens shows one piece at a time. At the start there is still one piece, so criteria 1 to 18 are unchanged.
+
+1. Two new panel buttons: "Add" and "Remove". With eight buttons the panel uses two rows of four, buttons still at least 6 cm wide with 2 cm gaps, and the panel stays at most 28 degrees wide at its default position.
+2. There is always one current piece (the one Next piece, Compare, Rotate, Measure, the gallery, dragging and the clearance indicator act on) and zero to five placed pieces. At most six pieces are in the room.
+3. Add: the current piece stays exactly where it is and becomes a placed piece. A new current piece appears, starting on the next type (as Next piece would choose), at the nearest spot to the previous piece where it does not overlap anything. Add is greyed out when six pieces are in the room.
+4. Remove: the current piece is deleted and the most recently placed piece becomes the current one. Remove is greyed out when the current piece is the only piece.
+5. Placed pieces are fixed, show their own model and a faint, neutral (not green or red) floor outline, and show no labels or gap numbers.
+6. Pinching and dragging a placed piece makes it the current piece; the piece that was current becomes placed where it stands.
+7. The current piece cannot overlap a placed piece (it is moved to the nearest spot where it does not, as for walls). The clearance indicator measures against the walls, the doorway, the coffee table and every placed piece: the outline edge facing the nearest obstacle closer than 80 cm turns red and the gap number shows for the nearest one.
+8. The same variant can be in the room more than once.
+9. Measure labels, the "behind you" arrow and the gallery all work on the current piece only. Opening the gallery or pressing Next piece, Compare or Rotate never moves a placed piece.
+10. Placed pieces are not saved between sessions.
+- Out of scope: saving layouts, undo, snapping to other pieces, more than six pieces.
+- Done criteria:
+  19. Add leaves the current piece where it is as a placed piece with a neutral outline and starts a new current piece on the next type at a non-overlapping spot; Add is greyed out at six pieces.
+  20. The current piece cannot overlap a placed piece, and the clearance indicator measures against placed pieces (red edge and live gap number under 80 cm, green at 80 cm or more).
+  21. Pinching and dragging a placed piece makes it current and the previous current piece becomes placed where it stands.
+  22. Remove deletes the current piece and makes the most recently placed piece current; Remove is greyed out when only one piece is left.
+  23. Next piece, Compare, Rotate, Measure and the gallery act only on the current piece and never move a placed piece; placed pieces show no labels.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
