@@ -197,6 +197,20 @@ Problem: a sofa that fits the room may not get through the door.
   26. For every piece in the catalog, the panel line shows "Fits through the 90 cm door" or "Too big for the 90 cm door" exactly as the rule gives, in green or red.
   27. The line updates when the piece changes (Next piece, Compare, gallery) and does not appear to take space from the buttons.
 
+## Update 9: Fabric colours
+Problem: the user wants to see the same piece in other colours.
+
+1. A row of six round swatches (each at least 3 cm wide, 1.5 cm gaps) sits on its own small strip under the control panel, following the panel. The first swatch means "original" (the model's own colours); the others are light grey, warm beige, sage green, dusty blue and terracotta. Every swatch is at least mid-tone.
+2. Pinching a swatch tints the current piece with that colour; pinching "original" restores the model's own colours. The selected swatch shows a ring.
+3. The tint keeps the model's shading and detail: it changes the colour, not the shape, and the piece must not become darker overall than the original (dark is transparent on the display).
+4. The colour belongs to the current piece. It stays when the variant changes (Next piece, Compare, gallery) and when the piece is rotated or moved. When Add places the piece, it keeps its colour as a placed piece, and the new current piece starts at "original".
+5. The strip scales with the panel size (Update 5) and moves with the panel (Update 3).
+6. It never moves the piece or changes Measure, and the colour is not saved between sessions.
+- Out of scope: custom colours, textures, per-part colours.
+- Done criteria:
+  28. Pinching a swatch tints the current piece, "original" restores it, and the selected swatch is marked; the tint does not make the piece darker than the original on average.
+  29. The colour stays across variant changes and rotation, a placed piece keeps its colour after Add, a new current piece starts at "original", and the strip follows the panel and its size.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
