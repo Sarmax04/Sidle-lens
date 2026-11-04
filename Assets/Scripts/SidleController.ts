@@ -18,6 +18,10 @@
  * light door frame (RoomDoorFrame) and a rug — all under RoomDecor except the
  * door frame, decoration only (no colliders, not obstacles, not measured).
  *
+ * Door fit (Update 8): currentFitsThroughDoor / doorFitText for the current
+ * piece (SidleGeometry.fitsThroughDoor with the doorway's DOOR_WIDTH_CM x
+ * DOOR_HEIGHT_CM), shown as a line under the name on the panel.
+ *
  * Expects @inputs: VirtualRoom, Doorway, CoffeeTable, Piece, FloorOutline
  * SceneObjects; the two UI components; a lit + an unlit template material;
  * the bundled catalog.json + the GLB prefabs from Assets/Models.
@@ -57,7 +61,10 @@ import {MaterialCache, makeBox} from "./SidleBoxFactory"
 import {CatalogEntry, buildImportedVisual, fileBaseName, glbBaseName, parseCatalog, warn} from "./SidleCatalog"
 import {
   ClearanceHit,
+  DOOR_HEIGHT_CM,
+  DOOR_WIDTH_CM,
   EDGE_NAMES,
+  fitsThroughDoor,
   EdgeName,
   Obstacle,
   ROOM_DEPTH_CM,
@@ -65,6 +72,7 @@ import {
   RoomSpec,
   isValidPlacement,
   measureClearances,
+  resolveDrag,
   resolvePlacement,
   rotateLocal,
 } from "./SidleGeometry"
@@ -210,15 +218,9 @@ export class SidleController extends BaseScriptComponent {
   @widget(new SliderWidget(10, 100, 1))
   startInsetCm: number = 30
 
-  @input
-  @hint("Doorway opening width, cm")
-  @widget(new SliderWidget(60, 140, 1))
-  doorWidth: number = 90
-
-  @input
-  @hint("Doorway opening height, cm")
-  @widget(new SliderWidget(180, 240, 1))
-  doorHeight: number = 200
+  // Doorway opening: DOOR_WIDTH_CM x DOOR_HEIGHT_CM in SidleGeometry (shared with the door-fit rule, Update 8).
+  private readonly doorWidth = DOOR_WIDTH_CM
+  private readonly doorHeight = DOOR_HEIGHT_CM
 
   @input("vec4", "{0.95, 0.93, 0.88, 1.0}")
   @hint("Wall color: warm white (left, right and doorway walls)")
@@ -726,6 +728,15 @@ export class SidleController extends BaseScriptComponent {
     if (!p.entry) return ""
     return `${p.entry.domain} · ${Math.round(p.w)} × ${Math.round(p.d)} × ${Math.round(p.h)} cm`
   }
+  /** Update 8: the current piece can be carried through the doorway (catalog / built-in dimensions). */
+  get currentFitsThroughDoor(): boolean {
+    const p = this.pieces[this.pieceIndex]
+    return fitsThroughDoor(p.w, p.d, p.h, this.doorWidth, this.doorHeight)
+  }
+  /** The panel's door-fit line for the current piece. */
+  get doorFitText(): string {
+    return this.currentFitsThroughDoor ? `Fits through the ${this.doorWidth} cm door` : `Too big for the ${this.doorWidth} cm door`
+  }
   /** Keys of the enabled imported pieces, in catalog order. */
   get importedPieceKeys(): string[] {
     return this.pieces.filter((p) => !!p.entry).map((p) => p.key)
@@ -1129,7 +1140,12 @@ export class SidleController extends BaseScriptComponent {
     if (!this._dragging || !this.dragOffset) return
     const hit = this.floorHit(e)
     if (!hit) return
-    this.setPiecePosition(hit.x + this.dragOffset.x, hit.z + this.dragOffset.z)
+    // Continuous move: never jumps through a placed piece (same as setPiecePosition when nothing is placed).
+    const def = this.pieces[this.pieceIndex]
+    const p = resolveDrag(this.posX, this.posZ, hit.x + this.dragOffset.x, hit.z + this.dragOffset.z, def.w, def.d, this.yawRad(), this.room3(), this.obstacles())
+    this.posX = p.x
+    this.posZ = p.z
+    this.applyAll()
   }
 
   // ── Panel drag (grab bar) ──────────────────────────────────────────────────
@@ -1263,6 +1279,7 @@ export class SidleController extends BaseScriptComponent {
     // Panel
     this.panelUI.setPieceName(def.name)
     this.panelUI.setPieceDetail(this.currentPieceDetail)
+    this.panelUI.setDoorFit(this.doorFitText, this.currentFitsThroughDoor)
     this.panelUI.setCompareEnabled(this.compareEnabled)
     this.panelUI.setAddEnabled(this.canAdd)
     this.panelUI.setRemoveEnabled(this.canRemove)

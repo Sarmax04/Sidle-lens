@@ -661,8 +661,6 @@
     showPlaceholderPieces: true
     wallHeight: true
     startInsetCm: true
-    doorWidth: true
-    doorHeight: true
     accentWallColor: true
     plankLineColor: true
     plankWidthCm: true
@@ -729,8 +727,6 @@
       showPlaceholderPieces: true
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
-      doorWidth: !<float> 90.000000
-      doorHeight: !<float> 200.000000
       wallColor: !<Vec4> {x: 0.950000, y: 0.930000, z: 0.880000, w: 1.000000}
       floorColor: !<Vec4> {x: 0.950000, y: 0.880000, z: 0.760000, w: 1.000000}
       accentWallColor: !<Vec4> {x: 0.740000, y: 0.800000, z: 0.700000, w: 1.000000}
@@ -1907,6 +1903,8 @@
     padding: true
     iconSize: true
     arrowColor: true
+    fitsColor: true
+    tooBigColor: true
     grabBarWidth: true
     grabBarHeight: true
     sizeButtonSize: true
@@ -1921,6 +1919,8 @@
       padding: 1.600000
       iconSize: 2.400000
       arrowColor: !<Vec4> {x: 1.000000, y: 0.820000, z: 0.450000, w: 1.000000}
+      fitsColor: !<Vec4> {x: 0.600000, y: 0.950000, z: 0.660000, w: 1.000000}
+      tooBigColor: !<Vec4> {x: 1.000000, y: 0.640000, z: 0.600000, w: 1.000000}
       grabBarWidth: !<float> 14.000000
       grabBarHeight: 2.500000
       sizeButtonSize: 3.200000

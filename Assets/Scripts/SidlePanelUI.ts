@@ -3,7 +3,8 @@
  *
  * Owns: a UIKit BackPlate panel with a header row (current piece name +
  * "piece is behind you" arrow), a detail line (PieceDetailLabel: source domain
- * + dimensions, imported pieces only) and eight UIKit Buttons (Update 6) in
+ * + dimensions, imported pieces only), a door-fit line under the name
+ * (DoorFitLabel, Update 8: text only, light green or light red) and eight UIKit Buttons (Update 6) in
  * two rows of four (one row only when it would fit in 45 cm):
  *   NextButton, CompareButton, MeasureButton, GalleryButton,
  *   RotateLeftButton, RotateRightButton, AddButton, RemoveButton
@@ -13,7 +14,7 @@
  * (Update 5)
  * (those are the runtime SceneObject names, stable for tests).
  *
- * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setAddEnabled,
+ * Main -> UI: setPieceName, setPieceDetail, setDoorFit, setCompareEnabled, setAddEnabled,
  *             setRemoveEnabled, setMeasureOn, setBehindArrow,
  *             setGrabBarActive, setPanelScale(scale, canSmaller, canBigger) (uniform
  *             scale of this SceneObject around its centre; SidleLazyFollow only sets
@@ -126,6 +127,16 @@ export class SidlePanelUI extends BaseScriptComponent {
   @widget(new ColorWidget())
   arrowColor: vec4 = new vec4(1.0, 0.82, 0.45, 1.0)
 
+  @input("vec4", "{0.6, 0.95, 0.66, 1.0}")
+  @hint("Door-fit line colour when the piece fits through the door (light green)")
+  @widget(new ColorWidget())
+  fitsColor: vec4 = new vec4(0.6, 0.95, 0.66, 1.0)
+
+  @input("vec4", "{1.0, 0.64, 0.6, 1.0}")
+  @hint("Door-fit line colour when the piece is too big for the door (light red)")
+  @widget(new ColorWidget())
+  tooBigColor: vec4 = new vec4(1.0, 0.64, 0.6, 1.0)
+
   @input
   @hint("Grab bar width in cm (brief: at least 12)")
   @widget(new SliderWidget(12, 24, 0.5))
@@ -198,6 +209,8 @@ export class SidlePanelUI extends BaseScriptComponent {
   private nameText: Text | null = null
   private detailText: Text | null = null
   private pendingDetail = ""
+  private doorFitText: Text | null = null
+  private pendingDoorFit = {text: "", fits: true}
   private arrowObj: SceneObject | null = null
   private compareButton: Button | null = null
   private measureButton: Button | null = null
@@ -230,6 +243,16 @@ export class SidlePanelUI extends BaseScriptComponent {
     if (!this.detailText) return
     if (this.detailText.text !== detail) this.detailText.text = detail
     this.detailText.getSceneObject().enabled = detail !== ""
+  }
+
+  /** Door-fit line under the name (Update 8): plain text, light green when it fits, light red when not. */
+  setDoorFit(text: string, fits: boolean): void {
+    this.pendingDoorFit = {text, fits}
+    if (!this.doorFitText) return
+    if (this.doorFitText.text !== text) this.doorFitText.text = text
+    const c = fits ? this.fitsColor : this.tooBigColor
+    const cur = this.doorFitText.textFill.color
+    if (cur.x !== c.x || cur.y !== c.y || cur.z !== c.z || cur.w !== c.w) this.doorFitText.textFill.color = c
   }
 
   setCompareEnabled(enabled: boolean): void {
@@ -305,9 +328,10 @@ export class SidlePanelUI extends BaseScriptComponent {
     const buttonsH = rows * this.buttonHeight + (rows - 1) * this.buttonGap
     const rowW = Math.max(buttonRowW, this.minContentWidth)
     const headerH = 3.2
+    const doorFitH = 2.2 // Update 8: added height, so the buttons keep their size
     const detailH = 2.2
     const panelW = rowW + this.padding * 2
-    const panelH = headerH + detailH + buttonsH + this.padding * 2 + 2.0
+    const panelH = headerH + doorFitH + detailH + buttonsH + this.padding * 2 + 3.0
 
     this.sceneObject.createComponent("Component.Canvas")
     const plate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
@@ -366,6 +390,22 @@ export class SidlePanelUI extends BaseScriptComponent {
         arrow.enabled = false
         this.arrowObj = arrow
       })
+    })
+
+    // Door-fit line under the name (Update 8): always shown, text only (not a button)
+    this.flexChild(content, {w: rowW, h: doorFitH}, (fitCell) => {
+      const so = this.obj(fitCell, "DoorFitLabel")
+      const t = so.createComponent("Component.Text") as Text
+      t.text = this.pendingDoorFit.text
+      t.depthTest = true
+      applyTextRole(t, "Caption", 100)
+      t.horizontalAlignment = HorizontalAlignment.Left
+      t.verticalAlignment = VerticalAlignment.Center
+      t.horizontalOverflow = HorizontalOverflow.Shrink // never wider than the panel
+      t.verticalOverflow = VerticalOverflow.Overflow
+      t.layoutRect = Rect.create(-rowW / 2, rowW / 2, -doorFitH / 2, doorFitH / 2)
+      t.textFill.color = this.pendingDoorFit.fits ? this.fitsColor : this.tooBigColor
+      this.doorFitText = t
     })
 
     // Detail line: source domain + W × D × H (imported pieces only)

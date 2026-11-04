@@ -35,8 +35,6 @@
     clearanceCm: false
     coffeeTable: false
     debugColliders: false
-    doorHeight: false
-    doorWidth: false
     doorway: false
     floorColor: false
     frameColor: false
@@ -91,8 +89,6 @@
       showPlaceholderPieces: true
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
-      doorWidth: !<float> 90.000000
-      doorHeight: !<float> 200.000000
       wallColor: !<Vec4> {x: 0.920000, y: 0.910000, z: 0.880000, w: 1.000000}
       floorColor: !<Vec4> {x: 0.720000, y: 0.700000, z: 0.660000, w: 1.000000}
       accentWallColor: !<Vec4> {x: 0.740000, y: 0.800000, z: 0.700000, w: 1.000000}
@@ -140,8 +136,6 @@
     - '// @ui {"widget":"group_start", "label":"Room"}'
     - '// @input float wallHeight = 250 {"hint":"Wall height, cm", "widget":"slider", "min":200, "max":350, "step":5}'
     - '// @input float startInsetCm = 30 {"hint":"How far the doorway wall line is behind the start position, cm", "widget":"slider", "min":10, "max":100, "step":1}'
-    - '// @input float doorWidth = 90 {"hint":"Doorway opening width, cm", "widget":"slider", "min":60, "max":140, "step":1}'
-    - '// @input float doorHeight = 200 {"hint":"Doorway opening height, cm", "widget":"slider", "min":180, "max":240, "step":1}'
     - '// @input vec4 wallColor = "{0.95, 0.93, 0.88, 1.0}" {"hint":"Wall color: warm white (left, right and doorway walls)", "widget":"color"}'
     - '// @input vec4 floorColor = "{0.95, 0.88, 0.76, 1.0}" {"hint":"Floor color: flat light wood tone (unlit). Kept light so the green/red outline and the gap number read on it", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

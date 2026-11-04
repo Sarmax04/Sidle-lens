@@ -104,6 +104,7 @@ export class C23PlacedClearanceScenario extends Scenario {
     // Real drag toward the placed sofa: live gap number, never overlaps, stops at contact.
     const texts: string[] = []
     let overlapped = false
+    let passedThrough = false
     let prevZ = -9999
     for (let n = 0; n < 12 && Math.abs(prevZ - c.piecePosition.z) > 0.01; n++) {
       prevZ = c.piecePosition.z
@@ -112,6 +113,7 @@ export class C23PlacedClearanceScenario extends Scenario {
       while (!done) {
         if (c.gapLabelVisible && texts[texts.length - 1] !== c.gapLabelText) texts.push(c.gapLabelText)
         if (footprintsOverlap(currentFootprint(c, offer), placedFootprint(A, offer))) overlapped = true
+        if (c.piecePosition.z + v.d / 2 > sofaBack + 0.5) passedThrough = true
         await nextFrame()
       }
       await drag
@@ -119,6 +121,7 @@ export class C23PlacedClearanceScenario extends Scenario {
     }
     log(`drag toward placed sofa: gap numbers ${texts.join(" | ")}; end ${JSON.stringify(c.piecePosition)} gap ${c.nearestGapCm}`)
     expect(overlapped, "never overlaps the placed sofa while dragged into it").toBe(false)
+    expect(passedThrough, "never jumps through to the far side of the placed sofa").toBe(false)
     expect(texts.length >= 3, `gap number updated live while dragging (${texts.length} values)`).toBe(true)
     expect(c.nearestObstacle, "touching the placed sofa").toBe(`Placed_${A.id}`)
     expect(c.nearestGapCm < 1, `gap ~0 at contact (${c.nearestGapCm})`).toBe(true)

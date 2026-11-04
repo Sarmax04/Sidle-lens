@@ -17,6 +17,26 @@
 /** Virtual stand-in room size, cm. The one place to change the room's footprint. */
 export const ROOM_WIDTH_CM = 500 // X, across the doorway wall
 export const ROOM_DEPTH_CM = 600 // Z, doorway wall to far wall
+/** Doorway opening, cm. The room builds its doorway from these, and fitsThroughDoor uses them by default. */
+export const DOOR_WIDTH_CM = 90
+export const DOOR_HEIGHT_CM = 200
+
+/**
+ * Update 8: can a piece be carried through the doorway? Sort the three
+ * dimensions; the two smallest must pass the opening, the smaller through the
+ * door width and the larger through the door height (the largest is the length
+ * it is carried along). Assumes the piece can be turned freely; ignores corners.
+ */
+export function fitsThroughDoor(
+  widthCm: number,
+  depthCm: number,
+  heightCm: number,
+  doorWidthCm: number = DOOR_WIDTH_CM,
+  doorHeightCm: number = DOOR_HEIGHT_CM,
+): boolean {
+  const [a, b] = [widthCm, depthCm, heightCm].sort((x, y) => x - y)
+  return a <= doorWidthCm && b <= doorHeightCm
+}
 
 export interface Pt {
   x: number
@@ -262,6 +282,67 @@ export function resolvePlacement(
     if (best) return best
   }
   return p
+}
+
+/** True if a w x d piece at yaw overlaps any of `obstacles` somewhere on the straight path a -> b (sampled every <= 2 cm). */
+function pathOverlaps(ax: number, az: number, bx: number, bz: number, w: number, d: number, yaw: number, obstacles: Obstacle[]): boolean {
+  const n = Math.max(1, Math.ceil(Math.sqrt((bx - ax) ** 2 + (bz - az) ** 2) / 2))
+  for (let i = 0; i <= n; i++) {
+    const t = i / n
+    const poly = obbCorners(ax + (bx - ax) * t, az + (bz - az) * t, w, d, yaw)
+    for (const o of obstacles) if (satPush(poly, obstacleCorners(o)) !== null) return true
+  }
+  return false
+}
+
+/** Furthest valid point on the straight path a -> b (stepping <= 2 cm, then bisecting to ~0.01 cm); `a` must be valid. */
+function furthestFree(ax: number, az: number, bx: number, bz: number, w: number, d: number, yaw: number, room: RoomSpec, obstacles: Obstacle[]): Pt {
+  const at = (t: number): Pt => ({x: ax + (bx - ax) * t, z: az + (bz - az) * t})
+  const ok = (t: number) => {
+    const p = at(t)
+    return isValidPlacement(p.x, p.z, w, d, yaw, room, obstacles)
+  }
+  const n = Math.max(1, Math.ceil(Math.sqrt((bx - ax) ** 2 + (bz - az) ** 2) / 2))
+  for (let i = 1; i <= n; i++) {
+    if (ok(i / n)) continue
+    let lo = (i - 1) / n
+    let hi = i / n
+    for (let k = 0; k < 16; k++) {
+      const mid = (lo + hi) / 2
+      if (ok(mid)) lo = mid
+      else hi = mid
+    }
+    return at(lo)
+  }
+  return at(1)
+}
+
+/**
+ * Dragging (Update 6 fix): like resolvePlacement(to), but a dragged piece never
+ * passes through a free-standing (oriented, i.e. placed) obstacle. If the
+ * nearest valid spot to the hand lies across such an obstacle, the piece stops
+ * at contact instead, sliding along it on whichever axis still moves it
+ * furthest. Without oriented obstacles this is exactly resolvePlacement.
+ */
+export function resolveDrag(
+  fromX: number,
+  fromZ: number,
+  toX: number,
+  toZ: number,
+  w: number,
+  d: number,
+  yaw: number,
+  room: RoomSpec,
+  obstacles: Obstacle[],
+): Pt {
+  const p = resolvePlacement(toX, toZ, w, d, yaw, room, obstacles)
+  const solid = obstacles.filter((o) => o.yaw !== undefined)
+  if (solid.length === 0 || !pathOverlaps(fromX, fromZ, p.x, p.z, w, d, yaw, solid)) return p
+  if (!isValidPlacement(fromX, fromZ, w, d, yaw, room, obstacles)) return p
+  const a = furthestFree(fromX, fromZ, toX, toZ, w, d, yaw, room, obstacles)
+  const sx = furthestFree(a.x, a.z, toX, a.z, w, d, yaw, room, obstacles)
+  const sz = furthestFree(a.x, a.z, a.x, toZ, w, d, yaw, room, obstacles)
+  return dist(a, sx) >= dist(a, sz) ? sx : sz
 }
 
 /**

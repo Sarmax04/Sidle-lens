@@ -30,6 +30,7 @@ import {C24GrabPlacedScenario} from "./C24GrabPlacedScenario"
 import {C25RemovePieceScenario} from "./C25RemovePieceScenario"
 import {C26CurrentOnlyScenario} from "./C26CurrentOnlyScenario"
 import {C27RoomLookScenario} from "./C27RoomLookScenario"
+import {C28DoorFitScenario} from "./C28DoorFitScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -65,5 +66,6 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c25-remove-piece", typename: C25RemovePieceScenario.getTypeName()},
     {id: "c26-current-only", typename: C26CurrentOnlyScenario.getTypeName()},
     {id: "c27-room-look", typename: C27RoomLookScenario.getTypeName()},
+    {id: "c28-door-fit", typename: C28DoorFitScenario.getTypeName()},
   ]
 }
