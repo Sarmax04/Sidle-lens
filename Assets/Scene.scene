@@ -9,8 +9,8 @@
     - !<own> e857a34f-2ecc-4cbf-a87f-ce0a56cc711c
     - !<own> 9dd62012-d9b1-4c9c-8635-c278f9948b14
     - !<own> 2a8cee4d-e8da-4af3-9787-cdd774fb39fb
-    - !<own> 5710fbb5-7c89-4513-a1bd-2224d58fe16c
     - !<own> d440ab8d-aea5-43f1-9852-117ac4d43160
+    - !<own> c3740330-f8bf-4949-82f0-7e33c44ff188
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -433,6 +433,22 @@
     - !<own> 9e373d68-993f-4c8f-83a0-6644f1d9fefd
   Components:
     []
+- !<ScriptComponent/1038d784-8c6a-49c7-9432-336f2de17c52>
+  PrefabRemaps:
+    []
+  Name: MessagingBridge
+  Enabled: true
+  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/10f60da2-2196-40ad-9e72-8a6bc7e86f35>
   PrefabRemaps:
     []
@@ -647,12 +663,19 @@
     startInsetCm: true
     doorWidth: true
     doorHeight: true
-    wallColor: true
-    floorColor: true
+    accentWallColor: true
+    plankLineColor: true
+    plankWidthCm: true
+    baseboardColor: true
+    frameColor: true
+    windowPaneColor: true
+    showRug: true
+    rugColor: true
     clearanceCm: true
     rotateStepDeg: true
     gapFadeSeconds: true
     clearColor: true
+    placedOutlineColor: true
     tooCloseColor: true
     outlineWidthCm: true
     debugColliders: true
@@ -708,12 +731,21 @@
       startInsetCm: !<float> 30.000000
       doorWidth: !<float> 90.000000
       doorHeight: !<float> 200.000000
-      wallColor: !<Vec4> {x: 0.920000, y: 0.910000, z: 0.880000, w: 1.000000}
-      floorColor: !<Vec4> {x: 0.720000, y: 0.700000, z: 0.660000, w: 1.000000}
+      wallColor: !<Vec4> {x: 0.950000, y: 0.930000, z: 0.880000, w: 1.000000}
+      floorColor: !<Vec4> {x: 0.950000, y: 0.880000, z: 0.760000, w: 1.000000}
+      accentWallColor: !<Vec4> {x: 0.740000, y: 0.800000, z: 0.700000, w: 1.000000}
+      plankLineColor: !<Vec4> {x: 0.860000, y: 0.770000, z: 0.630000, w: 1.000000}
+      plankWidthCm: !<float> 20.000000
+      baseboardColor: !<Vec4> {x: 0.990000, y: 0.980000, z: 0.960000, w: 1.000000}
+      frameColor: !<Vec4> {x: 0.970000, y: 0.960000, z: 0.930000, w: 1.000000}
+      windowPaneColor: !<Vec4> {x: 0.880000, y: 0.950000, z: 1.000000, w: 1.000000}
+      showRug: true
+      rugColor: !<Vec4> {x: 0.800000, y: 0.850000, z: 0.920000, w: 1.000000}
       clearanceCm: !<float> 80.000000
       rotateStepDeg: !<float> 15.000000
       gapFadeSeconds: !<float> 1.000000
       clearColor: !<Vec4> {x: 0.350000, y: 0.850000, z: 0.450000, w: 1.000000}
+      placedOutlineColor: !<Vec4> {x: 0.800000, y: 0.800000, z: 0.800000, w: 1.000000}
       tooCloseColor: !<Vec4> {x: 1.000000, y: 0.300000, z: 0.250000, w: 1.000000}
       outlineWidthCm: 1.500000
       debugColliders: false
@@ -1184,21 +1216,6 @@
     - !<own> 46b79537-a269-46f1-9483-500d7a4170d6
   Components:
     []
-- !<SceneObject/5710fbb5-7c89-4513-a1bd-2224d58fe16c>
-  PrefabRemaps:
-    []
-  Name: LEAF Plugin Bridge
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> eceb8e70-07fa-4ecb-938c-ab58738c6b94
 - !<SceneObject/58ef319f-850e-40dd-8295-e6dc36ab4854>
   PrefabRemaps:
     []
@@ -2345,6 +2362,21 @@
     []
   Components:
     []
+- !<SceneObject/c3740330-f8bf-4949-82f0-7e33c44ff188>
+  PrefabRemaps:
+    []
+  Name: LEAF Plugin Bridge
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 1038d784-8c6a-49c7-9432-336f2de17c52
 - !<ScriptComponent/c8e031d3-a8a1-468a-a419-427f8556de4c>
   PrefabRemaps:
     []
@@ -2772,22 +2804,6 @@
     Fingers_length: 0.000000
     Thumb_inflate: 0.000000
     Thumb_length: 0.000000
-- !<ScriptComponent/eceb8e70-07fa-4ecb-938c-ab58738c6b94>
-  PrefabRemaps:
-    []
-  Name: MessagingBridge
-  Enabled: true
-  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/f0394c5d-4c44-4c65-a77c-e1c7e05ca905>
   PrefabRemaps:
     []

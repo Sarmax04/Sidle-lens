@@ -28,6 +28,8 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    accentWallColor: false
+    baseboardColor: false
     catalog: false
     clearColor: false
     clearanceCm: false
@@ -37,6 +39,7 @@
     doorWidth: false
     doorway: false
     floorColor: false
+    frameColor: false
     galleryUI: false
     gapFadeSeconds: false
     labelsUI: false
@@ -47,15 +50,20 @@
     panelUI: false
     pieceRoot: false
     placedOutlineColor: false
+    plankLineColor: false
+    plankWidthCm: false
     room: false
     rotateStepDeg: false
+    rugColor: false
     showPlaceholderPieces: false
+    showRug: false
     startInsetCm: false
     thumbnailTextures: false
     tooCloseColor: false
     unlitMaterial: false
     wallColor: false
     wallHeight: false
+    windowPaneColor: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -87,6 +95,14 @@
       doorHeight: !<float> 200.000000
       wallColor: !<Vec4> {x: 0.920000, y: 0.910000, z: 0.880000, w: 1.000000}
       floorColor: !<Vec4> {x: 0.720000, y: 0.700000, z: 0.660000, w: 1.000000}
+      accentWallColor: !<Vec4> {x: 0.740000, y: 0.800000, z: 0.700000, w: 1.000000}
+      plankLineColor: !<Vec4> {x: 0.860000, y: 0.770000, z: 0.630000, w: 1.000000}
+      plankWidthCm: !<float> 20.000000
+      baseboardColor: !<Vec4> {x: 0.990000, y: 0.980000, z: 0.960000, w: 1.000000}
+      frameColor: !<Vec4> {x: 0.970000, y: 0.960000, z: 0.930000, w: 1.000000}
+      windowPaneColor: !<Vec4> {x: 0.880000, y: 0.950000, z: 1.000000, w: 1.000000}
+      showRug: true
+      rugColor: !<Vec4> {x: 0.800000, y: 0.850000, z: 0.920000, w: 1.000000}
       clearanceCm: !<float> 80.000000
       rotateStepDeg: !<float> 15.000000
       gapFadeSeconds: !<float> 1.000000
@@ -126,8 +142,19 @@
     - '// @input float startInsetCm = 30 {"hint":"How far the doorway wall line is behind the start position, cm", "widget":"slider", "min":10, "max":100, "step":1}'
     - '// @input float doorWidth = 90 {"hint":"Doorway opening width, cm", "widget":"slider", "min":60, "max":140, "step":1}'
     - '// @input float doorHeight = 200 {"hint":"Doorway opening height, cm", "widget":"slider", "min":180, "max":240, "step":1}'
-    - '// @input vec4 wallColor = "{0.92, 0.91, 0.88, 1.0}" {"hint":"Wall color (light)", "widget":"color"}'
-    - '// @input vec4 floorColor = "{0.72, 0.7, 0.66, 1.0}" {"hint":"Floor color", "widget":"color"}'
+    - '// @input vec4 wallColor = "{0.95, 0.93, 0.88, 1.0}" {"hint":"Wall color: warm white (left, right and doorway walls)", "widget":"color"}'
+    - '// @input vec4 floorColor = "{0.95, 0.88, 0.76, 1.0}" {"hint":"Floor color: flat light wood tone (unlit). Kept light so the green/red outline and the gap number read on it", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Room look (Update 7, decoration only)"}'
+    - '// @input vec4 accentWallColor = "{0.74, 0.8, 0.7, 1.0}" {"hint":"Accent wall color (the far wall): soft sage", "widget":"color"}'
+    - '// @input vec4 plankLineColor = "{0.86, 0.77, 0.63, 1.0}" {"hint":"Thin plank lines on the floor (slightly darker than the floor)", "widget":"color"}'
+    - '// @input float plankWidthCm = 20 {"hint":"Plank width, cm (distance between plank lines)", "widget":"slider", "min":10, "max":40, "step":1}'
+    - '// @input vec4 baseboardColor = "{0.99, 0.98, 0.96, 1.0}" {"hint":"Baseboard color (lighter than the walls)", "widget":"color"}'
+    - '// @input vec4 frameColor = "{0.97, 0.96, 0.93, 1.0}" {"hint":"Window frame and door frame color (light)", "widget":"color"}'
+    - '// @input vec4 windowPaneColor = "{0.88, 0.95, 1.0, 1.0}" {"hint":"Window pane color (pale, bright; unlit)", "widget":"color"}'
+    - '// @input bool showRug = true {"hint":"Show the flat rug in the middle of the room"}'
+    - '// @input vec4 rugColor = "{0.8, 0.85, 0.92, 1.0}" {"hint":"Rug color: soft dusty blue (unlit)", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Clearance"}'

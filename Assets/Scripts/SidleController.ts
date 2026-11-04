@@ -13,6 +13,11 @@
  * authored roots it is given, and pushes view state into SidlePanelUI /
  * SidleLabelsUI. Every piece is built once and enabled/disabled on switch.
  *
+ * Room look (Update 7): flat light-wood floor with plank lines, warm white
+ * walls with a sage accent far wall, baseboards, a window in the left wall, a
+ * light door frame (RoomDoorFrame) and a rug — all under RoomDecor except the
+ * door frame, decoration only (no colliders, not obstacles, not measured).
+ *
  * Expects @inputs: VirtualRoom, Doorway, CoffeeTable, Piece, FloorOutline
  * SceneObjects; the two UI components; a lit + an unlit template material;
  * the bundled catalog.json + the GLB prefabs from Assets/Models.
@@ -215,15 +220,57 @@ export class SidleController extends BaseScriptComponent {
   @widget(new SliderWidget(180, 240, 1))
   doorHeight: number = 200
 
-  @input("vec4", "{0.92, 0.91, 0.88, 1.0}")
-  @hint("Wall color (light)")
+  @input("vec4", "{0.95, 0.93, 0.88, 1.0}")
+  @hint("Wall color: warm white (left, right and doorway walls)")
   @widget(new ColorWidget())
-  wallColor: vec4 = new vec4(0.92, 0.91, 0.88, 1.0)
+  wallColor: vec4 = new vec4(0.95, 0.93, 0.88, 1.0)
 
-  @input("vec4", "{0.72, 0.7, 0.66, 1.0}")
-  @hint("Floor color")
+  @input("vec4", "{0.95, 0.88, 0.76, 1.0}")
+  @hint("Floor color: flat light wood tone (unlit). Kept light so the green/red outline and the gap number read on it")
   @widget(new ColorWidget())
-  floorColor: vec4 = new vec4(0.72, 0.7, 0.66, 1.0)
+  floorColor: vec4 = new vec4(0.95, 0.88, 0.76, 1.0)
+  @ui.group_end
+
+  @ui.separator
+  @ui.group_start("Room look (Update 7, decoration only)")
+  @input("vec4", "{0.74, 0.8, 0.7, 1.0}")
+  @hint("Accent wall color (the far wall): soft sage")
+  @widget(new ColorWidget())
+  accentWallColor: vec4 = new vec4(0.74, 0.8, 0.7, 1.0)
+
+  @input("vec4", "{0.86, 0.77, 0.63, 1.0}")
+  @hint("Thin plank lines on the floor (slightly darker than the floor)")
+  @widget(new ColorWidget())
+  plankLineColor: vec4 = new vec4(0.86, 0.77, 0.63, 1.0)
+
+  @input
+  @hint("Plank width, cm (distance between plank lines)")
+  @widget(new SliderWidget(10, 40, 1))
+  plankWidthCm: number = 20
+
+  @input("vec4", "{0.99, 0.98, 0.96, 1.0}")
+  @hint("Baseboard color (lighter than the walls)")
+  @widget(new ColorWidget())
+  baseboardColor: vec4 = new vec4(0.99, 0.98, 0.96, 1.0)
+
+  @input("vec4", "{0.97, 0.96, 0.93, 1.0}")
+  @hint("Window frame and door frame color (light)")
+  @widget(new ColorWidget())
+  frameColor: vec4 = new vec4(0.97, 0.96, 0.93, 1.0)
+
+  @input("vec4", "{0.88, 0.95, 1.0, 1.0}")
+  @hint("Window pane color (pale, bright; unlit)")
+  @widget(new ColorWidget())
+  windowPaneColor: vec4 = new vec4(0.88, 0.95, 1.0, 1.0)
+
+  @input
+  @hint("Show the flat rug in the middle of the room")
+  showRug: boolean = true
+
+  @input("vec4", "{0.8, 0.85, 0.92, 1.0}")
+  @hint("Rug color: soft dusty blue (unlit)")
+  @widget(new ColorWidget())
+  rugColor: vec4 = new vec4(0.8, 0.85, 0.92, 1.0)
   @ui.group_end
 
   @ui.separator
@@ -1304,14 +1351,16 @@ export class SidleController extends BaseScriptComponent {
     const T = 10 // wall thickness (outside the wall lines)
     const cz = (R.minZ + R.maxZ) / 2
     const wall = this.litCache.get(this.wallColor)
-    const floorMat = this.litCache.get(this.floorColor)
+    const accent = this.litCache.get(this.accentWallColor)
+    // Flat (unlit) floor: its colour on screen is exactly floorColor, so outline/gap-number contrast is predictable.
+    const floorMat = this.unlitCache.get(this.floorColor)
 
     makeBox(this.room, "Floor", new vec3(0, -1, cz), new vec3(W + 2 * T, 2, D + 2 * T), floorMat)
 
     const walls = this.group(this.room, "Walls")
     makeBox(walls, "Wall_Left", new vec3(R.minX - T / 2, H / 2, cz), new vec3(T, H, D + 2 * T), wall)
     makeBox(walls, "Wall_Right", new vec3(R.maxX + T / 2, H / 2, cz), new vec3(T, H, D + 2 * T), wall)
-    makeBox(walls, "Wall_Far", new vec3(0, H / 2, R.minZ - T / 2), new vec3(W + 2 * T, H, T), wall)
+    makeBox(walls, "Wall_Far", new vec3(0, H / 2, R.minZ - T / 2), new vec3(W + 2 * T, H, T), accent)
     // Near (doorway) wall: two segments + lintel around a centered opening
     const half = this.doorWidth / 2
     const segW = W / 2 + T - half
@@ -1326,22 +1375,26 @@ export class SidleController extends BaseScriptComponent {
       wall,
     )
 
-    // Doorway trim (mid tone) so the opening reads clearly
+    // Door frame around the opening (light tone). Same boxes as the old trim, grouped as RoomDoorFrame at identity,
+    // so the opening stays doorWidth x doorHeight.
     if (this.doorway) {
       this.doorway.getTransform().setLocalPosition(new vec3(0, 0, R.maxZ))
-      const trim = this.lit(0.62, 0.56, 0.5)
-      makeBox(this.doorway, "Jamb_Left", new vec3(-half - 2.5, this.doorHeight / 2, T / 2), new vec3(5, this.doorHeight, T + 4), trim)
-      makeBox(this.doorway, "Jamb_Right", new vec3(half + 2.5, this.doorHeight / 2, T / 2), new vec3(5, this.doorHeight, T + 4), trim)
-      makeBox(this.doorway, "Head", new vec3(0, this.doorHeight + 2.5, T / 2), new vec3(this.doorWidth + 10, 5, T + 4), trim)
-      makeBox(this.doorway, "Threshold", new vec3(0, 0.3, T / 2), new vec3(this.doorWidth, 0.6, T + 4), trim)
+      const frameObj = this.group(this.doorway, "RoomDoorFrame")
+      const trim = this.litCache.get(this.frameColor)
+      makeBox(frameObj, "Jamb_Left", new vec3(-half - 2.5, this.doorHeight / 2, T / 2), new vec3(5, this.doorHeight, T + 4), trim)
+      makeBox(frameObj, "Jamb_Right", new vec3(half + 2.5, this.doorHeight / 2, T / 2), new vec3(5, this.doorHeight, T + 4), trim)
+      makeBox(frameObj, "Head", new vec3(0, this.doorHeight + 2.5, T / 2), new vec3(this.doorWidth + 10, 5, T + 4), trim)
+      makeBox(frameObj, "Threshold", new vec3(0, 0.3, T / 2), new vec3(this.doorWidth, 0.6, T + 4), trim)
     }
 
-    // Coffee table (fixed obstacle) — top + legs
+    this.buildRoomDecor(R, half)
+
+    // Coffee table (fixed obstacle) — top + legs. Same size and place; light wood colours (Update 7: nothing dark).
     if (this.coffeeTable) {
       const ct = this.coffeeTable
       ct.getTransform().setLocalPosition(this.coffeeTableCenter())
-      const top = this.lit(0.66, 0.6, 0.54)
-      const leg = this.lit(0.55, 0.5, 0.45)
+      const top = this.lit(0.84, 0.76, 0.66)
+      const leg = this.lit(0.78, 0.7, 0.6)
       const {w, d, h} = COFFEE_TABLE
       makeBox(ct, "Top", new vec3(0, h - 2, 0), new vec3(w, 4, d), top)
       const lx = w / 2 - 4
@@ -1349,6 +1402,62 @@ export class SidleController extends BaseScriptComponent {
       for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
         makeBox(ct, "Leg", new vec3(sx * lx, (h - 4) / 2, sz * lz), new vec3(5, h - 4, 5), leg)
       }
+    }
+  }
+
+  /**
+   * Update 7 decoration under RoomDecor: plank lines, baseboards, a window in the
+   * left long wall and a rug. Plain visuals only: no colliders, not obstacles,
+   * not measured. Everything sits on or against the room's existing surfaces
+   * and stays at or below 0.2 cm above the floor (the outline is 0.1-0.5 cm,
+   * the gap number 0.6 cm).
+   */
+  private buildRoomDecor(R: RoomSpec, doorHalf: number): void {
+    const W = R.maxX - R.minX
+    const D = R.maxZ - R.minZ
+    const cz = (R.minZ + R.maxZ) / 2
+    const decor = this.group(this.room, "RoomDecor")
+
+    // Thin plank lines running front to back (flat, unlit like the floor).
+    const plankMat = this.unlitCache.get(this.plankLineColor)
+    const step = Math.max(5, this.plankWidthCm)
+    const n = Math.floor(W / step)
+    for (let i = 1; i < n; i++) {
+      makeBox(decor, `RoomFloorPlank_${i}`, new vec3(R.minX + i * step, 0.05, cz), new vec3(0.8, 0.1, D), plankMat)
+    }
+
+    // Baseboards: 8 cm tall, 1.5 cm deep, along the bottom of every wall (the doorway wall in two parts).
+    const bbMat = this.litCache.get(this.baseboardColor)
+    const bh = 8
+    const bd = 1.5
+    makeBox(decor, "RoomBaseboard_Left", new vec3(R.minX + bd / 2, bh / 2, cz), new vec3(bd, bh, D), bbMat)
+    makeBox(decor, "RoomBaseboard_Right", new vec3(R.maxX - bd / 2, bh / 2, cz), new vec3(bd, bh, D), bbMat)
+    makeBox(decor, "RoomBaseboard_Far", new vec3(0, bh / 2, R.minZ + bd / 2), new vec3(W, bh, bd), bbMat)
+    const jambOuter = doorHalf + 5 // the door frame jambs are 5 cm wide outside the opening
+    const segW = R.maxX - jambOuter
+    makeBox(decor, "RoomBaseboard_NearLeft", new vec3(-(jambOuter + segW / 2), bh / 2, R.maxZ - bd / 2), new vec3(segW, bh, bd), bbMat)
+    makeBox(decor, "RoomBaseboard_NearRight", new vec3(jambOuter + segW / 2, bh / 2, R.maxZ - bd / 2), new vec3(segW, bh, bd), bbMat)
+
+    // Window in the left long wall: light frame, cross mullion and sill around a pale, bright pane.
+    const win = this.group(decor, "RoomWindow")
+    win.getTransform().setLocalPosition(new vec3(R.minX, 150, cz))
+    const ww = 160 // along the wall (Z)
+    const wh = 120
+    const fb = 6 // frame bar width
+    const fd = 3 // frame depth into the room
+    const frame = this.litCache.get(this.frameColor)
+    makeBox(win, "RoomWindowPane", new vec3(0.5, 0, 0), new vec3(1, wh, ww), this.unlitCache.get(this.windowPaneColor))
+    makeBox(win, "RoomWindowFrame_Top", new vec3(fd / 2, wh / 2 + fb / 2, 0), new vec3(fd, fb, ww + 2 * fb), frame)
+    makeBox(win, "RoomWindowFrame_Bottom", new vec3(fd / 2, -wh / 2 - fb / 2, 0), new vec3(fd, fb, ww + 2 * fb), frame)
+    makeBox(win, "RoomWindowFrame_Front", new vec3(fd / 2, 0, ww / 2 + fb / 2), new vec3(fd, wh, fb), frame)
+    makeBox(win, "RoomWindowFrame_Back", new vec3(fd / 2, 0, -ww / 2 - fb / 2), new vec3(fd, wh, fb), frame)
+    makeBox(win, "RoomWindowMullion_V", new vec3(fd / 2, 0, 0), new vec3(fd, wh, 3), frame)
+    makeBox(win, "RoomWindowMullion_H", new vec3(fd / 2, 0, 0), new vec3(fd, 3, ww), frame)
+    makeBox(win, "RoomWindowSill", new vec3(4, -wh / 2 - fb - 1.5, 0), new vec3(8, 3, ww + 2 * fb + 8), frame)
+
+    // Flat rug in the middle (optional): just above the plank lines, below the outline.
+    if (this.showRug) {
+      makeBox(decor, "RoomRug", new vec3(0, 0.15, cz + 20), new vec3(300, 0.1, 200), this.unlitCache.get(this.rugColor))
     }
   }
 
