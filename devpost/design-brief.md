@@ -186,6 +186,17 @@ The virtual room should look good on video while still being plainly a stand-in.
   24. The room has the floor, planks, accent wall, baseboards, window and door frame described above; no colour in the room is darker than mid-tone; the clearance outline and gap number stay readable on the floor.
   25. The room's size, the doorway opening, the coffee table and all clearance results are exactly as before (all earlier scenarios still pass).
 
+## Update 8: Does it fit through the door?
+Problem: a sofa that fits the room may not get through the door.
+
+1. The panel shows one line under the piece name for the current piece, always on: "Fits through the 90 cm door" in green, or "Too big for the 90 cm door" in red.
+2. The rule: the piece fits if two of its three dimensions (width, depth, height from the catalog) fit through the doorway opening of 90 cm by 200 cm, with the smaller of the two going through the 90 cm side and the larger through the 200 cm side. The third dimension is the length it is carried through. This assumes the piece can be turned freely and ignores turning a corner.
+3. The result uses the catalog dimensions and updates with every piece change.
+4. The line is a text with a colour (light green, light red); it is not a button.
+- Done criteria:
+  26. For every piece in the catalog, the panel line shows "Fits through the 90 cm door" or "Too big for the 90 cm door" exactly as the rule gives, in green or red.
+  27. The line updates when the piece changes (Next piece, Compare, gallery) and does not appear to take space from the buttons.
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
