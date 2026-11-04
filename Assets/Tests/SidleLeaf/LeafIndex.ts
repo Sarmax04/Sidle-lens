@@ -24,6 +24,11 @@ import {C18GallerySelectScenario} from "./C18GallerySelectScenario"
 import {C19GalleryThumbsScenario} from "./C19GalleryThumbsScenario"
 import {C20PanelSizeScenario} from "./C20PanelSizeScenario"
 import {C21PanelSizeGalleryScenario} from "./C21PanelSizeGalleryScenario"
+import {C22AddPieceScenario} from "./C22AddPieceScenario"
+import {C23PlacedClearanceScenario} from "./C23PlacedClearanceScenario"
+import {C24GrabPlacedScenario} from "./C24GrabPlacedScenario"
+import {C25RemovePieceScenario} from "./C25RemovePieceScenario"
+import {C26CurrentOnlyScenario} from "./C26CurrentOnlyScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -53,5 +58,10 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c19-gallery-thumbs", typename: C19GalleryThumbsScenario.getTypeName()},
     {id: "c20-panel-size", typename: C20PanelSizeScenario.getTypeName()},
     {id: "c21-panel-size-gallery", typename: C21PanelSizeGalleryScenario.getTypeName()},
+    {id: "c22-add-piece", typename: C22AddPieceScenario.getTypeName()},
+    {id: "c23-placed-clearance", typename: C23PlacedClearanceScenario.getTypeName()},
+    {id: "c24-grab-placed", typename: C24GrabPlacedScenario.getTypeName()},
+    {id: "c25-remove-piece", typename: C25RemovePieceScenario.getTypeName()},
+    {id: "c26-current-only", typename: C26CurrentOnlyScenario.getTypeName()},
   ]
 }

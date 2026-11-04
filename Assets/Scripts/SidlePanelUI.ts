@@ -3,20 +3,23 @@
  *
  * Owns: a UIKit BackPlate panel with a header row (current piece name +
  * "piece is behind you" arrow), a detail line (PieceDetailLabel: source domain
- * + dimensions, imported pieces only) and six UIKit Buttons (Update 4) — one
- * row, or two rows of three when one row would be wider than 45 cm:
- *   NextButton, CompareButton, MeasureButton, RotateLeftButton, RotateRightButton, GalleryButton
+ * + dimensions, imported pieces only) and eight UIKit Buttons (Update 6) in
+ * two rows of four (one row only when it would fit in 45 cm):
+ *   NextButton, CompareButton, MeasureButton, GalleryButton,
+ *   RotateLeftButton, RotateRightButton, AddButton, RemoveButton
  * plus a grab bar along the top edge (PanelGrabBar: a light pill with its own
  * collider + SIK Interactable, so pinching it never reaches a button) and, on
  * the grab bar row, PanelSmallerButton ("-") and PanelBiggerButton ("+")
  * (Update 5)
  * (those are the runtime SceneObject names, stable for tests).
  *
- * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setMeasureOn, setBehindArrow,
+ * Main -> UI: setPieceName, setPieceDetail, setCompareEnabled, setAddEnabled,
+ *             setRemoveEnabled, setMeasureOn, setBehindArrow,
  *             setGrabBarActive, setPanelScale(scale, canSmaller, canBigger) (uniform
  *             scale of this SceneObject around its centre; SidleLazyFollow only sets
  *             position and rotation).
  * UI -> Main: onNext, onCompare, onMeasure, onRotateLeft, onRotateRight, onGallery,
+ *             onAdd, onRemove,
  *             onSmaller, onBigger,
  *             onGrabBarStart(e), onGrabBarUpdate(e), onGrabBarEnd.
  *
@@ -41,9 +44,13 @@ const ICON_ROT_L = requireAsset("../Icons/rotate_left.png") as Texture
 const ICON_ROT_R = requireAsset("../Icons/rotate_right.png") as Texture
 const ICON_ARROW = requireAsset("../Icons/arrow_upward.png") as Texture
 const ICON_GALLERY = requireAsset("../Icons/grid_view.png") as Texture
+const ICON_ADD = requireAsset("../Icons/add.png") as Texture
+const ICON_REMOVE = requireAsset("../Icons/delete.png") as Texture
 
 /** Brief (Update 4): if the buttons do not fit in one row this wide (cm, at 1 m), use two rows. */
 const MAX_ONE_ROW_WIDTH_CM = 45
+/** Brief (Update 6): with eight buttons, two rows of four. */
+const MAX_PER_ROW = 4
 
 // ── Typography (type scale; panel sits ~100 cm away) ─────────────────────────
 const FONT_SIZE_SCALE = 1.0
@@ -144,6 +151,14 @@ export class SidlePanelUI extends BaseScriptComponent {
   get onGallery(): PublicApi<void> {
     return this._onGallery.publicApi()
   }
+  private _onAdd = new Event<void>()
+  private _onRemove = new Event<void>()
+  get onAdd(): PublicApi<void> {
+    return this._onAdd.publicApi()
+  }
+  get onRemove(): PublicApi<void> {
+    return this._onRemove.publicApi()
+  }
   private _onSmaller = new Event<void>()
   private _onBigger = new Event<void>()
   get onSmaller(): PublicApi<void> {
@@ -187,6 +202,10 @@ export class SidlePanelUI extends BaseScriptComponent {
   private compareButton: Button | null = null
   private measureButton: Button | null = null
   private pendingCompareEnabled = true
+  private addButton_: Button | null = null
+  private removeButton: Button | null = null
+  private pendingAddEnabled = true
+  private pendingRemoveEnabled = false
   private pendingMeasureOn = false
   private grabBarShape: RoundedRectangle | null = null
   private smallerButton: Button | null = null
@@ -216,6 +235,18 @@ export class SidlePanelUI extends BaseScriptComponent {
   setCompareEnabled(enabled: boolean): void {
     this.pendingCompareEnabled = enabled
     if (this.compareButton) applyInactive(this.compareButton, !enabled)
+  }
+
+  /** Add is greyed out when the room holds the maximum number of pieces (Update 6). */
+  setAddEnabled(enabled: boolean): void {
+    this.pendingAddEnabled = enabled
+    if (this.addButton_) applyInactive(this.addButton_, !enabled)
+  }
+
+  /** Remove is greyed out when the current piece is the only piece (Update 6). */
+  setRemoveEnabled(enabled: boolean): void {
+    this.pendingRemoveEnabled = enabled
+    if (this.removeButton) applyInactive(this.removeButton, !enabled)
   }
 
   setMeasureOn(on: boolean): void {
@@ -260,13 +291,15 @@ export class SidlePanelUI extends BaseScriptComponent {
       ["NextButton", "Next piece", ICON_NEXT, () => this._onNext.invoke()],
       ["CompareButton", "Compare", ICON_COMPARE, () => this._onCompare.invoke()],
       ["MeasureButton", "Measure", ICON_MEASURE, () => this._onMeasure.invoke()],
+      ["GalleryButton", "Gallery", ICON_GALLERY, () => this._onGallery.invoke()],
       ["RotateLeftButton", "Rotate left", ICON_ROT_L, () => this._onRotateLeft.invoke()],
       ["RotateRightButton", "Rotate right", ICON_ROT_R, () => this._onRotateRight.invoke()],
-      ["GalleryButton", "Gallery", ICON_GALLERY, () => this._onGallery.invoke()],
+      ["AddButton", "Add", ICON_ADD, () => this._onAdd.invoke()],
+      ["RemoveButton", "Remove", ICON_REMOVE, () => this._onRemove.invoke()],
     ]
     const n = buttons.length
     const oneRowPanelW = n * this.buttonWidth + (n - 1) * this.buttonGap + this.padding * 2
-    const rows = oneRowPanelW > MAX_ONE_ROW_WIDTH_CM ? 2 : 1
+    const rows = oneRowPanelW > MAX_ONE_ROW_WIDTH_CM ? Math.max(2, Math.ceil(n / MAX_PER_ROW)) : 1
     const perRow = Math.ceil(n / rows)
     const buttonRowW = perRow * this.buttonWidth + (perRow - 1) * this.buttonGap
     const buttonsH = rows * this.buttonHeight + (rows - 1) * this.buttonGap
@@ -375,6 +408,8 @@ export class SidlePanelUI extends BaseScriptComponent {
           for (const [name, label, icon, cb] of buttons.slice(r * perRow, (r + 1) * perRow)) {
             const b = this.addButton(rowObj, name, label, icon, cb)
             if (name === "CompareButton") this.compareButton = b
+            if (name === "AddButton") this.addButton_ = b
+            if (name === "RemoveButton") this.removeButton = b
             if (name === "MeasureButton") {
               this.measureButton = b
               b.setIsToggleable(true)
@@ -385,6 +420,8 @@ export class SidlePanelUI extends BaseScriptComponent {
     })
 
     this.compareButton!.inactive = !this.pendingCompareEnabled
+    this.addButton_!.inactive = !this.pendingAddEnabled
+    this.removeButton!.inactive = !this.pendingRemoveEnabled
     this.measureButton!.isOn = this.pendingMeasureOn
 
     this.buildGrabBar(panelH)

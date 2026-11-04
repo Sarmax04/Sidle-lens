@@ -25,6 +25,14 @@
  * galleryShowType(type), galleryNextPage, galleryPrevPage; while it is open the
  * control panel is hidden and SidleGalleryUI is shown at the panel's offset.
  *
+ * Several pieces (Update 6): one current piece (everything above acts on it)
+ * plus zero to five placed pieces, each a separate instance (its own visual
+ * copy, a faint neutral outline, a collider + Interactable; no labels). Placed
+ * pieces are oriented-rectangle obstacles for the current piece. addPiece and
+ * removePiece (Add / Remove buttons), placedPieces, pieceCount, canAdd,
+ * canRemove, currentPieceId. Pinching a placed piece swaps it with the current
+ * piece (which becomes placed where it stands) and the same pinch drags it on.
+ *
  * Public API (for tests): nextPiece, compare, toggleMeasure, rotateLeft,
  * rotateRight, setPiecePosition(x, z), beginDrag, endDrag, refresh,
  * loadCatalogText(text), setShowPlaceholderPieces(on) and resetPanelOffset()
@@ -50,6 +58,7 @@ import {
   ROOM_DEPTH_CM,
   ROOM_WIDTH_CM,
   RoomSpec,
+  isValidPlacement,
   measureClearances,
   resolvePlacement,
   rotateLocal,
@@ -92,6 +101,27 @@ const SWATCH: {[key: string]: number[]} = {
 }
 const SWATCH_IMPORTED = [0.78, 0.78, 0.8]
 const COFFEE_TABLE = {w: 100, d: 50, h: 45}
+/** Update 6: at most this many pieces (current + placed) in the room. */
+export const MAX_PIECES = 6
+
+/** A placed piece (Update 6): variant key, floor position (VirtualRoom-local cm) and yaw. */
+export interface PlacedPiece {
+  id: number
+  key: string
+  x: number
+  z: number
+  yawDeg: number
+}
+
+/** Scene objects that show one placed piece; reused for another piece on a swap so a drag on it continues. */
+interface PlacedSlot {
+  id: number
+  root: SceneObject
+  visual: SceneObject | null
+  edges: SceneObject[]
+  grab: SceneObject
+  collider: ColliderComponent
+}
 
 @component
 export class SidleController extends BaseScriptComponent {
@@ -218,6 +248,11 @@ export class SidleController extends BaseScriptComponent {
   @widget(new ColorWidget())
   clearColor: vec4 = new vec4(0.35, 0.85, 0.45, 1.0)
 
+  @input("vec4", "{0.8, 0.8, 0.8, 1.0}")
+  @hint("Outline color of placed pieces (faint, neutral: not green or red)")
+  @widget(new ColorWidget())
+  placedOutlineColor: vec4 = new vec4(0.8, 0.8, 0.8, 1.0)
+
   @input("vec4", "{1.0, 0.3, 0.25, 1.0}")
   @hint("Outline edge color when too close")
   @widget(new ColorWidget())
@@ -265,12 +300,20 @@ export class SidleController extends BaseScriptComponent {
   private _galleryOpen = false
   private _galleryType = ""
   private _galleryPage = 0
+  /** Update 6: id of the current piece instance, the placed pieces in placement order, and their scene slots. */
+  private _currentId = 1
+  private nextId = 2
+  private placed: PlacedPiece[] = []
+  private slots: PlacedSlot[] = []
+  /** The placed slot whose pinch is dragging the current piece (after the swap), or null. */
+  private slotDrag: PlacedSlot | null = null
 
   // ── Scene handles ──────────────────────────────────────────────────────────
   private litCache!: MaterialCache
   private unlitCache!: MaterialCache
   private pieceVisuals: {[k: string]: SceneObject} = {}
   private modelLoaded: {[k: string]: boolean} = {}
+  private prefabs: {[name: string]: ObjectPrefab} = {}
   private _warnings: string[] = []
   private hitObj!: SceneObject
   private collider!: ColliderComponent
@@ -334,6 +377,8 @@ export class SidleController extends BaseScriptComponent {
       this.panelUI.onMeasure.add(() => this.toggleMeasure())
       this.panelUI.onRotateLeft.add(() => this.rotateLeft())
       this.panelUI.onRotateRight.add(() => this.rotateRight())
+      this.panelUI.onAdd.add(() => this.addPiece())
+      this.panelUI.onRemove.add(() => this.removePiece())
       this.panelUI.onGrabBarStart.add((e: InteractorEvent) => this.onPanelGrabStart(e))
       this.panelUI.onGrabBarUpdate.add((e: InteractorEvent) => this.onPanelGrabUpdate(e))
       this.panelUI.onGrabBarEnd.add(() => this.onPanelGrabEnd())
@@ -500,6 +545,50 @@ export class SidleController extends BaseScriptComponent {
     this.renderGallery()
   }
 
+  // -- Several pieces (Update 6) -----------------------------------------------
+
+  /**
+   * Add: the current piece stays exactly where it is and becomes placed; a new
+   * current piece of the next type (as Next piece would choose) appears at the
+   * nearest spot to it where it overlaps nothing, facing the same way.
+   * Returns false (and changes nothing) when the room already holds MAX_PIECES.
+   */
+  addPiece(): boolean {
+    if (!this.canAdd) return false
+    if (this._dragging) this.endDrag()
+    const prev: PlacedPiece = {id: this._currentId, key: this.currentPieceKey, x: this.posX, z: this.posZ, yawDeg: this.yawDeg}
+    this.placed.push(prev)
+    this.createSlot(prev)
+    this._currentId = this.nextId++
+    const ti = this.currentTypeIndex()
+    const key = this.types[(ti + 1) % this.types.length].keys[0]
+    this.pieceIndex = this.pieces.findIndex((p) => p.key === key)
+    const def = this.pieces[this.pieceIndex]
+    const p = this.resolve(this.posX, this.posZ, this.yawRad())
+    if (!isValidPlacement(p.x, p.z, def.w, def.d, this.yawRad(), this.room3(), this.obstacles())) {
+      warn(`no free spot for ${def.name}; it overlaps until it is moved`)
+    }
+    this.posX = p.x
+    this.posZ = p.z
+    this.applyAll()
+    return true
+  }
+
+  /**
+   * Remove: delete the current piece; the most recently placed piece becomes
+   * current where it stands. Returns false (and changes nothing) when the
+   * current piece is the only piece.
+   */
+  removePiece(): boolean {
+    if (!this.canRemove) return false
+    if (this._dragging) this.endDrag()
+    const last = this.placed.pop()!
+    this.destroySlot(last.id)
+    this.takeOver(last)
+    this.applyAll()
+    return true
+  }
+
   /** Re-run clearance + view sync (also runs every frame). */
   refresh(): void {
     this.applyAll()
@@ -522,6 +611,12 @@ export class SidleController extends BaseScriptComponent {
     this.pieces = BUILT_IN.slice()
     this._warnings = []
     this.buildImportedPieces(text === null ? this.bundledCatalogText() : text)
+    // Placed pieces keep their own visual copies; drop those whose variant no longer exists.
+    for (const pp of this.placed.slice()) {
+      if (this.defOf(pp.key)) continue
+      this.placed.splice(this.placed.indexOf(pp), 1)
+      this.destroySlot(pp.id)
+    }
     this.rebuildOffer()
     this.select(this.isOffered(key) ? key : this.firstKey())
     this.renderGallery()
@@ -542,6 +637,24 @@ export class SidleController extends BaseScriptComponent {
   }
 
   // ── Read-only state ────────────────────────────────────────────────────────
+  /** Placed pieces (not the current one), in placement order; yawDeg normalized to [0, 360). */
+  get placedPieces(): PlacedPiece[] {
+    return this.placed.map((p) => ({id: p.id, key: p.key, x: p.x, z: p.z, yawDeg: ((p.yawDeg % 360) + 360) % 360}))
+  }
+  /** Id of the current piece instance (kept when it becomes placed, and back). */
+  get currentPieceId(): number {
+    return this._currentId
+  }
+  /** Pieces in the room: the current one plus the placed ones. */
+  get pieceCount(): number {
+    return this.placed.length + 1
+  }
+  get canAdd(): boolean {
+    return this.pieceCount < MAX_PIECES
+  }
+  get canRemove(): boolean {
+    return this.placed.length > 0
+  }
   get currentPieceKey(): string {
     return this.pieces[this.pieceIndex].key
   }
@@ -727,9 +840,113 @@ export class SidleController extends BaseScriptComponent {
     return new vec3(R.maxX - COFFEE_TABLE.w / 2, 0, R.minZ + COFFEE_TABLE.d / 2)
   }
 
+  /** Coffee table, then every placed piece as an oriented rectangle named "Placed_<id>". */
   private obstacles(): Obstacle[] {
     const p = this.coffeeTableCenter()
-    return [{name: "CoffeeTable", cx: p.x, cz: p.z, w: COFFEE_TABLE.w, d: COFFEE_TABLE.d}]
+    const out: Obstacle[] = [{name: "CoffeeTable", cx: p.x, cz: p.z, w: COFFEE_TABLE.w, d: COFFEE_TABLE.d}]
+    for (const pp of this.placed) {
+      const def = this.defOf(pp.key)
+      if (!def) continue
+      out.push({name: `Placed_${pp.id}`, cx: pp.x, cz: pp.z, w: def.w, d: def.d, yaw: (pp.yawDeg * Math.PI) / 180})
+    }
+    return out
+  }
+
+  private defOf(key: string): PieceDef | null {
+    return this.pieces.find((q) => q.key === key) ?? null
+  }
+
+  /** Make a placed piece's state the current piece (no nudge: it already stands on a valid spot). */
+  private takeOver(pp: PlacedPiece): void {
+    this._currentId = pp.id
+    this.pieceIndex = this.pieces.findIndex((q) => q.key === pp.key)
+    this.posX = pp.x
+    this.posZ = pp.z
+    this.yawDeg = pp.yawDeg
+  }
+
+  // ── Placed pieces: scene slots (Update 6) ──────────────────────────────────
+  private createSlot(pp: PlacedPiece): void {
+    const root = this.group(this.room, "PlacedPiece")
+    const outline = this.group(root, "PlacedOutline")
+    const grey = this.unlitCache.get(this.placedOutlineColor)
+    const edges: SceneObject[] = []
+    for (const n of ["PlacedEdge_Front", "PlacedEdge_Right", "PlacedEdge_Back", "PlacedEdge_Left"]) {
+      edges.push(makeBox(outline, n, new vec3(0, 0.3, 0), new vec3(1, 0.4, 1), grey))
+    }
+    const grab = this.group(root, "PlacedGrab")
+    const collider = grab.createComponent("Physics.ColliderComponent") as ColliderComponent
+    collider.debugDrawEnabled = this.debugColliders
+    const slot: PlacedSlot = {id: pp.id, root, visual: null, edges, grab, collider}
+    const inter = grab.createComponent(Interactable.getTypeName()) as Interactable
+    inter.onTriggerStart.add((e: InteractorEvent) => this.onPlacedGrabStart(slot, e))
+    inter.onTriggerUpdate.add((e: InteractorEvent) => {
+      if (this.slotDrag === slot) this.onGrabUpdate(e)
+    })
+    const end = () => {
+      if (this.slotDrag !== slot) return
+      this.slotDrag = null
+      this.endDrag()
+    }
+    inter.onTriggerEnd.add(end)
+    inter.onTriggerEndOutside.add(end)
+    inter.onTriggerCanceled.add(end)
+    this.slots.push(slot)
+    this.fillSlot(slot, pp)
+  }
+
+  private destroySlot(id: number): void {
+    const slot = this.slots.find((s) => s.id === id)
+    if (!slot) return
+    this.slots.splice(this.slots.indexOf(slot), 1)
+    if (this.slotDrag === slot) {
+      this.slotDrag = null
+      this.endDrag()
+    }
+    slot.root.destroy()
+  }
+
+  /** Show `pp` in `slot`: its own visual copy, outline, collider, transform and names. */
+  private fillSlot(slot: PlacedSlot, pp: PlacedPiece): void {
+    const def = this.defOf(pp.key)!
+    slot.id = pp.id
+    slot.root.name = `PlacedPiece_${pp.id}`
+    slot.grab.name = `PlacedGrab_${pp.id}`
+    const t = slot.root.getTransform()
+    t.setLocalPosition(new vec3(pp.x, 0, pp.z))
+    t.setLocalRotation(quat.angleAxis((pp.yawDeg * Math.PI) / 180, vec3.up()))
+    if (slot.visual) slot.visual.destroy()
+    slot.visual = this.group(slot.root, `PlacedVisual_${def.key}`)
+    this.buildVisual(slot.visual, def)
+    const specs = outlineSpecs(def.w, def.d, this.outlineWidthCm)
+    for (let i = 0; i < 4; i++) {
+      const et = slot.edges[i].getTransform()
+      et.setLocalPosition(specs[i].pos)
+      et.setLocalScale(specs[i].size)
+    }
+    const shape = Shape.createBoxShape()
+    shape.size = new vec3(def.w, def.h, def.d)
+    slot.collider.shape = shape
+    slot.grab.getTransform().setLocalPosition(new vec3(0, def.h / 2, 0))
+  }
+
+  /**
+   * A pinch on a placed piece makes it current; the current piece becomes
+   * placed where it stands (shown by this same slot, so the pinch keeps
+   * dragging the new current piece without a break).
+   */
+  private onPlacedGrabStart(slot: PlacedSlot, e: InteractorEvent): void {
+    if (this._dragging) return
+    const idx = this.placed.findIndex((p) => p.id === slot.id)
+    if (idx < 0) return
+    const target = this.placed[idx]
+    const prev: PlacedPiece = {id: this._currentId, key: this.currentPieceKey, x: this.posX, z: this.posZ, yawDeg: this.yawDeg}
+    this.placed.splice(idx, 1)
+    this.placed.push(prev)
+    this.takeOver(target)
+    this.fillSlot(slot, prev)
+    this.slotDrag = slot
+    this.onGrabStart(e)
   }
 
   private resolve(x: number, z: number, yaw: number): {x: number; z: number} {
@@ -1000,6 +1217,8 @@ export class SidleController extends BaseScriptComponent {
     this.panelUI.setPieceName(def.name)
     this.panelUI.setPieceDetail(this.currentPieceDetail)
     this.panelUI.setCompareEnabled(this.compareEnabled)
+    this.panelUI.setAddEnabled(this.canAdd)
+    this.panelUI.setRemoveEnabled(this.canRemove)
     // Size view in step every frame (keeps "-"/"+" greyed out after the panel was hidden by the gallery)
     this.panelUI.setPanelScale(this.panelScale, this.canScaleDown, this.canScaleUp)
     this.panelUI.setMeasureOn(this._measureOn)
@@ -1141,14 +1360,14 @@ export class SidleController extends BaseScriptComponent {
   private buildImportedPieces(text: string | null): void {
     const {entries, warnings} = parseCatalog(text)
     for (const w of warnings) this.addWarning(w)
-    const prefabs: {[name: string]: ObjectPrefab} = {}
-    for (const p of this.modelPrefabs ?? []) if (p) prefabs[p.name] = p
+    this.prefabs = {}
+    for (const p of this.modelPrefabs ?? []) if (p) this.prefabs[p.name] = p
     const fallback = this.lit(0.78, 0.78, 0.8)
     for (const e of entries) {
       const key = IMPORTED_PREFIX + e.id
       const root = this.group(this.pieceRoot, `Piece_${key}`)
       root.enabled = false
-      const r = buildImportedVisual(root, e, prefabs[glbBaseName(e.glb)] ?? null, fallback)
+      const r = buildImportedVisual(root, e, this.prefabs[glbBaseName(e.glb)] ?? null, fallback)
       if (r.warning) this.addWarning(r.warning)
       this.pieceVisuals[key] = root
       this.modelLoaded[key] = r.model
@@ -1166,11 +1385,18 @@ export class SidleController extends BaseScriptComponent {
     for (const def of BUILT_IN) {
       const root = this.group(this.pieceRoot, `Piece_${def.key}`)
       this.pieceVisuals[def.key] = root
-      if (def.key === "SofaA") this.buildSofa(root, def, [0.82, 0.82, 0.84], [0.9, 0.9, 0.92])
-      else if (def.key === "SofaB") this.buildSofa(root, def, [0.86, 0.75, 0.6], [0.93, 0.84, 0.7])
-      else if (def.key === "Bed") this.buildBed(root, def)
-      else this.buildTable(root, def)
+      this.buildVisual(root, def)
     }
+  }
+
+  /** Build a piece's visual under `root` (piece-local: floor at y = 0, front = +Z); used for placed copies too. */
+  private buildVisual(root: SceneObject, def: PieceDef): void {
+    if (def.entry) {
+      buildImportedVisual(root, def.entry, this.prefabs[glbBaseName(def.entry.glb)] ?? null, this.lit(0.78, 0.78, 0.8))
+    } else if (def.key === "SofaA") this.buildSofa(root, def, [0.82, 0.82, 0.84], [0.9, 0.9, 0.92])
+    else if (def.key === "SofaB") this.buildSofa(root, def, [0.86, 0.75, 0.6], [0.93, 0.84, 0.7])
+    else if (def.key === "Bed") this.buildBed(root, def)
+    else this.buildTable(root, def)
   }
 
   private buildSofa(root: SceneObject, def: PieceDef, body: number[], cushion: number[]): void {
@@ -1229,16 +1455,9 @@ export class SidleController extends BaseScriptComponent {
   }
 
   private layoutOutline(w: number, d: number): void {
-    const t = this.outlineWidthCm
-    const off = t / 2 + 0.5 // sit just outside the footprint so the line stays visible
     const green = this.unlitCache.get(this.clearColor)
     const red = this.unlitCache.get(this.tooCloseColor)
-    const specs = [
-      {pos: new vec3(0, 0.3, d / 2 + off), size: new vec3(w + 2 * (off + t / 2), 0.4, t)},
-      {pos: new vec3(w / 2 + off, 0.3, 0), size: new vec3(t, 0.4, d + 2 * (off + t / 2))},
-      {pos: new vec3(0, 0.3, -d / 2 - off), size: new vec3(w + 2 * (off + t / 2), 0.4, t)},
-      {pos: new vec3(-w / 2 - off, 0.3, 0), size: new vec3(t, 0.4, d + 2 * (off + t / 2))},
-    ]
+    const specs = outlineSpecs(w, d, this.outlineWidthCm)
     for (let i = 0; i < 4; i++) {
       const tr = this.edges[i].getTransform()
       tr.setLocalPosition(specs[i].pos)
@@ -1256,6 +1475,17 @@ export class SidleController extends BaseScriptComponent {
     this.collider.debugDrawEnabled = this.debugColliders
     this.hitObj.createComponent(Interactable.getTypeName())
   }
+}
+
+/** Outline edge boxes [front, right, back, left] around a w × d footprint, line width t. */
+function outlineSpecs(w: number, d: number, t: number): {pos: vec3; size: vec3}[] {
+  const off = t / 2 + 0.5 // sit just outside the footprint so the line stays visible
+  return [
+    {pos: new vec3(0, 0.3, d / 2 + off), size: new vec3(w + 2 * (off + t / 2), 0.4, t)},
+    {pos: new vec3(w / 2 + off, 0.3, 0), size: new vec3(t, 0.4, d + 2 * (off + t / 2))},
+    {pos: new vec3(0, 0.3, -d / 2 - off), size: new vec3(w + 2 * (off + t / 2), 0.4, t)},
+    {pos: new vec3(-w / 2 - off, 0.3, 0), size: new vec3(t, 0.4, d + 2 * (off + t / 2))},
+  ]
 }
 
 function toLocal2(dx: number, dz: number, yaw: number): {x: number; z: number} {

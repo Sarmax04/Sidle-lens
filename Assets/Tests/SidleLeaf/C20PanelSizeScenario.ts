@@ -34,7 +34,8 @@ import {
 } from "./SidleTestHelpers"
 
 const SIZES = [0.75, 1.0, 1.25, 1.5]
-const MAIN = ["NextButton", "CompareButton", "MeasureButton", "RotateLeftButton", "RotateRightButton", "GalleryButton"]
+// Update 6 adds Add and Remove to the main buttons; their width is checked like the others.
+const MAIN = ["NextButton", "CompareButton", "MeasureButton", "RotateLeftButton", "RotateRightButton", "GalleryButton", "AddButton", "RemoveButton"]
 
 /** World width (cm) of a button's own visual. */
 function buttonWidthCm(name: string): number {

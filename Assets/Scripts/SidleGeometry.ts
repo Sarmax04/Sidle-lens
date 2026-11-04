@@ -2,7 +2,8 @@
  * SidleGeometry — pure 2D floor-plan math for Sidle (no scene access).
  *
  * Owns: piece catalog shape, oriented-rectangle (OBB) corners, clearance
- * measurement against walls + rectangular obstacles, and overlap resolution
+ * measurement against walls + rectangular obstacles (axis-aligned, or oriented
+ * for placed pieces), and overlap resolution
  * ("nearest valid spot"). All coordinates are VirtualRoom-local floor-plane
  * centimeters: X = width axis, Z = depth axis (near/doorway wall at +Z).
  *
@@ -33,8 +34,14 @@ export interface Obstacle {
   name: string
   cx: number
   cz: number
-  w: number // along X
-  d: number // along Z
+  w: number // along X at yaw 0
+  d: number // along Z at yaw 0
+  /**
+   * Rotation in radians (same convention as pieces). Left out for the fixed,
+   * axis-aligned room obstacles (coffee table); set for placed pieces
+   * (Update 6), which are oriented rectangles.
+   */
+  yaw?: number
 }
 
 /** Piece-local edge names, in outline order. front = local +Z. */
@@ -86,6 +93,15 @@ export function aabbCorners(o: Obstacle): Pt[] {
     {x: o.cx - hw, z: o.cz - hd},
     {x: o.cx - hw, z: o.cz + hd},
   ]
+}
+
+/**
+ * Footprint corners of an obstacle, same order as obbCorners. Axis-aligned
+ * obstacles (no yaw) use aabbCorners exactly as before Update 6, so results for
+ * the room's own obstacles do not change.
+ */
+export function obstacleCorners(o: Obstacle): Pt[] {
+  return o.yaw === undefined ? aabbCorners(o) : obbCorners(o.cx, o.cz, o.w, o.d, o.yaw)
 }
 
 /** World-axis half extents of a rotated rectangle. */
@@ -179,7 +195,7 @@ export function isValidPlacement(
   if (cz - e.z < room.minZ - eps || cz + e.z > room.maxZ + eps) return false
   const poly = obbCorners(cx, cz, w, d, yaw)
   for (const o of obstacles) {
-    if (satPush(poly, aabbCorners(o)) !== null) return false
+    if (satPush(poly, obstacleCorners(o)) !== null) return false
   }
   return true
 }
@@ -214,7 +230,7 @@ export function resolvePlacement(
     let moved = false
     const poly = obbCorners(p.x, p.z, w, d, yaw)
     for (const o of obstacles) {
-      const push = satPush(poly, aabbCorners(o))
+      const push = satPush(poly, obstacleCorners(o))
       if (push) {
         p = {x: p.x + push.x * 1.001, z: p.z + push.z * 1.001}
         moved = true
@@ -297,7 +313,7 @@ export function measureClearances(
   wall("DoorwayWall", (p) => room.maxZ - p.z, (p) => ({x: p.x, z: room.maxZ}), 0, 1)
 
   for (const o of obstacles) {
-    const oc = aabbCorners(o)
+    const oc = obstacleCorners(o)
     let bestGap = Number.MAX_VALUE
     let pp: Pt = corners[0]
     let op: Pt = oc[0]

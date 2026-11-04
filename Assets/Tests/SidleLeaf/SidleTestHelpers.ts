@@ -290,6 +290,9 @@ export async function resetState(): Promise<SidleController> {
   const c = controller()
   if (c.galleryOpen) c.closeGallery()
   if (c.isDragging) c.endDrag()
+  // Update 6: back to a single piece (a no-op when nothing was placed).
+  let removeGuard = 0
+  while (c.canRemove && removeGuard++ < 10) c.removePiece()
   if (!c.showPlaceholderPieces) c.setShowPlaceholderPieces(true)
   let guard = 0
   while (c.currentPieceKey !== "SofaA" && guard++ < 10 + c.importedPieceKeys.length) {
@@ -577,4 +580,101 @@ export async function expectGreyedButton(name: string, ctx: string): Promise<voi
   }
   await sleep(200)
   expect(landed, `${ctx}: pinch on greyed-out ${name} does not register`).toBe(false)
+}
+
+// ── Several pieces (Update 6) ────────────────────────────────────────────────
+
+export const MAX_PIECES_BRIEF = 6
+type P2 = {x: number; z: number}
+
+/** Expected variant (catalog / brief sizes) for a key in an expected offer. */
+export function variantOf(offer: ExpectedType[], key: string): ExpectedVariant {
+  for (const t of offer) for (const v of t.variants) if (v.key === key) return v
+  throw new Error(`variantOf: "${key}" not in the expected offer`)
+}
+
+/** First variant of the type after `key`'s type, wrapping (what Next piece / Add chooses). */
+export function nextTypeFirstKey(offer: ExpectedType[], key: string): string {
+  const ti = offer.findIndex((t) => t.variants.some((v) => v.key === key))
+  return offer[(ti + 1) % offer.length].variants[0].key
+}
+
+/** Independent SAT overlap of two convex footprints (touching, within 0.5 cm, allowed). */
+export function footprintsOverlap(a: P2[], b: P2[]): boolean {
+  for (const P of [a, b]) {
+    for (let i = 0; i < P.length; i++) {
+      const p = P[i]
+      const q = P[(i + 1) % P.length]
+      const l = Math.sqrt((q.x - p.x) ** 2 + (q.z - p.z) ** 2)
+      const ax = {x: -(q.z - p.z) / l, z: (q.x - p.x) / l}
+      const pa = a.map((v) => v.x * ax.x + v.z * ax.z)
+      const pb = b.map((v) => v.x * ax.x + v.z * ax.z)
+      const ov = Math.min(Math.max(...pa), Math.max(...pb)) - Math.max(Math.min(...pa), Math.min(...pb))
+      if (ov <= 0.5) return false
+    }
+  }
+  return true
+}
+
+function segPointDist(p: P2, a: P2, b: P2): number {
+  const abx = b.x - a.x
+  const abz = b.z - a.z
+  const l2 = abx * abx + abz * abz
+  const t = l2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.z - a.z) * abz) / l2)) : 0
+  return Math.sqrt((p.x - a.x - abx * t) ** 2 + (p.z - a.z - abz * t) ** 2)
+}
+
+/** Independent shortest distance between two separated convex footprints (cm). */
+export function footprintGap(a: P2[], b: P2[]): number {
+  let g = Infinity
+  for (const [P, Q] of [[a, b], [b, a]]) {
+    for (const p of P) for (let i = 0; i < Q.length; i++) g = Math.min(g, segPointDist(p, Q[i], Q[(i + 1) % Q.length]))
+  }
+  return g
+}
+
+/** Current piece footprint from the controller's pose and the expected size of its variant. */
+export function currentFootprint(c: SidleController, offer: ExpectedType[]): P2[] {
+  const v = variantOf(offer, c.currentPieceKey)
+  return footprint(c.piecePosition.x, c.piecePosition.z, v.w, v.d, c.rotationDeg)
+}
+
+export function placedFootprint(p: {key: string; x: number; z: number; yawDeg: number}, offer: ExpectedType[]): P2[] {
+  const v = variantOf(offer, p.key)
+  return footprint(p.x, p.z, v.w, v.d, p.yawDeg)
+}
+
+/** The placed piece's root SceneObject ("PlacedPiece_<id>"), or null. */
+export function placedRoot(id: number): SceneObject | null {
+  return findSceneObjectByName(`PlacedPiece_${id}`) ?? null
+}
+
+/** Faint neutral outline colour: light grey, neither green nor red. */
+export function isNeutral(col: vec4): boolean {
+  return Math.abs(col.x - col.y) < 0.05 && Math.abs(col.y - col.z) < 0.05 && col.x > 0.5 && !isGreen(col) && !isRed(col)
+}
+
+/** No piece in the room overlaps another, and every one is inside the room and clear of the coffee table. */
+export function expectNoOverlaps(c: SidleController, offer: ExpectedType[], ctx: string): void {
+  const all = [{id: c.currentPieceId, key: c.currentPieceKey, x: c.piecePosition.x, z: c.piecePosition.z, yawDeg: c.rotationDeg}].concat(c.placedPieces)
+  for (const p of all) {
+    const v = variantOf(offer, p.key)
+    expect(placementValid(p.x, p.z, v.w, v.d, p.yawDeg), `${ctx}: piece ${p.id} (${p.key}) inside the room, clear of the coffee table`).toBe(true)
+  }
+  for (let i = 0; i < all.length; i++)
+    for (let j = i + 1; j < all.length; j++) {
+      const ov = footprintsOverlap(placedFootprint(all[i], offer), placedFootprint(all[j], offer))
+      expect(ov, `${ctx}: pieces ${all[i].id} and ${all[j].id} do not overlap`).toBe(false)
+    }
+}
+
+/** Transforms of every placed piece's root, read from the scene (for "never moves a placed piece"). */
+export function placedSceneSnapshot(c: SidleController): string {
+  return JSON.stringify(
+    c.placedPieces.map((p) => {
+      const t = placedRoot(p.id)!.getTransform()
+      const pos = t.getLocalPosition()
+      return {id: p.id, x: pos.x.toFixed(3), z: pos.z.toFixed(3), yaw: ((yawOf(t) * 180) / Math.PI).toFixed(3)}
+    }),
+  )
 }
