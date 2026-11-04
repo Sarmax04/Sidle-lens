@@ -18,6 +18,13 @@
  * light door frame (RoomDoorFrame) and a rug — all under RoomDecor except the
  * door frame, decoration only (no colliders, not obstacles, not measured).
  *
+ * Fabric colours (Update 9): the current piece's swatch index (setColor,
+ * currentColorIndex) and each placed piece's (PlacedPiece.colorIndex); the tint
+ * is applied by SidleTint per visual. The colour strip (SidleColorStripUI) is
+ * created as a child of the panel. Add keeps the colour on the placed piece and
+ * starts the new current piece at "original"; Remove and grabbing a placed
+ * piece bring its colour back to the current piece.
+ *
  * Door fit (Update 8): currentFitsThroughDoor / doorFitText for the current
  * piece (SidleGeometry.fitsThroughDoor with the doorway's DOOR_WIDTH_CM x
  * DOOR_HEIGHT_CM), shown as a line under the name on the panel.
@@ -57,6 +64,8 @@ import {SidleLazyFollow} from "./SidleLazyFollow"
 import {GALLERY_TILES_PER_PAGE, GalleryView, SidleGalleryUI} from "./SidleGalleryUI"
 import {PanelOffset, clampOffset, headFrame, worldToOffset} from "./SidlePanelOffset"
 import {SidleLabelsUI} from "./SidleLabelsUI"
+import {SidleColorStripUI} from "./SidleColorStripUI"
+import {COLOR_SWATCHES, PieceTint, TintMethod} from "./SidleTint"
 import {MaterialCache, makeBox} from "./SidleBoxFactory"
 import {CatalogEntry, buildImportedVisual, fileBaseName, glbBaseName, parseCatalog, warn} from "./SidleCatalog"
 import {
@@ -124,6 +133,8 @@ export interface PlacedPiece {
   x: number
   z: number
   yawDeg: number
+  /** Fabric colour swatch index (Update 9); 0 = original. */
+  colorIndex: number
 }
 
 /** Scene objects that show one placed piece; reused for another piece on a swap so a drag on it continues. */
@@ -134,6 +145,7 @@ interface PlacedSlot {
   edges: SceneObject[]
   grab: SceneObject
   collider: ColliderComponent
+  tint: PieceTint | null
 }
 
 @component
@@ -356,6 +368,11 @@ export class SidleController extends BaseScriptComponent {
   private slots: PlacedSlot[] = []
   /** The placed slot whose pinch is dragging the current piece (after the swap), or null. */
   private slotDrag: PlacedSlot | null = null
+  /** Update 9: fabric colour of the current piece (swatch index, 0 = original) and the tint of each variant's visual. */
+  private _colorIndex = 0
+  private _tintMethod: TintMethod = "blend"
+  private tints: {[key: string]: PieceTint} = {}
+  private colorStrip: SidleColorStripUI | null = null
 
   // ── Scene handles ──────────────────────────────────────────────────────────
   private litCache!: MaterialCache
@@ -428,6 +445,7 @@ export class SidleController extends BaseScriptComponent {
       this.panelUI.onRotateRight.add(() => this.rotateRight())
       this.panelUI.onAdd.add(() => this.addPiece())
       this.panelUI.onRemove.add(() => this.removePiece())
+      this.buildColorStrip()
       this.panelUI.onGrabBarStart.add((e: InteractorEvent) => this.onPanelGrabStart(e))
       this.panelUI.onGrabBarUpdate.add((e: InteractorEvent) => this.onPanelGrabUpdate(e))
       this.panelUI.onGrabBarEnd.add(() => this.onPanelGrabEnd())
@@ -594,6 +612,26 @@ export class SidleController extends BaseScriptComponent {
     this.renderGallery()
   }
 
+  // -- Fabric colours (Update 9) -----------------------------------------------
+
+  /** Tint the current piece with swatch `index` (0 = original). Returns false for an unknown index. */
+  setColor(index: number): boolean {
+    if (!(index >= 0 && index < COLOR_SWATCHES.length) || Math.floor(index) !== index) return false
+    this._colorIndex = index
+    this.applyAll()
+    return true
+  }
+
+  /**
+   * Measurement hook: "blend" (default, used by the Lens) or "multiply" (plain
+   * baseColorFactor *= swatch, kept only to compare brightness).
+   */
+  setTintMethod(method: TintMethod): void {
+    this._tintMethod = method
+    for (const s of this.slots) if (s.tint) s.tint.apply(this.placedColorOf(s.id), method)
+    this.applyAll()
+  }
+
   // -- Several pieces (Update 6) -----------------------------------------------
 
   /**
@@ -605,10 +643,11 @@ export class SidleController extends BaseScriptComponent {
   addPiece(): boolean {
     if (!this.canAdd) return false
     if (this._dragging) this.endDrag()
-    const prev: PlacedPiece = {id: this._currentId, key: this.currentPieceKey, x: this.posX, z: this.posZ, yawDeg: this.yawDeg}
+    const prev: PlacedPiece = {id: this._currentId, key: this.currentPieceKey, x: this.posX, z: this.posZ, yawDeg: this.yawDeg, colorIndex: this._colorIndex}
     this.placed.push(prev)
     this.createSlot(prev)
     this._currentId = this.nextId++
+    this._colorIndex = 0 // the new current piece starts at "original"
     const ti = this.currentTypeIndex()
     const key = this.types[(ti + 1) % this.types.length].keys[0]
     this.pieceIndex = this.pieces.findIndex((p) => p.key === key)
@@ -655,6 +694,7 @@ export class SidleController extends BaseScriptComponent {
       if (!p.entry) continue
       this.pieceVisuals[p.key].destroy()
       delete this.pieceVisuals[p.key]
+      delete this.tints[p.key]
       delete this.modelLoaded[p.key]
     }
     this.pieces = BUILT_IN.slice()
@@ -688,7 +728,18 @@ export class SidleController extends BaseScriptComponent {
   // ── Read-only state ────────────────────────────────────────────────────────
   /** Placed pieces (not the current one), in placement order; yawDeg normalized to [0, 360). */
   get placedPieces(): PlacedPiece[] {
-    return this.placed.map((p) => ({id: p.id, key: p.key, x: p.x, z: p.z, yawDeg: ((p.yawDeg % 360) + 360) % 360}))
+    return this.placed.map((p) => ({id: p.id, key: p.key, x: p.x, z: p.z, yawDeg: ((p.yawDeg % 360) + 360) % 360, colorIndex: p.colorIndex}))
+  }
+  /** Fabric colour of the current piece: swatch index, 0 = original (Update 9). */
+  get currentColorIndex(): number {
+    return this._colorIndex
+  }
+  /** Swatch names in strip order ("original" first). */
+  get colorSwatchNames(): string[] {
+    return COLOR_SWATCHES.map((s) => s.name)
+  }
+  get tintMethod(): TintMethod {
+    return this._tintMethod
   }
   /** Id of the current piece instance (kept when it becomes placed, and back). */
   get currentPieceId(): number {
@@ -921,6 +972,31 @@ export class SidleController extends BaseScriptComponent {
     this.posX = pp.x
     this.posZ = pp.z
     this.yawDeg = pp.yawDeg
+    this._colorIndex = pp.colorIndex
+  }
+
+  private placedColorOf(id: number): number {
+    const p = this.placed.find((q) => q.id === id)
+    return p ? p.colorIndex : 0
+  }
+
+  /** Tint of a variant's (current-piece) visual, made on first use. */
+  private tintOf(key: string): PieceTint | null {
+    if (!this.tints[key]) {
+      const v = this.pieceVisuals[key]
+      if (!v) return null
+      this.tints[key] = new PieceTint(v)
+    }
+    return this.tints[key]
+  }
+
+  /** The colour strip: a child of the panel, so it follows its offset, size and visibility. */
+  private buildColorStrip(): void {
+    const so = global.scene.createSceneObject("ColorStrip")
+    so.setParent(this.panelUI.getSceneObject())
+    this.colorStrip = so.createComponent(SidleColorStripUI.getTypeName()) as SidleColorStripUI
+    this.colorStrip.build(COLOR_SWATCHES, -this.panelUI.panelHeight / 2)
+    this.colorStrip.onSwatch.add((i: number) => this.setColor(i))
   }
 
   // ── Placed pieces: scene slots (Update 6) ──────────────────────────────────
@@ -935,7 +1011,7 @@ export class SidleController extends BaseScriptComponent {
     const grab = this.group(root, "PlacedGrab")
     const collider = grab.createComponent("Physics.ColliderComponent") as ColliderComponent
     collider.debugDrawEnabled = this.debugColliders
-    const slot: PlacedSlot = {id: pp.id, root, visual: null, edges, grab, collider}
+    const slot: PlacedSlot = {id: pp.id, root, visual: null, edges, grab, collider, tint: null}
     const inter = grab.createComponent(Interactable.getTypeName()) as Interactable
     inter.onTriggerStart.add((e: InteractorEvent) => this.onPlacedGrabStart(slot, e))
     inter.onTriggerUpdate.add((e: InteractorEvent) => {
@@ -976,6 +1052,9 @@ export class SidleController extends BaseScriptComponent {
     if (slot.visual) slot.visual.destroy()
     slot.visual = this.group(slot.root, `PlacedVisual_${def.key}`)
     this.buildVisual(slot.visual, def)
+    // The placed piece keeps its own colour (its own visual copy, its own material clones).
+    slot.tint = new PieceTint(slot.visual)
+    slot.tint.apply(pp.colorIndex, this._tintMethod)
     const specs = outlineSpecs(def.w, def.d, this.outlineWidthCm)
     for (let i = 0; i < 4; i++) {
       const et = slot.edges[i].getTransform()
@@ -998,7 +1077,7 @@ export class SidleController extends BaseScriptComponent {
     const idx = this.placed.findIndex((p) => p.id === slot.id)
     if (idx < 0) return
     const target = this.placed[idx]
-    const prev: PlacedPiece = {id: this._currentId, key: this.currentPieceKey, x: this.posX, z: this.posZ, yawDeg: this.yawDeg}
+    const prev: PlacedPiece = {id: this._currentId, key: this.currentPieceKey, x: this.posX, z: this.posZ, yawDeg: this.yawDeg, colorIndex: this._colorIndex}
     this.placed.splice(idx, 1)
     this.placed.push(prev)
     this.takeOver(target)
@@ -1220,6 +1299,10 @@ export class SidleController extends BaseScriptComponent {
     pt.setLocalPosition(new vec3(this.posX, 0, this.posZ))
     pt.setLocalRotation(quat.angleAxis(yaw, vec3.up()))
     for (const p of this.pieces) this.pieceVisuals[p.key].enabled = p.key === def.key
+    // Fabric colour follows the current piece across variants (no-op when unchanged).
+    const tint = this.tintOf(def.key)
+    if (tint) tint.apply(this._colorIndex, this._tintMethod)
+    if (this.colorStrip) this.colorStrip.setSelected(this._colorIndex)
     if (this.colliderKey !== def.key) {
       const shape = Shape.createBoxShape()
       shape.size = new vec3(def.w, def.h, def.d)

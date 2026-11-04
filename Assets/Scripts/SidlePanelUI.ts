@@ -227,6 +227,12 @@ export class SidlePanelUI extends BaseScriptComponent {
   private canBigger = true
   private grabBarHovered = false
   private grabBarActive = false
+  private _panelHeight = 0
+
+  /** Height of the panel plate, cm (local, before panel scale); its centre is this SceneObject's origin. */
+  get panelHeight(): number {
+    return this._panelHeight
+  }
 
   onAwake() {
     this.build()
@@ -332,6 +338,7 @@ export class SidlePanelUI extends BaseScriptComponent {
     const detailH = 2.2
     const panelW = rowW + this.padding * 2
     const panelH = headerH + doorFitH + detailH + buttonsH + this.padding * 2 + 3.0
+    this._panelHeight = panelH
 
     this.sceneObject.createComponent("Component.Canvas")
     const plate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate

@@ -31,6 +31,8 @@ import {C25RemovePieceScenario} from "./C25RemovePieceScenario"
 import {C26CurrentOnlyScenario} from "./C26CurrentOnlyScenario"
 import {C27RoomLookScenario} from "./C27RoomLookScenario"
 import {C28DoorFitScenario} from "./C28DoorFitScenario"
+import {C29ColorSwatchScenario} from "./C29ColorSwatchScenario"
+import {C30ColorPersistScenario} from "./C30ColorPersistScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -67,5 +69,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c26-current-only", typename: C26CurrentOnlyScenario.getTypeName()},
     {id: "c27-room-look", typename: C27RoomLookScenario.getTypeName()},
     {id: "c28-door-fit", typename: C28DoorFitScenario.getTypeName()},
+    {id: "c29-color-swatch", typename: C29ColorSwatchScenario.getTypeName()},
+    {id: "c30-color-persist", typename: C30ColorPersistScenario.getTypeName()},
   ]
 }

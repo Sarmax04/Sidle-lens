@@ -10,6 +10,7 @@ import {findSceneObjectByName, nextFrame, sleep, withTimeout} from "Leaf.lspkg/U
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
+import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {SidleController} from "../../Scripts/SidleController"
 import {ROOM_DEPTH_CM, ROOM_WIDTH_CM} from "../../Scripts/SidleGeometry"
 
@@ -302,6 +303,7 @@ export async function resetState(): Promise<SidleController> {
   guard = 0
   while (c.rotationDeg > 0.01 && c.rotationDeg < 359.99 && guard++ < 30) c.rotateLeft()
   if (c.measureOn) c.toggleMeasure()
+  if (c.currentColorIndex !== 0) c.setColor(0) // Update 9: back to the original colours
   c.resetPanelOffset()
   c.resetPanelScale()
   c.setPiecePosition(START.x, START.z)
@@ -677,4 +679,111 @@ export function placedSceneSnapshot(c: SidleController): string {
       return {id: p.id, x: pos.x.toFixed(3), z: pos.z.toFixed(3), yaw: ((yawOf(t) * 180) / Math.PI).toFixed(3)}
     }),
   )
+}
+
+// ── Fabric colours (Update 9) ─────────────────────────────────────────────────
+
+/** The brief's swatch order; colours are read from the strip faces in the tests, not from here. */
+export const SWATCH_NAMES = ["original", "light grey", "warm beige", "sage green", "dusty blue", "terracotta"]
+
+export function linC(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+}
+/** WCAG relative luminance of an sRGB colour. */
+export function srgbLum(c: {x: number; y: number; z: number}): number {
+  return 0.2126 * linC(c.x) + 0.7152 * linC(c.y) + 0.0722 * linC(c.z)
+}
+/** Luminance of a linear RGB triple (glTF factors are linear). */
+export function linLum(c: {x: number; y: number; z: number}): number {
+  return 0.2126 * c.x + 0.7152 * c.y + 0.0722 * c.z
+}
+
+/** One material under a piece visual, read from the scene: glTF factors or a flat base colour. */
+export interface MatState {
+  kind: "gltf" | "flat"
+  base: vec4
+  emissive: vec3 | null
+}
+
+function prop(pass: Pass, name: string): any {
+  try {
+    return (pass as any)[name]
+  } catch (e) {
+    return undefined
+  }
+}
+
+/** Actual material colours of every mesh visual under `root`, in a stable traversal order. */
+export function readMaterials(root: SceneObject): MatState[] {
+  const out: MatState[] = []
+  const walk = (so: SceneObject) => {
+    for (const v of so.getComponents("Component.RenderMeshVisual") as RenderMeshVisual[]) {
+      for (const m of v.materials ?? []) {
+        const f = prop(m.mainPass, "baseColorFactor")
+        if (f !== undefined && f !== null) {
+          const e = prop(m.mainPass, "emissiveFactor")
+          out.push({kind: "gltf", base: new vec4(f.x, f.y, f.z, f.w), emissive: e ? new vec3(e.x, e.y, e.z) : new vec3(0, 0, 0)})
+          continue
+        }
+        const c = prop(m.mainPass, "baseColor")
+        if (c !== undefined && c !== null) out.push({kind: "flat", base: new vec4(c.x, c.y, c.z, c.w), emissive: null})
+      }
+    }
+    for (let i = 0; i < so.getChildrenCount(); i++) walk(so.getChild(i))
+  }
+  walk(root)
+  return out
+}
+
+export function sameMaterials(a: MatState[], b: MatState[]): boolean {
+  const near = (x: number, y: number) => Math.abs(x - y) < 1e-4
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const p = a[i]
+    const q = b[i]
+    if (p.kind !== q.kind || !near(p.base.x, q.base.x) || !near(p.base.y, q.base.y) || !near(p.base.z, q.base.z)) return false
+    if (p.emissive && q.emissive && (!near(p.emissive.x, q.emissive.x) || !near(p.emissive.y, q.emissive.y) || !near(p.emissive.z, q.emissive.z))) return false
+  }
+  return true
+}
+
+/** Linear colour of a swatch face read from the strip (ColorSwatch_i > SwatchFace). */
+export function swatchFaceColor(i: number): vec4 {
+  const face = findChild(obj(`ColorSwatch_${i}`), "SwatchFace")
+  const rr = face.getComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
+  return rr.backgroundColor
+}
+
+/**
+ * Independent check that a tinted material is the swatch colour and not
+ * darker than the original:
+ *  - flat: luminance not lower; the hue's channel order is the swatch's.
+ *  - glTF: output is affine in the texel value g (lit part base*g plus
+ *    emissive), so checking g = 1 (white texel) and g = 0 (black texel) covers
+ *    every neutral texel: neither may be darker than the original; the added
+ *    colour has the swatch's channel order.
+ * Returns a reason string when it fails, "" when it passes.
+ */
+export function tintProblem(orig: MatState, now: MatState, swatch: vec4): string {
+  const sw = [linC(swatch.x), linC(swatch.y), linC(swatch.z)]
+  const order = (v: number[]) => [0, 1, 2].sort((i, j) => v[i] - v[j]).join("")
+  const neutral = Math.max(...sw) - Math.min(...sw) < 0.02
+  if (now.kind === "flat") {
+    const lo = srgbLum(orig.base)
+    const ln = srgbLum(now.base)
+    if (ln < lo - 0.003) return `flat colour darker (${lo.toFixed(3)} -> ${ln.toFixed(3)})`
+    const nv = [linC(now.base.x), linC(now.base.y), linC(now.base.z)]
+    if (neutral) return Math.max(...nv) - Math.min(...nv) < 0.03 ? "" : `grey swatch gave a coloured result ${now.base}`
+    if (order(nv) !== order(sw)) return `flat hue order ${order(nv)} is not the swatch's ${order(sw)} (${now.base})`
+    return ""
+  }
+  const white0 = linLum(orig.base) + linLum(orig.emissive!)
+  const white1 = linLum(now.base) + linLum(now.emissive!)
+  if (white1 < white0 - 1e-3) return `white texel darker (${white0.toFixed(3)} -> ${white1.toFixed(3)})`
+  if (linLum(now.emissive!) < linLum(orig.emissive!) - 1e-4) return "black texel darker"
+  const added = [now.emissive!.x - orig.emissive!.x, now.emissive!.y - orig.emissive!.y, now.emissive!.z - orig.emissive!.z]
+  if (Math.max(...added) <= 0) return "no swatch colour added"
+  if (!neutral && order(added) !== order(sw)) return `added colour order ${order(added)} is not the swatch's ${order(sw)}`
+  if (neutral && Math.max(...added) - Math.min(...added) > 0.02 * Math.max(...added) + 1e-4) return "grey swatch added a colour"
+  return ""
 }
