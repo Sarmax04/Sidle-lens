@@ -172,6 +172,20 @@ This update changes the rule that the Lens shows one piece at a time. At the sta
   22. Remove deletes the current piece and makes the most recently placed piece current; Remove is greyed out when only one piece is left.
   23. Next piece, Compare, Rotate, Measure and the gallery act only on the current piece and never move a placed piece; placed pieces show no labels.
 
+## Update 7: A nicer room
+The virtual room should look good on video while still being plainly a stand-in. This update only changes how the room looks, not its size, walls, doorway or coffee table.
+
+1. Floor: a flat, warm wood-tone colour in a mid to light tone, with thin plank lines. The green and red clearance outlines must stay clearly visible on it.
+2. Walls: light, plain colours (a warm white for three walls, one accent wall in a soft mid colour such as sage or dusty blue). A thin baseboard in a lighter tone along the bottom of every wall.
+3. A window in one long wall: a simple frame with a pale, bright pane. Decoration only; it is not an obstacle and is not measured.
+4. The doorway gets a simple door frame around the opening, in a light tone. Its opening stays 90 cm wide and 200 cm tall.
+5. Optional: a flat rug in a soft mid colour on the floor in the middle of the room. Decoration only: it is not an obstacle, and the outline and gap numbers stay readable on it.
+6. Everything stays flat-coloured and stylised (no photo textures) so it is clearly a model of a room, not a real room. Nothing in the room is dark: every colour is at least mid-tone, because dark colours are transparent on the display.
+7. The room size (5 m x 6 m), wall height (250 cm), doorway, coffee table, start position and all clearance numbers do not change.
+- Done criteria:
+  24. The room has the floor, planks, accent wall, baseboards, window and door frame described above; no colour in the room is darker than mid-tone; the clearance outline and gap number stay readable on the floor.
+  25. The room's size, the doorway opening, the coffee table and all clearance results are exactly as before (all earlier scenarios still pass).
+
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.
 - Use Spectacles Interaction Kit (SIK) and UI Kit for all interactions, so they work with the mouse in Interactive Preview and with LEAF.
