@@ -15,11 +15,11 @@ export class C1StartStateScenario extends Scenario {
     await sleep(1500)
     const c = controller()
 
-    // Room stand-in: 5 x 6 m, doorway 90 x 200 in the near short wall
+    // Room stand-in: 7 x 8 m, doorway 90 x 200 in the near short wall
     const R = c.roomSpec
     log(`roomSpec ${JSON.stringify(R)}`)
-    expect(ROOM_WIDTH_CM, "ROOM_WIDTH_CM").toBe(500)
-    expect(ROOM_DEPTH_CM, "ROOM_DEPTH_CM").toBe(600)
+    expect(ROOM_WIDTH_CM, "ROOM_WIDTH_CM").toBe(700)
+    expect(ROOM_DEPTH_CM, "ROOM_DEPTH_CM").toBe(800)
     expect(R.maxX - R.minX, "room width cm").toBeCloseTo(ROOM_WIDTH_CM, 1)
     expect(R.maxZ - R.minZ, "room depth cm").toBeCloseTo(ROOM_DEPTH_CM, 1)
     const wf = obj("Wall_Far").getTransform().getLocalScale()
@@ -36,12 +36,12 @@ export class C1StartStateScenario extends Scenario {
     expect(head.y - 2.5, "doorway opening height").toBeCloseTo(200, 1)
     expect(local("Doorway").z, "doorway sits on near wall line").toBeCloseTo(R.maxZ, 1)
 
-    // User just inside the doorway, facing into the room
+    // User about 1 m inside the doorway, facing into the room
     const roomT = obj("VirtualRoom").getTransform()
     const camW = WorldCameraFinderProvider.getInstance().getTransform().getWorldPosition()
     const cam = roomT.getInvertedWorldTransform().multiplyPoint(camW)
     log(`camera room-local ${cam}`)
-    expect(cam.z < R.maxZ && cam.z > R.maxZ - 60, `camera just inside doorway (z=${cam.z})`).toBe(true)
+    expect(Math.abs(cam.z - (R.maxZ - 100)) <= 20, `camera about 1 m inside doorway (z=${cam.z}, doorway wall ${R.maxZ})`).toBe(true)
     expect(Math.abs(cam.x) < 45, `camera in line with doorway (x=${cam.x})`).toBe(true)
 
     // Sofa A, 220 x 90 x 85, light gray
@@ -56,17 +56,17 @@ export class C1StartStateScenario extends Scenario {
     expect(col.x > 0.7 && col.y > 0.7 && col.z > 0.7, `light (got ${col})`).toBe(true)
     expect(Math.max(col.x, col.y, col.z) - Math.min(col.x, col.y, col.z) < 0.06, `gray (got ${col})`).toBe(true)
 
-    // On the floor, in the middle of the room, about 2 m ahead
+    // On the floor, in the middle of the room, about 2.5-3 m ahead
     const pr = local("Piece")
     expect(pr.y, "piece root on floor").toBeCloseTo(0, 2)
     const bl = base.getTransform().getLocalPosition()
     const bs = base.getTransform().getLocalScale()
     expect(bl.y - bs.y / 2, "sofa base bottom at floor").toBeCloseTo(0, 2)
     expect(c.piecePosition.x, "piece centred in X").toBeCloseTo(0, 1)
-    expect(c.piecePosition.z, "piece z room-local").toBeCloseTo(-220, 1)
+    expect(c.piecePosition.z, "piece z room-local (room centre)").toBeCloseTo((R.minZ + R.maxZ) / 2, 1)
     const horiz = Math.sqrt((cam.x - pr.x) ** 2 + (cam.z - pr.z) ** 2)
     log(`horizontal distance camera->piece centre ${horiz.toFixed(1)} cm`)
-    expect(horiz > 180 && horiz < 260, `about 2 m in front (got ${horiz})`).toBe(true)
+    expect(horiz > 250 && horiz < 310, `about 2.5-3 m in front (got ${horiz})`).toBe(true)
     expect(pr.z < cam.z, "piece is in front (-Z) of the user").toBe(true)
     expect(insideRoom(pr.x, pr.z, 220, 90), "piece inside room").toBe(true)
     expect(c.rotationDeg, "start rotation").toBeCloseTo(0, 2)

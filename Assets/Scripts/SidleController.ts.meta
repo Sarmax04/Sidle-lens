@@ -135,7 +135,7 @@
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'
     - '// @input float wallHeight = 250 {"hint":"Wall height, cm", "widget":"slider", "min":200, "max":350, "step":5}'
-    - '// @input float startInsetCm = 30 {"hint":"How far the doorway wall line is behind the start position, cm", "widget":"slider", "min":10, "max":100, "step":1}'
+    - '// @input float startInsetCm = 100 {"hint":"How far the doorway wall line is behind the start position, cm", "widget":"slider", "min":10, "max":100, "step":1}'
     - '// @input vec4 wallColor = "{0.95, 0.93, 0.88, 1.0}" {"hint":"Wall color: warm white (left, right and doorway walls)", "widget":"color"}'
     - '// @input vec4 floorColor = "{0.95, 0.88, 0.76, 1.0}" {"hint":"Floor color: flat light wood tone (unlit). Kept light so the green/red outline and the gap number read on it", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

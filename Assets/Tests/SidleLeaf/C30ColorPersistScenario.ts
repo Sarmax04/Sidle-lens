@@ -29,6 +29,7 @@ import {
   placedRoot,
   readMaterials,
   resetState,
+  roomDir,
   sameMaterials,
   swatchFaceColor,
   tap,
@@ -109,7 +110,7 @@ export class C30ColorPersistScenario extends Scenario {
     await tap(it, `ColorSwatch_${BEIGE}`)
     expectCurrent(BEIGE, "new current beige")
     const B = {id: c.currentPieceId, key: c.currentPieceKey}
-    await it.drag(interactable(`PlacedGrab_${A.id}`), new vec3(0, 0, 0.5), 300)
+    await it.drag(interactable(`PlacedGrab_${A.id}`), roomDir(new vec3(0, 0, 0.5)), 300)
     await sleep(150)
     expect(c.currentPieceId, "grabbed piece is current").toBe(A.id)
     expectCurrent(BLUE, "grabbed placed piece brings its colour")

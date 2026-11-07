@@ -32,6 +32,7 @@ import {
   placementValid,
   resetState,
   ROOM,
+  roomDir,
   START,
   tap,
   variantOf,
@@ -109,7 +110,7 @@ export class C23PlacedClearanceScenario extends Scenario {
     for (let n = 0; n < 12 && Math.abs(prevZ - c.piecePosition.z) > 0.01; n++) {
       prevZ = c.piecePosition.z
       let done = false
-      const drag = it.drag(interactable("PieceGrab"), new vec3(0, 0, 3), 900).then(() => (done = true))
+      const drag = it.drag(interactable("PieceGrab"), roomDir(new vec3(0, 0, 3)), 900).then(() => (done = true))
       while (!done) {
         if (c.gapLabelVisible && texts[texts.length - 1] !== c.gapLabelText) texts.push(c.gapLabelText)
         if (footprintsOverlap(currentFootprint(c, offer), placedFootprint(A, offer))) overlapped = true

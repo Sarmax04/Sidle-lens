@@ -22,6 +22,7 @@ import {
   obj,
   placedRoot,
   resetState,
+  roomDir,
   tap,
 } from "./SidleTestHelpers"
 
@@ -74,7 +75,7 @@ export class C25RemovePieceScenario extends Scenario {
     // Order follows swaps: add again, grab p1 (it becomes current, p2 becomes the last placed), then Remove.
     await tap(it, "AddButton")
     const p2now = c.placedPieces.find((p) => p.id === p2.id)!
-    await it.drag(interactable(`PlacedGrab_${p1.id}`), new vec3(0, 0, 0.3), 200)
+    await it.drag(interactable(`PlacedGrab_${p1.id}`), roomDir(new vec3(0, 0, 0.3)), 200)
     await sleep(150)
     expect(c.currentPieceId, "swap: p1 current").toBe(p1.id)
     const last = c.placedPieces[c.placedPieces.length - 1]

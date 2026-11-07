@@ -8,7 +8,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {angDiffDeg, log, obj, placementValid, resetState, ROOM, SOFA_A_HALF, tap, yawOf} from "./SidleTestHelpers"
+import {angDiffDeg, log, obj, placementValid, resetState, ROOM, SOFA_A_HALF, START, tap, yawOf} from "./SidleTestHelpers"
 
 function checkYaw(c: SidleController, deg: number, ctx: string): void {
   expect(angDiffDeg(c.rotationDeg, deg) < 0.01, `${ctx}: rotationDeg ${c.rotationDeg} vs ${deg}`).toBe(true)
@@ -57,7 +57,7 @@ export class C4cRotateScenario extends Scenario {
     // rotate 15° -> its corners would cross the wall unless moved.
     await resetState()
     const flushX = ROOM.maxX - SOFA_A_HALF.w
-    c.setPiecePosition(flushX, -220) // API setup: right edge on the wall line
+    c.setPiecePosition(flushX, START.z) // API setup: right edge on the wall line
     await sleep(50)
     await tap(it, "RotateLeftButton")
     const p = c.piecePosition

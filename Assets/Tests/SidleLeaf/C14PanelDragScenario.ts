@@ -18,6 +18,7 @@ import {
   bundledCatalog,
   expectedOffer,
   fmtOffset,
+  headDir,
   HeadHold,
   headOffsetOf,
   interactable,
@@ -90,7 +91,7 @@ export class C14PanelDragScenario extends Scenario {
       const firstHold = bar.onTriggerStart.add(() => {
         held0 = (it as unknown as {endPoint: vec3}).endPoint
       })
-      await it.drag(bar, new vec3(0.7, 0.25, 0), 600) // right and a bit up, per frame (world cm)
+      await it.drag(bar, headDir(new vec3(0.7, 0.25, 0)), 600) // right and a bit up, per frame (head-frame cm)
       firstHold()
       await nextFrame()
       expect(barUpdates > 3, `drag produced trigger updates (${barUpdates})`).toBe(true)
@@ -131,11 +132,11 @@ export class C14PanelDragScenario extends Scenario {
 
       // 3. Limits: dragging past each one stops at it.
       const limitCases: {name: string; v: vec3; check: (o: Offset) => [number, number]}[] = [
-        {name: "right", v: new vec3(3, 0, 0), check: (o) => [o.horizontalDeg, LIMITS.maxH]},
-        {name: "left", v: new vec3(-3, 0, 0), check: (o) => [o.horizontalDeg, -LIMITS.maxH]},
-        {name: "up", v: new vec3(0, 3, 0), check: (o) => [o.verticalDeg, LIMITS.maxV]},
-        {name: "down", v: new vec3(0, -3, 0), check: (o) => [o.verticalDeg, LIMITS.minV]},
-        {name: "away", v: new vec3(0, 0, -3), check: (o) => [o.distanceCm, LIMITS.maxD]},
+        {name: "right", v: headDir(new vec3(3, 0, 0)), check: (o) => [o.horizontalDeg, LIMITS.maxH]},
+        {name: "left", v: headDir(new vec3(-3, 0, 0)), check: (o) => [o.horizontalDeg, -LIMITS.maxH]},
+        {name: "up", v: headDir(new vec3(0, 3, 0)), check: (o) => [o.verticalDeg, LIMITS.maxV]},
+        {name: "down", v: headDir(new vec3(0, -3, 0)), check: (o) => [o.verticalDeg, LIMITS.minV]},
+        {name: "away", v: headDir(new vec3(0, 0, -3)), check: (o) => [o.distanceCm, LIMITS.maxD]},
       ]
       for (const lc of limitCases) {
         c.resetPanelOffset()
@@ -180,7 +181,7 @@ export class C14PanelDragScenario extends Scenario {
       // 5. With the panel moved, pinching buttons works as before.
       c.resetPanelOffset()
       await sleep(300)
-      await it.drag(interactable("PanelGrabBar"), new vec3(-0.8, 0.3, 0.1), 600)
+      await it.drag(interactable("PanelGrabBar"), headDir(new vec3(-0.8, 0.3, 0.1)), 600)
       await sleep(1500)
       const moved = c.panelOffset
       log(`panel moved for button check: ${fmtOffset(moved)}`)

@@ -15,7 +15,7 @@ Photos and 3D viewers on a phone show you a picture of furniture. Sidle puts the
 - You can drag the piece along the floor, rotate it in 15 degree steps and show its width, depth and height.
 - You can switch between types (sofa, chair, table, bed) and compare variants of the same type in the same spot.
 
-In the preview, the "room" is a virtual stand-in: 5 m x 6 m, four walls, a 90 x 200 cm doorway and a 100 x 50 x 45 cm coffee table in a far corner. On real glasses the same indicator would measure against the actual room.
+In the preview, the "room" is a virtual stand-in: 7 m x 8 m, four walls, a 90 x 200 cm doorway and a 100 x 50 x 45 cm coffee table in a far corner. The Lens places the room around where you start, so you always begin about 1 m inside the doorway, facing into the room. On real glasses the same indicator would measure against the actual room.
 
 ## Controls
 
@@ -41,7 +41,7 @@ An arrow on the panel points to the piece when it is behind you.
 3. Lens Studio fetches the packages it needs (Spectacles Interaction Kit, Spectacles UI Kit, and the LEAF test plugin).
 4. Open the Preview panel and choose Interactive Preview. Move with WASD, Q and E to go down and up, and right-drag to look around.
 
-No SPECS glasses are needed. The Lens starts just inside the doorway, facing a three-seater sofa about 2 m away.
+No SPECS glasses are needed. The Lens starts about 1 m inside the doorway, facing a three-seater sofa about 3 m away.
 
 ## The furniture
 

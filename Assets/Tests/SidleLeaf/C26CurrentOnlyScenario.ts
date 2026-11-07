@@ -75,11 +75,11 @@ export class C26CurrentOnlyScenario extends Scenario {
     const headLocal = new vec3(0, 0, -250)
     const w = c.room.getTransform().getWorldTransform().multiplyPoint(headLocal)
     const head = new vec3(w.x, START_HEAD.pos.y, w.z)
-    const hold = new HeadHold(head, 0) // facing into the room: current ahead, placed behind
+    const hold = new HeadHold(head, START_HEAD.yawDeg) // facing into the room: current ahead, placed behind
     try {
       await sleep(300)
       expect(c.behindArrowVisible, "facing the current piece (placed pieces behind): no arrow").toBe(false)
-      hold.set(head, 180) // facing the doorway: placed ahead, current behind
+      hold.set(head, START_HEAD.yawDeg + 180) // facing the doorway: placed ahead, current behind
       await sleep(300)
       expect(c.behindArrowVisible, "current piece behind (placed pieces ahead): arrow shows").toBe(true)
     } finally {

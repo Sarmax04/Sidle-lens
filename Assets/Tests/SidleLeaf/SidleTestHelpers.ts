@@ -14,12 +14,49 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 import {SidleController} from "../../Scripts/SidleController"
 import {ROOM_DEPTH_CM, ROOM_WIDTH_CM} from "../../Scripts/SidleGeometry"
 
-/** Doorway wall line is 30 cm behind the start position (SidleController.startInsetCm). */
-const START_INSET = 30
-export const ROOM = {minX: -ROOM_WIDTH_CM / 2, maxX: ROOM_WIDTH_CM / 2, minZ: START_INSET - ROOM_DEPTH_CM, maxZ: START_INSET}
+/** Doorway wall line distance behind the start position (SidleController.startInsetCm), read from c.roomSpec. */
+function startInset(): number {
+  return controller().roomSpec.maxZ
+}
+/** Room footprint from the size constants and the start inset (read on access, so it follows the Lens). */
+export const ROOM = {
+  get minX(): number {
+    return -ROOM_WIDTH_CM / 2
+  },
+  get maxX(): number {
+    return ROOM_WIDTH_CM / 2
+  },
+  get minZ(): number {
+    return startInset() - ROOM_DEPTH_CM
+  },
+  get maxZ(): number {
+    return startInset()
+  },
+}
 /** 100 x 50 coffee table in the far right corner. */
-export const COFFEE = {minX: ROOM.maxX - 100, maxX: ROOM.maxX, minZ: ROOM.minZ, maxZ: ROOM.minZ + 50}
-export const START = {x: 0, z: -220}
+export const COFFEE = {
+  get minX(): number {
+    return ROOM.maxX - 100
+  },
+  get maxX(): number {
+    return ROOM.maxX
+  },
+  get minZ(): number {
+    return ROOM.minZ
+  },
+  get maxZ(): number {
+    return ROOM.minZ + 50
+  },
+}
+/** Start spot of the piece: the room centre. */
+export const START = {
+  get x(): number {
+    return (ROOM.minX + ROOM.maxX) / 2
+  },
+  get z(): number {
+    return (ROOM.minZ + ROOM.maxZ) / 2
+  },
+}
 /** Sofa A footprint half-extents at 0°. */
 export const SOFA_A_HALF = {w: 110, d: 45}
 
@@ -33,10 +70,13 @@ export function obj(name: string): SceneObject {
   return so
 }
 
+/** Cached after the first lookup (a Lens reset reloads this module); re-found if the component was destroyed. */
+let cachedController: SidleController | null = null
 export function controller(): SidleController {
+  if (cachedController && !isNull(cachedController)) return cachedController
   const c = obj("SidleController").getComponent(SidleController.getTypeName()) as SidleController
   if (!c) throw new Error("SidleController component not found")
-  return c
+  return (cachedController = c)
 }
 
 export function interactable(name: string): Interactable {
@@ -209,9 +249,14 @@ export function panelText(name: string): string {
   return t ? t.text : ""
 }
 
-/** Grab PieceGrab and drag it; dragVector is world cm added per drag-update frame. */
+/** A room-local direction (cm) in world space, using VirtualRoom's world rotation (the room follows the start heading). */
+export function roomDir(v: vec3): vec3 {
+  return obj("VirtualRoom").getTransform().getWorldRotation().multiplyVec3(v)
+}
+
+/** Grab PieceGrab and drag it; perFrame is room-local cm added per drag-update frame. */
 export async function dragPiece(it: DefaultLeafInteractor, perFrame: vec3, ms: number): Promise<void> {
-  await it.drag(interactable("PieceGrab"), perFrame, ms)
+  await it.drag(interactable("PieceGrab"), roomDir(perFrame), ms)
   await sleep(150)
 }
 
@@ -378,6 +423,15 @@ export function levelHeadFrame(): {pos: vec3; fwd: vec3; right: vec3; pitchDeg: 
   }
 }
 
+/**
+ * A drag vector written for a head facing world -Z (x = right, y = up, z = toward
+ * the head), expressed in the current level head frame. At head yaw 0 it returns v unchanged.
+ */
+export function headDir(v: vec3): vec3 {
+  const f = levelHeadFrame()
+  return f.right.uniformScale(v.x).add(new vec3(0, v.y, 0)).add(f.fwd.uniformScale(-v.z))
+}
+
 /** Measured head-space offset of a world point: distance, horizontal (+ right) and vertical (+ up) angle. */
 export function headOffsetOf(p: vec3): {distanceCm: number; horizontalDeg: number; verticalDeg: number} {
   const f = levelHeadFrame()
@@ -452,8 +506,21 @@ export class HeadHold {
   }
 }
 
-/** Head pose at the start: the scene's camera origin, level, facing into the room (-Z). */
-export const START_HEAD = {pos: new vec3(0, 0, 0), yawDeg: 0}
+/**
+ * Head pose at the start, level, facing into the room (-Z): room-local (0, 0)
+ * at the eye height (the room's floor offset), in world space. The Lens places
+ * the room around the start pose, so this follows VirtualRoom's world transform.
+ */
+export const START_HEAD = {
+  get pos(): vec3 {
+    const rt = obj("VirtualRoom").getTransform()
+    return rt.getWorldTransform().multiplyPoint(new vec3(0, -rt.getLocalPosition().y, 0))
+  },
+  /** HeadHold yaw (+ = right) that faces the room's -Z. */
+  get yawDeg(): number {
+    return (-yawOf(obj("VirtualRoom").getTransform()) * 180) / Math.PI
+  },
+}
 
 /** Names of objects whose visual corners were not finite in the last visualCorners() calls (debug). */
 export const skippedVisuals: string[] = []

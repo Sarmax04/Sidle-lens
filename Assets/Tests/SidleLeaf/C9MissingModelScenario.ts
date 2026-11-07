@@ -10,7 +10,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {bundledCatalog, expectedOffer, goTo, log, meshBounds, obj, panelText, resetState, tap} from "./SidleTestHelpers"
+import {bundledCatalog, expectedOffer, goTo, log, meshBounds, obj, panelText, resetState, ROOM, START, tap} from "./SidleTestHelpers"
 
 const BROKEN = [
   {id: "missing_box", name: "Missing Model", category: "sofa", sourceUrl: "https://example.org/a/missing", domain: "example.org",
@@ -61,7 +61,7 @@ export class C9MissingModelScenario extends Scenario {
     // Keeps working: rotate, move with clearance, then wrap to Sofa A
     await tap(it, "RotateLeftButton")
     expect(c.rotationDeg, "rotate still works").toBeCloseTo(15, 1)
-    c.setPiecePosition(230, -220)
+    c.setPiecePosition(ROOM.maxX - 20, START.z) // 20 cm inside the right wall line (clamped to fit)
     await sleep(100)
     expect(c.isClear, "clearance still evaluated (too close to the right wall)").toBe(false)
     expect(c.nearestObstacle, "nearest obstacle").toBe("RightWall")

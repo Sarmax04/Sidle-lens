@@ -9,7 +9,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {SidleController} from "../../Scripts/SidleController"
-import {dragPiece, expectEdges, interactable, local, log, obj, resetState, ROOM, SOFA_A_HALF} from "./SidleTestHelpers"
+import {dragPiece, expectEdges, interactable, local, log, obj, resetState, ROOM, roomDir, SOFA_A_HALF, START} from "./SidleTestHelpers"
 
 function checkGapLabelBetween(c: SidleController, ctx: string, expectGap: number, axis: "x" | "z", pieceEdge: number, wall: number): void {
   expect(c.gapLabelVisible, `${ctx}: gap label visible`).toBe(true)
@@ -39,7 +39,7 @@ export class C4aWallClearanceScenario extends Scenario {
 
     // ---- Real drag toward the right wall ----
     let guard = 0
-    while (c.nearestGapCm >= 60 && guard++ < 12) await dragPiece(it, new vec3(1.5, 0, 0), 300)
+    while (c.nearestGapCm >= 60 && guard++ < 24) await dragPiece(it, new vec3(1.5, 0, 0), 300)
     const p = c.piecePosition
     const expectGap = ROOM.maxX - (p.x + SOFA_A_HALF.w)
     log(`after drag: pos ${JSON.stringify(p)} nearest ${c.nearestObstacle} ${c.nearestGapCm}`)
@@ -55,7 +55,7 @@ export class C4aWallClearanceScenario extends Scenario {
 
     // live update while dragging: gap text changes during a drag that is still held
     const before = c.gapLabelText
-    const dp = it.drag(interactable("PieceGrab"), new vec3(-0.5, 0, 0), 700)
+    const dp = it.drag(interactable("PieceGrab"), roomDir(new vec3(-0.5, 0, 0)), 700)
     await sleep(500)
     const during = c.gapLabelText
     const duringDrag = c.isDragging
@@ -86,29 +86,29 @@ export class C4aWallClearanceScenario extends Scenario {
 
     // ---- Threshold boundary + other walls (API positioning; values exact) ----
     const x80 = ROOM.maxX - SOFA_A_HALF.w - 80
-    c.setPiecePosition(x80, -220) // right gap exactly 80
+    c.setPiecePosition(x80, START.z) // right gap exactly 80
     await sleep(50)
     expect(c.nearestGapCm, "boundary gap").toBeCloseTo(80, 2)
     expect(c.isClear, "80 cm counts as clear").toBe(true)
     expectEdges(c, ["green", "green", "green", "green"], "exactly 80")
-    c.setPiecePosition(x80 + 0.5, -220)
+    c.setPiecePosition(x80 + 0.5, START.z)
     await sleep(50)
     expect(c.isClear, "79.5 cm is too close").toBe(false)
     expect(c.gapLabelText, "79.5 floors to 79").toBe("79 cm")
     expectEdges(c, ["green", "red", "green", "green"], "79.5 to right wall")
 
     const leftEdge = ROOM.minX + 50
-    c.setPiecePosition(leftEdge + SOFA_A_HALF.w, -220) // left wall: gap 50
+    c.setPiecePosition(leftEdge + SOFA_A_HALF.w, START.z) // left wall: gap 50
     await sleep(50)
     expect(c.nearestObstacle, "left wall").toBe("LeftWall")
     expectEdges(c, ["green", "green", "green", "red"], "near left wall")
     checkGapLabelBetween(c, "left wall", 50, "x", leftEdge, ROOM.minX)
 
-    c.setPiecePosition(0, -40) // doorway wall line: front edge -40+45=5, gap 25
+    c.setPiecePosition(0, ROOM.maxZ - 25 - SOFA_A_HALF.d) // doorway wall line: front edge ROOM.maxZ - 25, gap 25
     await sleep(50)
     expect(c.nearestObstacle, "doorway wall").toBe("DoorwayWall")
     expectEdges(c, ["red", "green", "green", "green"], "near doorway wall")
-    checkGapLabelBetween(c, "doorway wall", 25, "z", 5, ROOM.maxZ)
+    checkGapLabelBetween(c, "doorway wall", 25, "z", ROOM.maxZ - 25, ROOM.maxZ)
 
     // far wall: back edge gap 30 (left wall and coffee table both 90 away)
     const backEdge = ROOM.minZ + 30
@@ -119,7 +119,7 @@ export class C4aWallClearanceScenario extends Scenario {
     expectEdges(c, ["green", "green", "red", "green"], "near far wall")
     checkGapLabelBetween(c, "far wall", 30, "z", backEdge, ROOM.minZ)
 
-    c.setPiecePosition(0, -220)
+    c.setPiecePosition(0, START.z)
     await sleep(1300)
     expect(c.gapLabelVisible, "gap label gone after reset").toBe(false)
     log("C4a done")

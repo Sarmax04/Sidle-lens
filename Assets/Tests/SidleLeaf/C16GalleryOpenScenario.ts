@@ -21,6 +21,7 @@ import {
   galleryObj,
   galleryShown,
   goTo,
+  headDir,
   HeadHold,
   headOffsetOf,
   interactable,
@@ -100,7 +101,7 @@ export class C16GalleryOpenScenario extends Scenario {
       await sleep(300)
       expectGalleryAt(c, "default offset")
       await tap(it, "GalleryCloseButton")
-      await it.drag(interactable("PanelGrabBar"), new vec3(0.8, 0.3, 0), 600)
+      await it.drag(interactable("PanelGrabBar"), headDir(new vec3(0.8, 0.3, 0)), 600)
       await nextFrame()
       log(`panel dragged to ${fmtOffset(c.panelOffset)}`)
       expect(Math.abs(c.panelOffset.horizontalDeg) > 3, "panel moved off its default").toBe(true)

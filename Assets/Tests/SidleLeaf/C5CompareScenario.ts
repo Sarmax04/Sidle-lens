@@ -30,6 +30,7 @@ import {
   placementValid,
   resetState,
   ROOM,
+  START,
   tap,
   textOf,
   yawOf,
@@ -75,7 +76,7 @@ function expectedSpot(v: ExpectedVariant, from: {x: number; z: number}): {x: num
   return p
 }
 
-/** Sofas sit near the right wall: the right-wall gap is 250 - x - w/2 for every sofa variant. */
+/** Sofas sit near the right wall: the right-wall gap is ROOM.maxX - x - w/2 for every sofa variant. */
 function checkSofaClearance(c: SidleController, v: ExpectedVariant, pos: {x: number; z: number}): void {
   const gap = Math.max(0, Math.round((ROOM.maxX - pos.x - v.w / 2) * 1e4) / 1e4)
   expect(gap < 80, `${v.key}: test spot is too close to the right wall (gap ${gap})`).toBe(true)
@@ -108,11 +109,11 @@ export class C5CompareScenario extends Scenario {
     // is 30 cm from the right wall at 0° for exact clearance numbers.
     await tap(it, "MeasureButton")
     expect(c.measureOn, "Measure on").toBe(true)
-    c.setPiecePosition(ROOM.maxX - 140, -220) // Sofa A right edge 30 cm off the wall; Sofa B (180 wide) 50 cm
+    c.setPiecePosition(ROOM.maxX - 140, START.z) // Sofa A right edge 30 cm off the wall; Sofa B (180 wide) 50 cm
     await sleep(50)
     let pos = c.piecePosition
     const rot = c.rotationDeg
-    expect(pos.x, "sofa spot").toBeCloseTo(110, 1)
+    expect(pos.x, "sofa spot").toBeCloseTo(ROOM.maxX - 140, 1)
     const nudged: string[] = []
     /** Advance the tracked spot for the variant now shown, then check it. */
     const check = (v: ExpectedVariant) => {

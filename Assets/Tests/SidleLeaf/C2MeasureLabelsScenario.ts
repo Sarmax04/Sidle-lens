@@ -6,7 +6,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {dragPiece, interactable, local, log, obj, resetState, tap, textOf} from "./SidleTestHelpers"
+import {dragPiece, interactable, local, log, obj, resetState, roomDir, tap, textOf} from "./SidleTestHelpers"
 
 @component
 export class C2MeasureLabelsScenario extends Scenario {
@@ -62,7 +62,7 @@ export class C2MeasureLabelsScenario extends Scenario {
     expect(obj("DimensionLabels").enabled, "DimensionLabels hidden after second pinch").toBe(false)
 
     // --- Measure off: labels show while dragging, hide on release ---
-    const dragP = it.drag(interactable("PieceGrab"), new vec3(0.4, 0, 0), 900)
+    const dragP = it.drag(interactable("PieceGrab"), roomDir(new vec3(0.4, 0, 0)), 900)
     await sleep(450)
     const midDragging = c.isDragging
     const midLabels = obj("DimensionLabels").enabled

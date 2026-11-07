@@ -7,7 +7,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {COFFEE, dragPiece, expectEdges, local, log, obj, placementValid, resetState, ROOM, SOFA_A_HALF} from "./SidleTestHelpers"
+import {COFFEE, dragPiece, expectEdges, local, log, obj, placementValid, resetState, ROOM, SOFA_A_HALF, START} from "./SidleTestHelpers"
 
 @component
 export class C4bCoffeeTableBlockingScenario extends Scenario {
@@ -74,7 +74,7 @@ export class C4bCoffeeTableBlockingScenario extends Scenario {
     expect(local("Piece").y, "on floor").toBeCloseTo(0, 2)
 
     // ---- Real drag into the right wall: must stop at the wall ----
-    c.setPiecePosition(0, -220)
+    c.setPiecePosition(0, START.z)
     await sleep(50)
     guard = 0
     let prevX = -999
@@ -94,7 +94,7 @@ export class C4bCoffeeTableBlockingScenario extends Scenario {
     // ---- Direct placement inside obstacles / outside the room is resolved (API) ----
     const tries: [number, number][] = [
       [(COFFEE.minX + COFFEE.maxX) / 2, (COFFEE.minZ + COFFEE.maxZ) / 2], // inside the coffee table
-      [1000, 0], // far outside right/doorway
+      [1000, ROOM.maxZ - SOFA_A_HALF.d + 15], // far outside right/doorway (front edge 15 cm past the doorway wall line)
       [-1000, -1000], // far outside left/far
       [COFFEE.minX + 50, COFFEE.maxZ + 20], // overlapping the table corner
     ]
@@ -105,11 +105,11 @@ export class C4bCoffeeTableBlockingScenario extends Scenario {
       log(`setPiecePosition(${x}, ${z}) -> ${JSON.stringify(p)}`)
       expect(placementValid(p.x, p.z, 220, 90, c.rotationDeg), `resolved spot valid for (${x}, ${z}) -> ${JSON.stringify(p)}`).toBe(true)
     }
-    c.setPiecePosition(1000, 0)
+    c.setPiecePosition(1000, ROOM.maxZ - SOFA_A_HALF.d + 15) // front edge 15 cm past the doorway wall line
     expect(c.piecePosition.x, "clamped x to right wall").toBeCloseTo(ROOM.maxX - SOFA_A_HALF.w, 1)
-    expect(c.piecePosition.z, "clamped z to doorway wall").toBeCloseTo(-15, 1)
+    expect(c.piecePosition.z, "clamped z to doorway wall").toBeCloseTo(ROOM.maxZ - SOFA_A_HALF.d, 1)
 
-    c.setPiecePosition(0, -220)
+    c.setPiecePosition(0, START.z)
     await sleep(1300)
     log("C4b done")
   }

@@ -16,7 +16,7 @@ import {awaitEventOnce, findSceneObjectByName, nextFrame, sleep, withTimeout} fr
 import {InteractorTriggerType} from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {SidleController} from "../../Scripts/SidleController"
-import {cameraTransform, COFFEE, controller, ROOM} from "../SidleLeaf/SidleTestHelpers"
+import {cameraTransform, COFFEE, controller, ROOM, START, START_HEAD} from "../SidleLeaf/SidleTestHelpers"
 
 // ═══ CONFIG: tune everything here (seconds unless noted; positions in room cm) ═══
 const CONFIG = {
@@ -345,11 +345,11 @@ export class DemoScenario extends Scenario {
     while (c.rotationDeg > 0.01 && c.rotationDeg < 359.99 && g++ < 30) c.rotateLeft()
     if (c.measureOn) c.toggleMeasure()
     if (c.currentColorIndex !== 0) c.setColor(0)
-    c.setPiecePosition(0, -220)
+    c.setPiecePosition(START.x, START.z)
 
-    // Camera at the normal start (scene origin, just inside the doorway), facing the sofa.
+    // Camera at the normal start (room-local (0, 0), about 1 m inside the doorway), facing the sofa.
     const inv = roomT.getInvertedWorldTransform()
-    const camRoom = inv.multiplyPoint(new vec3(0, 0, 0))
+    const camRoom = inv.multiplyPoint(START_HEAD.pos)
     this.startPose = {x: camRoom.x, z: camRoom.z, look: this.sofaLook()}
     this.head = new DemoHead(camRoom.y, this.startPose)
     await nextFrame()
@@ -511,7 +511,7 @@ export class DemoScenario extends Scenario {
   private async s3(): Promise<void> {
     const k = CONFIG.s3
     const c = this.c
-    await this.head.glide({x: -40, z: -10, look: new vec3(60, 30, -250)}, k.camera)
+    await this.head.glide({x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}, k.camera)
     const halfW = c.currentDims.w / 2
     const toX = ROOM.maxX - halfW - k.wallGapCm
     await this.dragPiece(new vec3(toX - c.piecePosition.x, 0, 0), k.toWall)
@@ -519,7 +519,7 @@ export class DemoScenario extends Scenario {
     await sleep(k.hold * 1000)
     await this.dragPiece(new vec3(-c.piecePosition.x, 0, 0), k.back)
     log(`S3 open floor: clear=${c.isClear}, edges ${c.outlineEdgeColors.join(",")}`)
-    await this.head.glide({x: -40, z: -10, look: new vec3(110, 30, -400)}, k.turn)
+    await this.head.glide({x: -40, z: -10, look: new vec3(110, 30, START.z - 180)}, k.turn)
     const goal = new vec3(COFFEE.minX + 20, 0, COFFEE.maxZ + 20)
     await this.dragPiece(new vec3(goal.x - c.piecePosition.x, 0, goal.z - c.piecePosition.z), k.toTable)
     log(`S3 stopped at ${JSON.stringify(c.piecePosition)}: nearest ${c.nearestObstacle} ${c.nearestGapCm.toFixed(1)} cm`)
@@ -564,7 +564,7 @@ export class DemoScenario extends Scenario {
   private async s6(): Promise<void> {
     const k = CONFIG.s6
     const c = this.c
-    await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, -280)}, k.camera)
+    await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.camera)
     await this.pinch("GalleryButton")
     const types = c.availableTypes
     const tabA = Math.min(3, types.length)
@@ -608,6 +608,6 @@ export class DemoScenario extends Scenario {
     if (c.measureOn) await this.pinch("MeasureButton")
     const cam = cameraTransform()
     await this.ring.glideTo(() => cam.getWorldPosition().add(cam.back.uniformScale(40)).add(cam.down.uniformScale(80)), 0.4)
-    await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, -300)}, CONFIG.s9.camera)
+    await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, CONFIG.s9.camera)
   }
 }

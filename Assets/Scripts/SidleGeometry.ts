@@ -15,8 +15,8 @@
  */
 
 /** Virtual stand-in room size, cm. The one place to change the room's footprint. */
-export const ROOM_WIDTH_CM = 500 // X, across the doorway wall
-export const ROOM_DEPTH_CM = 600 // Z, doorway wall to far wall
+export const ROOM_WIDTH_CM = 700 // X, across the doorway wall
+export const ROOM_DEPTH_CM = 800 // Z, doorway wall to far wall
 /** Doorway opening, cm. The room builds its doorway from these, and fitsThroughDoor uses them by default. */
 export const DOOR_WIDTH_CM = 90
 export const DOOR_HEIGHT_CM = 200

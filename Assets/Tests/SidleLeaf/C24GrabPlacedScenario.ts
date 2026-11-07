@@ -23,6 +23,7 @@ import {
   obj,
   placedRoot,
   resetState,
+  roomDir,
   yawOf,
 } from "./SidleTestHelpers"
 
@@ -35,7 +36,7 @@ async function grabPlaced(c: SidleController, offer: ExpectedType[], it: Default
   // Drag toward the doorway (+Z), sampling the current piece every frame.
   const samples: {id: number; x: number; z: number; dragging: boolean; labels: boolean}[] = []
   let done = false
-  const drag = it.drag(interactable(`PlacedGrab_${target.id}`), new vec3(0, 0, 3.0), 1000).then(() => (done = true))
+  const drag = it.drag(interactable(`PlacedGrab_${target.id}`), roomDir(new vec3(0, 0, 3.0)), 1000).then(() => (done = true))
   while (!done) {
     samples.push({id: c.currentPieceId, x: c.piecePosition.x, z: c.piecePosition.z, dragging: c.isDragging, labels: c.labelsVisible})
     await nextFrame()

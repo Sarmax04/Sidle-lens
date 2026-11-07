@@ -228,7 +228,7 @@ export class SidleController extends BaseScriptComponent {
   @input
   @hint("How far the doorway wall line is behind the start position, cm")
   @widget(new SliderWidget(10, 100, 1))
-  startInsetCm: number = 30
+  startInsetCm: number = 100
 
   // Doorway opening: DOOR_WIDTH_CM x DOOR_HEIGHT_CM in SidleGeometry (shared with the door-fit rule, Update 8).
   private readonly doorWidth = DOOR_WIDTH_CM
@@ -402,7 +402,8 @@ export class SidleController extends BaseScriptComponent {
     this.litCache = new MaterialCache(this.litMaterial)
     this.unlitCache = new MaterialCache(this.unlitMaterial)
 
-    const start = this.pieceRoot.getTransform().getLocalPosition()
+    // Start piece in the middle of the room (derived from the room constants, not the authored transform).
+    const start = this.startSpot()
     this.posX = start.x
     this.posZ = start.z
 
@@ -418,6 +419,7 @@ export class SidleController extends BaseScriptComponent {
 
     this.createEvent("OnStartEvent").bind(() => {
       this.camT = WorldCameraFinderProvider.getInstance().getTransform()
+      this.anchorRoomToHead()
       // SidleLazyFollow sits lower in the hierarchy: only initialized from OnStart on.
       this.panelFollow = this.panelUI.getSceneObject().getComponent(SidleLazyFollow.getTypeName()) as SidleLazyFollow | null
       if (!this.panelFollow) warn("SidleLazyFollow not found on the panel; the panel cannot be placed or moved")
@@ -941,6 +943,31 @@ export class SidleController extends BaseScriptComponent {
   private room3(): RoomSpec {
     const maxZ = this.startInsetCm
     return {minX: -ROOM_WIDTH_CM / 2, maxX: ROOM_WIDTH_CM / 2, minZ: maxZ - ROOM_DEPTH_CM, maxZ}
+  }
+
+  /** Start spot of the piece: the room centre (room-local floor cm). */
+  private startSpot(): {x: number; z: number} {
+    const R = this.room3()
+    return {x: (R.minX + R.maxX) / 2, z: (R.minZ + R.maxZ) / 2}
+  }
+
+  /**
+   * Places the room around the user's start pose, once: the head stands at
+   * room-local (0, 0) and the room's -Z runs along the head's horizontal gaze.
+   * Only world X, Z and yaw change; the room's height (floor below the eye) is
+   * kept. With the head at the world origin facing -Z this sets exactly the
+   * authored transform (position (0, y, 0), yaw 0), so it is a no-op.
+   */
+  private anchorRoomToHead(): void {
+    if (!this.camT) return
+    const rt = this.room.getTransform()
+    const head = this.camT.getWorldPosition()
+    const gaze = this.camT.back // view direction (the camera looks along its -Z)
+    rt.setWorldPosition(new vec3(head.x, rt.getWorldPosition().y, head.z))
+    // Looking (almost) straight up or down gives no heading: keep the authored yaw.
+    if (Math.sqrt(gaze.x * gaze.x + gaze.z * gaze.z) > 1e-3) {
+      rt.setWorldRotation(quat.angleAxis(Math.atan2(-gaze.x, -gaze.z), vec3.up()))
+    }
   }
 
   /** Coffee table footprint center: against the far wall, in the far right corner. */
@@ -1541,7 +1568,7 @@ export class SidleController extends BaseScriptComponent {
     // Window in the left long wall: light frame, cross mullion and sill around a pale, bright pane.
     const win = this.group(decor, "RoomWindow")
     win.getTransform().setLocalPosition(new vec3(R.minX, 150, cz))
-    const ww = 160 // along the wall (Z)
+    const ww = (D * 4) / 15 // along the wall (Z): scales with the room depth (160 cm in a 600 cm room)
     const wh = 120
     const fb = 6 // frame bar width
     const fd = 3 // frame depth into the room
@@ -1556,8 +1583,9 @@ export class SidleController extends BaseScriptComponent {
     makeBox(win, "RoomWindowSill", new vec3(4, -wh / 2 - fb - 1.5, 0), new vec3(8, 3, ww + 2 * fb + 8), frame)
 
     // Flat rug in the middle (optional): just above the plank lines, below the outline.
+    // Scales with the room: 0.6 W x D/3, D/30 toward the doorway (300 x 200, +20 in a 500 x 600 room).
     if (this.showRug) {
-      makeBox(decor, "RoomRug", new vec3(0, 0.15, cz + 20), new vec3(300, 0.1, 200), this.unlitCache.get(this.rugColor))
+      makeBox(decor, "RoomRug", new vec3(0, 0.15, cz + D / 30), new vec3(W * 0.6, 0.1, D / 3), this.unlitCache.get(this.rugColor))
     }
   }
 
