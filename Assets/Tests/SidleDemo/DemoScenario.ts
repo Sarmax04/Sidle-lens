@@ -780,10 +780,14 @@ export class DemoScenario extends Scenario {
 
   async run(config?: ScenarioConfig): Promise<void> {
     const raw = (config?.get("scene") ?? "all").trim().toLowerCase()
-    const only = raw === "all" || raw === "" || raw === "0" ? 0 : Number(raw)
-    const scenes = only >= 1 && only <= 9 ? [only] : [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    // "all", one scene "1".."9", or a list "1,2" (played in order from the first one's start state)
+    const picked = raw.split(",").map((v) => Number(v.trim())).filter((v) => v >= 1 && v <= 9 && Math.floor(v) === v)
+    const scenes = raw === "all" || picked.length === 0 ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : picked
     log(`DEMO start, scene=${raw} -> ${scenes.join(",")}`)
-    previewHead = (config?.get("head") ?? "walker").trim().toLowerCase() === "preview"
+    // head: "preview" (replay drives the preview head), "walker" (the Lens moves its camera), or "auto"
+    // (default): preview if the editor replay (tools/demo/play_demo.ts) is armed, else walker.
+    const headParam = (config?.get("head") ?? "auto").trim().toLowerCase()
+    previewHead = headParam === "preview" || (headParam === "auto" && (await this.replayArmed()))
     recordPath = (config?.get("record") ?? "0").trim() === "1"
 
     await this.setup()
@@ -796,18 +800,46 @@ export class DemoScenario extends Scenario {
       if (scenes.length === 1) await this.prepAlone(scenes[0])
       this.T0 = getTime()
       this.frames = 0
-      postEditor({type: "SidleDemoStart"})
+      if (previewHead) this.setLeafOverlay(false)
+      postEditor({type: "SidleDemoStart", head: previewHead ? "preview" : "walker", backdrop, scenes: scenes.join(",")})
       for (const n of scenes) records.push(await this.playScene(n))
     } catch (e) {
       log(`ERROR (demo stopped early): ${e}`)
     } finally {
       frameEvt.enabled = false
+      this.setLeafOverlay(true)
+      postEditor({type: "SidleDemoEnd"})
       this.summary(records)
       this.ring.destroy()
       await this.head.stop()
       this.c.resetPanelScale()
       this.c.resetPanelOffset()
       log(`DEMO done (pointer ring removed, camera tracking restored, panel back to ${this.c.panelScale * 100}% at ${this.fmtOffset()})`)
+    }
+  }
+
+  /** Asks the editor whether the replay script is armed (it answers "SidleReplayArmed"); false after 0.6 s without an answer. */
+  private async replayArmed(): Promise<boolean> {
+    let armed = false
+    const evt = this.createEvent("MessageEvent" as any) as any
+    evt.bind((e: any) => {
+      const d = e && e.data !== undefined ? e.data : e
+      if (d && d.type === "SidleReplayArmed") armed = true
+    })
+    postEditor({type: "SidleDemoHello"})
+    const t0 = getTime()
+    while (!armed && getTime() - t0 < 0.6) await nextFrame()
+    evt.enabled = false
+    log(`head = auto: editor replay ${armed ? "armed -> preview head" : "not armed -> walker"}`)
+    return armed
+  }
+
+  /** Replay video: hide the LEAF on-screen log strip ("RUNS: DEMO ...") while the DEMO plays; restored at the end. */
+  private setLeafOverlay(on: boolean): void {
+    const so = findSceneObjectByName("LeafDebugUICamera")
+    if (so && so.enabled !== on) {
+      so.enabled = on
+      log(`LEAF overlay ${on ? "shown again" : "hidden for the replay"}`)
     }
   }
 

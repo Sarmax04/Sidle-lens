@@ -75,8 +75,9 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c30-color-persist", typename: C30ColorPersistScenario.getTypeName()},
     // Backdrop room mode only (roomMode = backdrop, Preview: Interactive / Colorful Home)
     {id: "c31-backdrop-room", typename: C31BackdropRoomScenario.getTypeName()},
-    // Demo walkthrough for the video (no assertions); scene = all | 1..9; head = walker (the Lens moves the
-    // camera) | preview (backdrop: tools/demo/play_demo.ts drives the preview head); record = 1 logs the path
-    {id: "DEMO", typename: DemoScenario.getTypeName(), parameters: {scene: "all", head: "walker", record: "0"}},
+    // Demo walkthrough for the video (no assertions); scene = all | 1..9 | list "1,2"; head = auto (preview if
+    // the replay tools/demo/play_demo.ts is armed, else walker) | walker (the Lens moves the camera) | preview;
+    // record = 1 logs the camera path
+    {id: "DEMO", typename: DemoScenario.getTypeName(), parameters: {scene: "all", head: "auto", record: "0"}},
   ]
 }
