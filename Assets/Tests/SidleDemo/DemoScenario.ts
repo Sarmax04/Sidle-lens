@@ -61,11 +61,11 @@ const BD = {
     s1: {x: 90, z: 0, sec: 14},
     s2: {toDeg: -8, radiusCm: 400, sec: 25.5}, // arc around the sofa, widening, ending in the opening (>= 86 cm off its edge)
     s3: {x: -55, z: 290, sec: 30}, // back out into the hall while the piece is dragged
-    s4: {x: -90, z: 395, sec: 15},
-    s5: {x: 20, z: 385, sec: 20},
-    s6: {x: -70, z: 400, sec: 25}, // closer than the old 744 cm (hovering the far piece was slow), wide enough for all pieces
-    s7: {x: -105, z: 330, sec: 10},
-    s9: {x: -30, z: 365, sec: 8},
+    s4: {x: -105, z: 404, sec: 15},
+    s5: {x: 40, z: 390, sec: 20},
+    s6: {x: -45, z: 404, sec: 25}, // closer than the old 744 cm (hovering the far piece was slow), wide enough for all pieces
+    s7: {x: -105, z: 330, sec: 12},
+    s9: {x: -22, z: 372, sec: 8},
     swayCm: 4,
     swayPeriodSec: 10,
     maxYawDegPerSec: 8,
@@ -93,7 +93,7 @@ const BD = {
   s4: {azDeg: 12, distCm: 750},
   s1: {walkCm: 15},
   /** S6 pieces spread less (smaller room); the camera stands still at camX (the pieces' final centroid; a moving head drags the panel off the pinch), the gaze follows the centroid. Shorter beats: hovering the far piece before each drag takes 2-7 s at this distance, so S6 still ends on time. */
-  s6: {dragA: new vec3(-60, 0, 40), dragB: new vec3(100, 0, 60), camX: -40, tabPause: 1.2, drag: 1.8, afterAdd: 0.4},
+  s6: {dragA: new vec3(-45, 0, 40), dragB: new vec3(100, 0, 60), camX: -40, tabPause: 1.2, drag: 1.8, afterAdd: 0.4},
   /**
    * S7: the panel stays raised (-23°) until the end of S7 so the 153 cm tall bed and the panel's
    * door line fit in one view: camera distCm back toward the hall, gaze pitchDeg down, centred on the piece.
@@ -269,20 +269,34 @@ class DemoHead {
   private readonly tracking: Component | null
   private readonly trackingWasEnabled: boolean
 
-  constructor(eyeY: number, pose: Pose) {
+  /** true: the preview head drives the camera (backdrop replay); this only reads the pose, never sets the camera. */
+  readonly external: boolean
+
+  constructor(eyeY: number, pose: Pose, external: boolean = false) {
     const t = cameraTransform()
     this.origPos = t.getWorldPosition()
     this.origRot = t.getWorldRotation()
     this.tracking = t.getSceneObject().getComponent("Component.DeviceTracking") as Component | null
     this.trackingWasEnabled = !!this.tracking && this.tracking.enabled
-    if (this.tracking) this.tracking.enabled = false
+    this.external = external
+    if (this.tracking && !external) this.tracking.enabled = false
     this.eyeY = eyeY
     this.pose = pose
-    this.apply()
+    if (external) this.readPose()
+    else this.apply()
     this.loop()
   }
 
+  /** External mode: the pose (room-local) from the actual camera, looking 300 cm ahead. */
+  private readPose(): void {
+    const t = cameraTransform()
+    const pos = worldToRoom(t.getWorldPosition())
+    const look = worldToRoom(t.getWorldPosition().add(t.back.uniformScale(300)))
+    this.pose = {x: pos.x, z: pos.z, look}
+  }
+
   set(p: Pose): void {
+    if (this.external) return
     this.pose = p
     if (!this.gliding) this.tiltMix = p.center ? 0 : 1
     this.apply()
@@ -292,6 +306,10 @@ class DemoHead {
 
   /** Eased glide (position and gaze target) to `to` over `sec`. */
   async glide(to: Pose, sec: number): Promise<void> {
+    if (this.external) {
+      await sleep(sec * 1000)
+      return
+    }
     const from = this.pose
     // The subject's screen height eases from the old framing to the new one with the move.
     const t0 = from.center ? 0 : 1
@@ -320,6 +338,7 @@ class DemoHead {
   async stop(): Promise<void> {
     this.active = false
     await nextFrame()
+    if (this.external) return
     const t = cameraTransform()
     t.setWorldPosition(this.origPos)
     t.setWorldRotation(this.origRot)
@@ -340,7 +359,8 @@ class DemoHead {
 
   private async loop(): Promise<void> {
     while (this.active) {
-      this.apply()
+      if (this.external) this.readPose()
+      else this.apply()
       await nextFrame()
     }
   }
@@ -497,6 +517,25 @@ function boxDist(x: number, z: number, b: Box): number {
 }
 
 let backdrop = false
+/**
+ * Backdrop replay (DEMO parameter head = "preview"): the PREVIEW head is driven by the editor
+ * replay script (tools/demo/play_demo.ts) along Assets/Tests/SidleDemo/DemoPath.json, so the
+ * Colorful Home backdrop moves with it; the Lens only reads the camera pose. The walker still runs
+ * as a timing shadow so pinches happen at the same moments as in the recording.
+ */
+let previewHead = false
+/** DEMO parameter record = "1": log the camera's world pose every frame ([SidlePath] lines) for the path file. */
+let recordPath = false
+
+/** Post a message to the Lens Studio editor (the replay script listens); no-op outside the editor. */
+function postEditor(msg: any): void {
+  try {
+    // @ts-ignore Editor exists only when running inside Lens Studio
+    if (typeof Editor !== "undefined" && Editor.context) Editor.context.postMessage(msg)
+  } catch (e) {
+    // not in the editor
+  }
+}
 
 /** The obstacle box the S3 second hold drives into: the coffee table (stand-in) or the pillar, clipped to the room (backdrop). */
 function holdBox(): Box {
@@ -729,6 +768,8 @@ export class DemoScenario extends Scenario {
   private maxCover = 0
   private ringExt = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, n: 0}
   private walker: BdWalker | null = null
+  /** Backdrop: running pinch number (recording and replay count the same pinches). */
+  private pinchIdx = 0
   private mot = {travel: 0, yaw: 0, still: 0, stillCur: 0, maxSpeed: 0, maxYawRate: 0}
   private lastCam: {x: number; z: number; yaw: number} | null = null
   private sceneN = 0
@@ -742,8 +783,12 @@ export class DemoScenario extends Scenario {
     const only = raw === "all" || raw === "" || raw === "0" ? 0 : Number(raw)
     const scenes = only >= 1 && only <= 9 ? [only] : [1, 2, 3, 4, 5, 6, 7, 8, 9]
     log(`DEMO start, scene=${raw} -> ${scenes.join(",")}`)
+    previewHead = (config?.get("head") ?? "walker").trim().toLowerCase() === "preview"
+    recordPath = (config?.get("record") ?? "0").trim() === "1"
 
     await this.setup()
+    if (!backdrop) previewHead = false // the stand-in DEMO always drives the camera itself
+    log(`head driver: ${previewHead ? "preview head (editor replay)" : "Lens camera (walker)"}${recordPath ? ", recording the path" : ""}`)
     const frameEvt = this.createEvent("UpdateEvent")
     frameEvt.bind(() => this.onFrame())
     const records: SceneRecord[] = []
@@ -751,6 +796,7 @@ export class DemoScenario extends Scenario {
       if (scenes.length === 1) await this.prepAlone(scenes[0])
       this.T0 = getTime()
       this.frames = 0
+      postEditor({type: "SidleDemoStart"})
       for (const n of scenes) records.push(await this.playScene(n))
     } catch (e) {
       log(`ERROR (demo stopped early): ${e}`)
@@ -793,9 +839,22 @@ export class DemoScenario extends Scenario {
   /** Backdrop: one walker step (head pose) and the motion metrics (travel, yaw, still periods, peak speed and turn rate). */
   private walkFrame(): void {
     const dt = Math.max(1e-4, getDeltaTime())
-    const w = this.walker!.update(dt)
-    this.head.set({x: w.x, z: w.z, look: w.look})
-    const yaw = Math.atan2(w.look.x - w.x, -(w.look.z - w.z)) / DEG
+    const wk = this.walker!.update(dt)
+    if (!previewHead) this.head.set({x: wk.x, z: wk.z, look: wk.look})
+    // Metrics from the actual camera (in replay the preview head moves it, not the walker).
+    const t = cameraTransform()
+    const cp = worldToRoom(t.getWorldPosition())
+    const cf = worldToRoom(t.getWorldPosition().add(t.back.uniformScale(100))).sub(cp)
+    const w = {x: cp.x, z: cp.z}
+    const yaw = Math.atan2(cf.x, -cf.z) / DEG
+    if (recordPath && this.T0 > 0) {
+      const wp = t.getWorldPosition()
+      const f = t.back
+      const wyaw = Math.atan2(-f.x, -f.z) / DEG
+      const wpitch = Math.asin(Math.max(-1, Math.min(1, f.y))) / DEG
+      print(`[SidlePath] ${(getTime() - this.T0).toFixed(3)} ${wp.x.toFixed(2)} ${wp.y.toFixed(2)} ${wp.z.toFixed(2)} ${wyaw.toFixed(3)} ${wpitch.toFixed(3)} ${this.sceneN} ${this.walker!.tau.toFixed(4)}`)
+    }
+
     if (this.sceneN > 0 && this.lastCam) {
       const d = Math.sqrt((w.x - this.lastCam.x) ** 2 + (w.z - this.lastCam.z) ** 2)
       let dy = yaw - this.lastCam.yaw
@@ -1020,7 +1079,7 @@ export class DemoScenario extends Scenario {
     const inv = roomT.getInvertedWorldTransform()
     const camRoom = inv.multiplyPoint(START_HEAD.pos)
     this.startPose = backdrop ? {x: BD.walk.s1From.x, z: BD.walk.s1From.z, look: this.sofaLook()} : {x: camRoom.x, z: camRoom.z, look: this.sofaLook()}
-    this.head = new DemoHead(camRoom.y, this.startPose)
+    this.head = new DemoHead(camRoom.y, this.startPose, backdrop && previewHead)
     if (backdrop) {
       this.walker = new BdWalker({x: this.startPose.x, z: this.startPose.z}, this.sofaLook())
       log(`setup: DEMO head starts in the hall at (${this.startPose.x}, ${this.startPose.z}), ${Math.sqrt((this.startPose.x - c.piecePosition.x) ** 2 + (this.startPose.z - c.piecePosition.z) ** 2).toFixed(0)} cm from the sofa`)
@@ -1089,6 +1148,7 @@ export class DemoScenario extends Scenario {
     const f0 = this.frames
     const start = this.sceneStart - this.T0
     log(`S${n} ${SCENE_NAMES[n]} START ${start.toFixed(2)} s (target ${target} s)`)
+    postEditor({type: "SidleDemoScene", n, t: start})
     try {
       await (this as any)[`s${n}`]()
     } catch (e) {
@@ -1143,6 +1203,25 @@ export class DemoScenario extends Scenario {
 
   // ── Pinch helpers ──────────────────────────────────────────────────────────
 
+  /** Replay: wait (at most `maxSec`) until the preview-driven camera has been still for 3 frames. */
+  private async waitHeadStill(maxSec: number): Promise<void> {
+    const t = cameraTransform()
+    let last = t.getWorldPosition()
+    let lastF = t.back
+    let still = 0
+    const t0 = getTime()
+    while (still < 3 && getTime() - t0 < maxSec) {
+      await nextFrame()
+      const p = t.getWorldPosition()
+      const f = t.back
+      if (p.distance(last) < 0.2 && f.dot(lastF) > 0.999998) still++
+      else still = 0
+      last = p
+      lastF = f
+    }
+    if (still < 3) log(`pinch: head still moving after ${maxSec} s (replay out of step), pinching anyway`)
+  }
+
   /** Remember where a pinch/drag ring landed on screen (for the 10-90% check). */
   private noteRing(s: {x: number; y: number}): void {
     const r = this.ringExt
@@ -1162,6 +1241,16 @@ export class DemoScenario extends Scenario {
     // Backdrop: the walk eases to a stop while the ring glides in (the panel follows the head), resumes after the pinch.
     const stop = backdrop && this.walker ? this.walker.brake() : Promise.resolve()
     await Promise.all([this.ring.glideTo(() => inter.getSceneObject().getTransform().getWorldPosition(), CONFIG.ring.glide), stop])
+    if (backdrop && this.T0 > 0) {
+      // Pinch markers: the recording logs when each pinch's stop is reached; in the replay the editor
+      // lines its path time up with that recorded stop (the head is still there, so nothing jumps).
+      const k = this.pinchIdx++
+      if (recordPath) print(`[SidlePinch] ${k} ${(getTime() - this.T0).toFixed(3)}`)
+      if (previewHead) {
+        postEditor({type: "SidleDemoPinch", k})
+        await this.waitHeadStill(0.6)
+      }
+    }
     const s = toScreen(inter.getSceneObject().getTransform().getWorldPosition())
     this.noteRing(s)
     const inView = s.front && s.x >= 0 && s.x <= 100 && s.y >= 0 && s.y <= 100
