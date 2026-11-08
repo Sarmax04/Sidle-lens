@@ -14,9 +14,53 @@
  * Must not: touch SceneObjects, components, or UI.
  */
 
-/** Virtual stand-in room size, cm. The one place to change the room's footprint. */
+/** Virtual stand-in room size, cm. The one place to change the stand-in room's footprint. */
 export const ROOM_WIDTH_CM = 700 // X, across the doorway wall
 export const ROOM_DEPTH_CM = 800 // Z, doorway wall to far wall
+
+/**
+ * Room modes: "standin" = the virtual 7 x 8 m room built by the Lens, placed around
+ * the start pose; "backdrop" = the living room of Lens Studio's built-in
+ * Interactive Preview scene "Colorful Home" (needs Preview: Interactive, source
+ * Colorful Home). Backdrop furniture is not an obstacle; only its walls are.
+ */
+export type RoomMode = "standin" | "backdrop"
+
+/** Stand-in room bounds: centred on the start position, doorway wall `startInsetCm` behind it. */
+export function standinRoom(startInsetCm: number): RoomSpec {
+  return {minX: -ROOM_WIDTH_CM / 2, maxX: ROOM_WIDTH_CM / 2, minZ: startInsetCm - ROOM_DEPTH_CM, maxZ: startInsetCm}
+}
+
+/**
+ * Colorful Home living room (measured from the backdrop's own meshes), room-local cm:
+ * room axes = the house axes, origin = the start position at house (0, -420), +Z toward
+ * the 336 cm open side to the hall (the "doorway wall" line, 24.3 cm behind the start).
+ * 520.5 x 501.9 cm.
+ */
+export const BACKDROP_ROOM: RoomSpec = {minX: -351.7, maxX: 168.8, minZ: -477.6, maxZ: 24.3}
+
+/**
+ * Backdrop walls inside the room rectangle, as yaw-0 (oriented, so dragging stops at
+ * them) boxes: the corner pillar (wall22, house x 112.2..181.3, z -913.7..-867.4) and
+ * the stub of the open side's wall (wall20, house x -360.4..-163.3, z -402.0..-395.4).
+ */
+export const BACKDROP_OBSTACLES: Obstacle[] = [
+  {name: "Pillar", cx: 146.75, cz: -470.55, w: 69.1, d: 46.3, yaw: 0},
+  {name: "WallStub", cx: -261.85, cz: 21.3, w: 197.1, d: 6.6, yaw: 0},
+]
+
+/**
+ * Fixed backdrop anchor (Lens world, preview start = head at the origin): VirtualRoom
+ * world position and yaw. Floor y = -135 (135 cm below the preview head).
+ */
+export const BACKDROP_ANCHOR = {x: -234.0, y: -135, z: -533.4, yawDeg: 45}
+
+/**
+ * Backdrop start spot (room-local): about 300 cm ahead of the start position (300.1 cm,
+ * 4.8° left of straight ahead), 25 cm left of the head's line so even the widest
+ * built-in sofa (220 cm) starts green (83.8 cm to the right wall, the near side).
+ */
+export const BACKDROP_START = {x: -25, z: -300}
 /** Doorway opening, cm. The room builds its doorway from these, and fitsThroughDoor uses them by default. */
 export const DOOR_WIDTH_CM = 90
 export const DOOR_HEIGHT_CM = 200

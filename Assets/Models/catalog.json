@@ -168,20 +168,6 @@
     "thumbnail": "Models/thumbs/table_4.png"
   },
   {
-    "id": "classic_bed",
-    "name": "Classic Bed",
-    "category": "bed",
-    "sourceUrl": "",
-    "domain": "local",
-    "widthCm": 168.6,
-    "depthCm": 216.4,
-    "heightCm": 110.8,
-    "glb": "Models/classic_bed.glb",
-    "yawDeg": 0,
-    "credit": "Bed1 by Scopia Visual Interfaces Systems, s.l. (scopia.es), CC BY 3.0, via Sweet Home 3D free models",
-    "thumbnail": "Models/thumbs/classic_bed.png"
-  },
-  {
     "id": "single_bed",
     "name": "Single Bed",
     "category": "bed",
@@ -194,6 +180,20 @@
     "yawDeg": 90,
     "credit": "Children bed by Scopia Visual Interfaces Systems, s.l. (scopia.es), CC BY 3.0, via Sweet Home 3D free models",
     "thumbnail": "Models/thumbs/single_bed.png"
+  },
+  {
+    "id": "classic_bed",
+    "name": "Classic Bed",
+    "category": "bed",
+    "sourceUrl": "",
+    "domain": "local",
+    "widthCm": 168.6,
+    "depthCm": 216.4,
+    "heightCm": 110.8,
+    "glb": "Models/classic_bed.glb",
+    "yawDeg": 0,
+    "credit": "Bed1 by Scopia Visual Interfaces Systems, s.l. (scopia.es), CC BY 3.0, via Sweet Home 3D free models",
+    "thumbnail": "Models/thumbs/classic_bed.png"
   },
   {
     "id": "gothicbed_01",

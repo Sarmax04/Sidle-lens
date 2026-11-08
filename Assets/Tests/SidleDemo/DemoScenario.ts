@@ -16,12 +16,13 @@ import {awaitEventOnce, findSceneObjectByName, nextFrame, sleep, withTimeout} fr
 import {InteractorTriggerType} from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {SidleController} from "../../Scripts/SidleController"
+import {BACKDROP_OBSTACLES, BACKDROP_START, Obstacle} from "../../Scripts/SidleGeometry"
 import {BUILT_INS, bundledCatalog, cameraTransform, COFFEE, controller, footprint, levelHeadFrame, panelObj, ROOM, START, START_HEAD, visualCorners} from "../SidleLeaf/SidleTestHelpers"
 
 // ═══ CONFIG: tune everything here (seconds unless noted; positions in room cm) ═══
 const CONFIG = {
   /** Target length of each scene; a scene that finishes early holds until its target. */
-  target: {1: 14, 2: 26, 3: 30, 4: 15, 5: 20, 6: 25, 7: 15, 8: 0, 9: 8} as Record<number, number>,
+  target: {1: 14, 2: 26, 3: 30, 4: 15, 5: 20, 6: 25, 7: 15, 8: 0, 9: 10} as Record<number, number>,
   startPiece: "Imported_sofa_01",
   ring: {glide: 0.45, press: 0.25, colour: new vec4(1.0, 0.96, 0.78, 1), sizePerCm: 0.012},
   s1: {hold: 3, walkCm: 30, walk: 7},
@@ -33,11 +34,92 @@ const CONFIG = {
   /** backCm: extra distance from the pieces' centroid vs the old (0, 0) spot; aimFollow: per-frame easing of the gaze toward the moving centroid. */
   s6: {camera: 2, tabPause: 1.6, drag: 2.5, dragA: new vec3(-140, 0, 40), dragB: new vec3(130, 0, 60), afterAdd: 0.8, backCm: 125, aimFollow: 0.12},
   s7: {bigKey: "Imported_gothicbed_01", fitKey: "Imported_painted_wooden_chair_01", hold: 3, camera: 0.8, startCamera: 1},
-  s9: {camera: 3},
+  /** S9: after the walk-in, flip through the colour swatches on the current piece (the S7 chair), then back to original. */
+  s9: {camera: 1, swatchPause: 0.5, swatches: [1, 2, 3, 4, 5, 0]},
   /** Panel during the DEMO only (restored at the end): one size step down (75%), then lowered to verticalDeg (limit -50). */
   panel: {scaleDownSteps: 1, verticalDeg: -40},
   /** Framing: shot pitch for the clearance holds, camera kept >= wallMarginCm from walls (rule: >= 40), labels checked against the central 70%. */
   frame: {pitchDeg: 27.5, subjectYPct: 32, wallMarginCm: 60, wallRuleCm: 40, centralPct: 70, sampleEveryFrames: 3},
+}
+
+/**
+ * Backdrop room mode (Colorful Home living room, 520.5 x 501.9 cm, room-local: start at (0, 0),
+ * open side to the hall at +Z). Only the values that differ from CONFIG; the stand-in DEMO
+ * uses CONFIG alone. Same scenes, order and durations.
+ */
+const BD = {
+  /** The open side to the hall (room-local x range at the near line); the camera may step up to intoOpeningCm into the hall (its walls stay >= 60 cm away there). */
+  opening: {minX: -166.8, maxX: 168.8, intoOpeningCm: 380},
+  /**
+   * The camera walks continuously like a person (BdWalker): one leg per scene, from where the last
+   * one left off (smooth Hermite path, or an arc around the sofa in S2), plus a slow 6 cm sway so it
+   * never stands still; it eases to a stop only for a pinch (and the grab-bar panel moves). Legs are
+   * room-local cm; the time is motion time (it pauses while stopped for a pinch). Peak speed of a leg
+   * is about 1.5 x length / time, kept <= 14 cm/s; the gaze turns at most maxYawDegPerSec.
+   */
+  walk: {
+    s1From: {x: 95, z: 70}, // just outside the open side: a short walk in, no wandering
+    s1: {x: 90, z: 0, sec: 14},
+    s2: {toDeg: -8, radiusCm: 400, sec: 25.5}, // arc around the sofa, widening, ending in the opening (>= 86 cm off its edge)
+    s3: {x: -55, z: 290, sec: 30}, // back out into the hall while the piece is dragged
+    // S4-S9 stay near one spot in the opening (short legs, 20-80 cm): less walking around.
+    s4: {x: -75, z: 370, sec: 15},
+    s5: {x: -55, z: 390, sec: 20},
+    s6: {x: -45, z: 404, sec: 25}, // wide enough for all pieces
+    s7: {x: -70, z: 350, sec: 12},
+    s9: {x: -50, z: 370, sec: 10},
+    swayCm: 1.5,
+    swayPeriodSec: 10,
+    maxYawDegPerSec: 8,
+    lookTauSec: 0.5,
+    brakeSec: 0.4,
+    /** walking rate kept while the panel is dragged by its grab bar (0..1) */
+    panelCrawl: 0.3,
+  },
+  /**
+   * S3 from the hall, looking into the living room through its open side (the room is too small
+   * for the narrow view): overview, the right-wall hold, and the pillar hold (it takes the coffee
+   * table's part). The glide in from the S2 end passes the wall stub at 56 cm.
+   */
+  s3: {
+    overview: {x: -40, z: 250, look: new vec3(25, 30, -310)},
+    wall: {x: -40, z: 200, look: new vec3(80, 25, -300)},
+    turnLook: new vec3(45, 30, -360),
+    pillar: {x: -20, z: 200, look: new vec3(90, 25, -420)},
+    /** walking camera: how far the gaze leans from the piece toward the wall / the pillar */
+    wallLean: 0.25,
+    pillarLean: 0.5,
+  },
+  /** Shot pitch for the clearance holds: flatter than the stand-in (eye 135 cm instead of 160) so the shots sit as far back. */
+  pitchDeg: 19,
+  s4: {azDeg: 12, distCm: 750, panelRaiseDeg: -20},
+  s1: {walkCm: 15},
+  /** S6 pieces spread less (smaller room); the camera stands still at camX (the pieces' final centroid; a moving head drags the panel off the pinch), the gaze follows the centroid. Shorter beats: hovering the far piece before each drag takes 2-7 s at this distance, so S6 still ends on time. */
+  s6: {dragA: new vec3(-45, 0, 40), dragB: new vec3(100, 0, 60), camX: -40, tabPause: 1.2, drag: 1.8, afterAdd: 0.4},
+  /**
+   * S7: the panel stays raised (-23°) until the end of S7 so the 153 cm tall bed and the panel's
+   * door line fit in one view: camera distCm back toward the hall, gaze pitchDeg down, centred on the piece.
+   */
+  s7: {distCm: 620, xOffsetCm: -40, pitchDeg: 15.8},
+  /** S9: wide closing view from deep in the opening, looking at the pieces. */
+  s9: {z: 404},
+  /**
+   * Lowered panel angle in the backdrop (the stand-in uses CONFIG.panel.verticalDeg = -40). The backdrop
+   * camera looks down only about 15-20 deg (far shots from the hall), so a -40 deg panel hangs below the
+   * screen. The panel box (grab bar, buttons, colour strip) is about 40% of the view tall, so it is kept
+   * at -23 deg (lowered) and -20 deg (raised, S4-S7), where it stays inside with a 3% margin.
+   */
+  panel: {lowDeg: -23, openingDeg: -26}, // openingDeg: S1-S2 (looking at the sofa), slightly lower; back to lowDeg at the S3 start
+}
+
+/** The DEMO's lowered panel angle for the current room mode. */
+function lowPanelDeg(): number {
+  return backdrop ? BD.panel.lowDeg : CONFIG.panel.verticalDeg
+}
+
+/** Clearance-hold pitch for the current room mode. */
+function holdPitch(): number {
+  return backdrop ? BD.pitchDeg : CONFIG.frame.pitchDeg
 }
 
 const SCENE_NAMES: Record<number, string> = {
@@ -201,20 +283,34 @@ class DemoHead {
   private readonly tracking: Component | null
   private readonly trackingWasEnabled: boolean
 
-  constructor(eyeY: number, pose: Pose) {
+  /** true: the preview head drives the camera (backdrop replay); this only reads the pose, never sets the camera. */
+  readonly external: boolean
+
+  constructor(eyeY: number, pose: Pose, external: boolean = false) {
     const t = cameraTransform()
     this.origPos = t.getWorldPosition()
     this.origRot = t.getWorldRotation()
     this.tracking = t.getSceneObject().getComponent("Component.DeviceTracking") as Component | null
     this.trackingWasEnabled = !!this.tracking && this.tracking.enabled
-    if (this.tracking) this.tracking.enabled = false
+    this.external = external
+    if (this.tracking && !external) this.tracking.enabled = false
     this.eyeY = eyeY
     this.pose = pose
-    this.apply()
+    if (external) this.readPose()
+    else this.apply()
     this.loop()
   }
 
+  /** External mode: the pose (room-local) from the actual camera, looking 300 cm ahead. */
+  private readPose(): void {
+    const t = cameraTransform()
+    const pos = worldToRoom(t.getWorldPosition())
+    const look = worldToRoom(t.getWorldPosition().add(t.back.uniformScale(300)))
+    this.pose = {x: pos.x, z: pos.z, look}
+  }
+
   set(p: Pose): void {
+    if (this.external) return
     this.pose = p
     if (!this.gliding) this.tiltMix = p.center ? 0 : 1
     this.apply()
@@ -224,6 +320,10 @@ class DemoHead {
 
   /** Eased glide (position and gaze target) to `to` over `sec`. */
   async glide(to: Pose, sec: number): Promise<void> {
+    if (this.external) {
+      await sleep(sec * 1000)
+      return
+    }
     const from = this.pose
     // The subject's screen height eases from the old framing to the new one with the move.
     const t0 = from.center ? 0 : 1
@@ -252,6 +352,7 @@ class DemoHead {
   async stop(): Promise<void> {
     this.active = false
     await nextFrame()
+    if (this.external) return
     const t = cameraTransform()
     t.setWorldPosition(this.origPos)
     t.setWorldRotation(this.origRot)
@@ -272,7 +373,8 @@ class DemoHead {
 
   private async loop(): Promise<void> {
     while (this.active) {
-      this.apply()
+      if (this.external) this.readPose()
+      else this.apply()
       await nextFrame()
     }
   }
@@ -408,6 +510,248 @@ class DemoInteractor extends DefaultLeafInteractor {
   }
 }
 
+// ── Room mode helpers ─────────────────────────────────────────────────────────
+
+interface Box {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+function boxOf(o: Obstacle): Box {
+  return {minX: o.cx - o.w / 2, maxX: o.cx + o.w / 2, minZ: o.cz - o.d / 2, maxZ: o.cz + o.d / 2}
+}
+
+/** Horizontal distance from (x, z) to a box (0 inside). */
+function boxDist(x: number, z: number, b: Box): number {
+  const dx = Math.max(0, b.minX - x, x - b.maxX)
+  const dz = Math.max(0, b.minZ - z, z - b.maxZ)
+  return Math.sqrt(dx * dx + dz * dz)
+}
+
+let backdrop = false
+/**
+ * Backdrop replay (DEMO parameter head = "preview"): the PREVIEW head is driven by the editor
+ * replay script (tools/demo/play_demo.ts) along Assets/Tests/SidleDemo/DemoPath.json, so the
+ * Colorful Home backdrop moves with it; the Lens only reads the camera pose. The walker still runs
+ * as a timing shadow so pinches happen at the same moments as in the recording.
+ */
+let previewHead = false
+/** DEMO parameter record = "1": log the camera's world pose every frame ([SidlePath] lines) for the path file. */
+let recordPath = false
+
+/** Post a message to the Lens Studio editor (the replay script listens); no-op outside the editor. */
+function postEditor(msg: any): void {
+  try {
+    // @ts-ignore Editor exists only when running inside Lens Studio
+    if (typeof Editor !== "undefined" && Editor.context) Editor.context.postMessage(msg)
+  } catch (e) {
+    // not in the editor
+  }
+}
+
+/** The obstacle box the S3 second hold drives into: the coffee table (stand-in) or the pillar, clipped to the room (backdrop). */
+function holdBox(): Box {
+  if (!backdrop) return {minX: COFFEE.minX, maxX: COFFEE.maxX, minZ: COFFEE.minZ, maxZ: COFFEE.maxZ}
+  const b = boxOf(BACKDROP_OBSTACLES[0])
+  return {minX: b.minX, maxX: Math.min(b.maxX, ROOM.maxX), minZ: Math.max(b.minZ, ROOM.minZ), maxZ: b.maxZ}
+}
+function holdName(): "CoffeeTable" | "Pillar" {
+  return backdrop ? "Pillar" : "CoffeeTable"
+}
+
+/**
+ * Camera distance (room-local cm) to the nearest wall. Stand-in: the four wall lines.
+ * Backdrop: the living-room walls, the pillar and the wall stub; at the open side only
+ * the opening's edges count (the camera may step into the opening).
+ */
+function cameraWallCm(x: number, z: number): number {
+  if (!backdrop) return Math.min(x - ROOM.minX, ROOM.maxX - x, z - ROOM.minZ, ROOM.maxZ - z)
+  let d = z <= ROOM.maxZ ? Math.min(x - ROOM.minX, ROOM.maxX - x, z - ROOM.minZ) : Math.min(x - BD.opening.minX, BD.opening.maxX - x)
+  for (const o of BACKDROP_OBSTACLES) d = Math.min(d, boxDist(x, z, boxOf(o)))
+  return d
+}
+
+/** Keeps a camera position `m` cm off every wall (backdrop: may step into the opening, pushed off the pillar and stub). */
+function clampCamera(x: number, z: number, m: number): {x: number; z: number} {
+  x = Math.min(ROOM.maxX - m, Math.max(ROOM.minX + m, x))
+  if (!backdrop) return {x, z: Math.min(ROOM.maxZ - m, Math.max(ROOM.minZ + m, z))}
+  const inOpening = x >= BD.opening.minX + m && x <= BD.opening.maxX - m
+  z = Math.min(inOpening ? ROOM.maxZ + BD.opening.intoOpeningCm : ROOM.maxZ - m, Math.max(ROOM.minZ + m, z))
+  for (const o of BACKDROP_OBSTACLES) {
+    const b = boxOf(o)
+    if (boxDist(x, z, b) >= m) continue
+    // Push out along the cheaper axis.
+    const px = x < (b.minX + b.maxX) / 2 ? b.minX - m - x : b.maxX + m - x
+    const pz = z < (b.minZ + b.maxZ) / 2 ? b.minZ - m - z : b.maxZ + m - z
+    if (Math.abs(px) < Math.abs(pz)) x += px
+    else z += pz
+  }
+  return {x, z}
+}
+
+/** Median and 99th percentile of the per-frame camera steps, and the number of frames over 100 ms. */
+function stepStats(steps: number[], slow: number): {median: number; p99: number; slow: number} {
+  if (!steps.length) return {median: 0, p99: 0, slow}
+  const a = steps.slice().sort((x, y) => x - y)
+  return {median: a[Math.floor(a.length / 2)], p99: a[Math.min(a.length - 1, Math.floor(a.length * 0.99))], slow}
+}
+
+// ── Backdrop walking camera ───────────────────────────────────────────────────
+
+interface P2 {
+  x: number
+  z: number
+}
+
+function smooth01(u: number): number {
+  const t = Math.max(0, Math.min(1, u))
+  return t * t * (3 - 2 * t)
+}
+
+/**
+ * Backdrop DEMO camera: walks one leg at a time like a person (no flying), with a slow sway so it
+ * never stands still, and a motion clock that eases to a stop for a pinch (brake/resume). The gaze
+ * eases toward its target, turning at most BD.walk.maxYawDegPerSec.
+ */
+class BdWalker {
+  /** motion time (s): advances with the walking rate */
+  tau = 0
+  private rate = 1
+  private rateTarget = 1
+  private kind: "line" | "arc" | "steady" = "line"
+  private t0 = 0
+  private dur = 0
+  private p0: P2
+  private v0: P2 = {x: 0, z: 0}
+  private p1: P2
+  private c: P2 = {x: 0, z: 0}
+  private a0 = 0
+  private a1 = 0
+  private r0 = 0
+  private r1 = 0
+  cam: P2
+  look: vec3
+  private desired: vec3
+  private lookFn: (() => vec3) | null = null
+
+  constructor(start: P2, look: vec3) {
+    this.p0 = {...start}
+    this.p1 = {...start}
+    this.cam = {...start}
+    this.look = look
+    this.desired = look
+  }
+
+  private base(t: number): P2 {
+    const u = this.dur > 0 ? Math.max(0, Math.min(1, (t - this.t0) / this.dur)) : 1
+    if (this.kind === "arc") {
+      const e = smooth01(u)
+      const a = this.a0 + (this.a1 - this.a0) * e
+      const r = this.r0 + (this.r1 - this.r0) * e
+      return {x: this.c.x + r * Math.sin(a), z: this.c.z + r * Math.cos(a)}
+    }
+    if (this.kind === "steady") {
+      // Ramp up, steady speed, ramp down (ramps of R s): peak speed = length / (dur - R).
+      const D = this.dur
+      const R = Math.min(1.5, D / 8)
+      const t1 = u * D
+      const vp = 1 / (D - R)
+      let f: number
+      if (t1 < R) f = (vp * t1 * t1) / (2 * R)
+      else if (t1 > D - R) f = 1 - (vp * (D - t1) * (D - t1)) / (2 * R)
+      else f = vp * (t1 - R / 2)
+      return {x: this.p0.x + (this.p1.x - this.p0.x) * f, z: this.p0.z + (this.p1.z - this.p0.z) * f}
+    }
+    const h00 = 2 * u * u * u - 3 * u * u + 1
+    const h10 = u * u * u - 2 * u * u + u
+    const h01 = -2 * u * u * u + 3 * u * u
+    const D = this.dur
+    return {x: h00 * this.p0.x + h10 * D * this.v0.x + h01 * this.p1.x, z: h00 * this.p0.z + h10 * D * this.v0.z + h01 * this.p1.z}
+  }
+
+  private baseVel(t: number): P2 {
+    const a = this.base(t - 0.02)
+    const b = this.base(t + 0.02)
+    if (t - 0.02 < this.t0 || t + 0.02 > this.t0 + this.dur) return {x: 0, z: 0}
+    return {x: (b.x - a.x) / 0.04, z: (b.z - a.z) / 0.04}
+  }
+
+  /**
+   * Walk to (x, z) over `sec` of motion time from the current position: a steady walk (ramp up, steady,
+   * ramp down) when starting from rest or `steady`, else a smooth curve that continues the current velocity.
+   */
+  walkTo(x: number, z: number, sec: number, steady: boolean = false): void {
+    const p = this.base(this.tau)
+    this.v0 = this.baseVel(this.tau)
+    this.kind = steady || Math.sqrt(this.v0.x * this.v0.x + this.v0.z * this.v0.z) < 1 ? "steady" : "line"
+    this.p0 = p
+    this.p1 = {x, z}
+    this.t0 = this.tau
+    this.dur = sec
+  }
+
+  /** Arc around (cx, cz) to azimuth toDeg (0 = +Z side) at radius r over `sec` of motion time. */
+  arcAround(cx: number, cz: number, toDeg: number, r: number, sec: number): void {
+    const p = this.base(this.tau)
+    this.kind = "arc"
+    this.c = {x: cx, z: cz}
+    this.a0 = Math.atan2(p.x - cx, p.z - cz)
+    this.r0 = Math.sqrt((p.x - cx) ** 2 + (p.z - cz) ** 2)
+    this.a1 = toDeg * DEG
+    this.r1 = r
+    this.t0 = this.tau
+    this.dur = sec
+  }
+
+  lookAt(v: vec3): void {
+    this.lookFn = null
+    this.desired = v
+  }
+
+  follow(fn: () => vec3): void {
+    this.lookFn = fn
+  }
+
+  /** Ease down to `to` (0 = stop) over about BD.walk.brakeSec; resolves once there. */
+  async brake(to: number = 0): Promise<void> {
+    this.rateTarget = to
+    const t0 = getTime()
+    while (this.rate > to && getTime() - t0 < 1.0) await nextFrame()
+  }
+
+  resume(): void {
+    this.rateTarget = 1
+  }
+
+  /** Advance one frame; returns the camera position (room-local) and the eased look target. */
+  update(dtIn: number): {x: number; z: number; look: vec3} {
+    // A frame hitch (e.g. a model loading) must not make the camera leap: at most 50 ms of walking per frame.
+    const dt = Math.min(dtIn, 0.05)
+    const k = BD.walk
+    const step = dt / k.brakeSec
+    this.rate = Math.max(0, Math.min(1, this.rate + Math.max(-step, Math.min(step, this.rateTarget - this.rate))))
+    const e = smooth01(this.rate)
+    this.tau += dt * e
+    const b = this.base(this.tau)
+    const w = (2 * Math.PI) / k.swayPeriodSec
+    const x = b.x + k.swayCm * Math.sin(w * this.tau)
+    const z = b.z + k.swayCm * (1 - Math.cos(w * this.tau))
+    this.cam = {x, z}
+    const want = this.lookFn ? this.lookFn() : this.desired
+    const eye = new vec3(x, 0, z)
+    const d0 = this.look.sub(eye).normalize()
+    const d1 = want.sub(eye).normalize()
+    const ang = Math.acos(Math.max(-1, Math.min(1, d0.dot(d1)))) / DEG
+    if (ang > 1e-4) {
+      const f = Math.min(1, (dt * e) / k.lookTauSec, (k.maxYawDegPerSec * dt * e) / ang)
+      this.look = lerp3(this.look, want, f)
+    } else this.look = want
+    return {x, z, look: this.look}
+  }
+}
+
 // ── Scenario ──────────────────────────────────────────────────────────────────
 
 interface SceneRecord {
@@ -424,6 +768,15 @@ interface SceneRecord {
   allIn: number
   /** largest share of the current piece box covered by the panel box (sampled, %) */
   maxCover: number
+  /** sampled frames with the whole panel (grab bar and buttons) inside the view with a 3% margin; worst overflow (%) and when */
+  panelIn: number
+  panelWorst: {over: number; t: number}
+  /** per-frame camera step (cm): median, 99th percentile; frames over 100 ms */
+  step: {median: number; p99: number; slow: number}
+  /** pinch/drag ring positions in the viewport this scene (%) */
+  ring: {x0: number; x1: number; y0: number; y1: number; n: number}
+  /** backdrop walking camera: travel (cm), total yaw change (deg), longest still period (s), peak speed (cm/s), peak turn rate (deg/s) */
+  motion: {travel: number; yaw: number; still: number; maxSpeed: number; maxYawRate: number}
 }
 
 @component
@@ -441,17 +794,37 @@ export class DemoScenario extends Scenario {
   private samples = 0
   private allIn = 0
   private maxCover = 0
+  private ringExt = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, n: 0}
+  private walker: BdWalker | null = null
+  /** Backdrop: running pinch number (recording and replay count the same pinches). */
+  private pinchIdx = 0
+  private mot = {travel: 0, yaw: 0, still: 0, stillCur: 0, maxSpeed: 0, maxYawRate: 0}
+  private lastCam: {x: number; z: number; yaw: number} | null = null
   private sceneN = 0
+  private panelIn = 0
+  private panelWorst = {over: 0, t: 0}
+  private steps: number[] = []
+  private slowFrames = 0
   private followCentroid = false
+  /** Backdrop S5: the gaze eases toward the current piece (types and variants differ in size and get nudged). */
+  private followPiece = false
   private dimsByKey: {[key: string]: {w: number; d: number; h: number}} = {}
 
   async run(config?: ScenarioConfig): Promise<void> {
     const raw = (config?.get("scene") ?? "all").trim().toLowerCase()
-    const only = raw === "all" || raw === "" || raw === "0" ? 0 : Number(raw)
-    const scenes = only >= 1 && only <= 9 ? [only] : [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    // "all", one scene "1".."9", or a list "1,2" (played in order from the first one's start state)
+    const picked = raw.split(",").map((v) => Number(v.trim())).filter((v) => v >= 1 && v <= 9 && Math.floor(v) === v)
+    const scenes = raw === "all" || picked.length === 0 ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : picked
     log(`DEMO start, scene=${raw} -> ${scenes.join(",")}`)
+    // head: "preview" (replay drives the preview head), "walker" (the Lens moves its camera), or "auto"
+    // (default): preview if the editor replay (tools/demo/play_demo.ts) is armed, else walker.
+    const headParam = (config?.get("head") ?? "auto").trim().toLowerCase()
+    previewHead = headParam === "preview" || (headParam === "auto" && (await this.replayArmed()))
+    recordPath = (config?.get("record") ?? "0").trim() === "1"
 
     await this.setup()
+    if (!backdrop) previewHead = false // the stand-in DEMO always drives the camera itself
+    log(`head driver: ${previewHead ? "preview head (editor replay)" : "Lens camera (walker)"}${recordPath ? ", recording the path" : ""}`)
     const frameEvt = this.createEvent("UpdateEvent")
     frameEvt.bind(() => this.onFrame())
     const records: SceneRecord[] = []
@@ -459,11 +832,15 @@ export class DemoScenario extends Scenario {
       if (scenes.length === 1) await this.prepAlone(scenes[0])
       this.T0 = getTime()
       this.frames = 0
+      if (previewHead) this.setLeafOverlay(false)
+      postEditor({type: "SidleDemoStart", head: previewHead ? "preview" : "walker", backdrop, scenes: scenes.join(",")})
       for (const n of scenes) records.push(await this.playScene(n))
     } catch (e) {
       log(`ERROR (demo stopped early): ${e}`)
     } finally {
       frameEvt.enabled = false
+      this.setLeafOverlay(true)
+      postEditor({type: "SidleDemoEnd"})
       this.summary(records)
       this.ring.destroy()
       await this.head.stop()
@@ -473,24 +850,106 @@ export class DemoScenario extends Scenario {
     }
   }
 
+  /** Asks the editor whether the replay script is armed (it answers "SidleReplayArmed"); false after 0.6 s without an answer. */
+  private async replayArmed(): Promise<boolean> {
+    let armed = false
+    const evt = this.createEvent("MessageEvent" as any) as any
+    evt.bind((e: any) => {
+      const d = e && e.data !== undefined ? e.data : e
+      if (d && d.type === "SidleReplayArmed") armed = true
+    })
+    postEditor({type: "SidleDemoHello"})
+    const t0 = getTime()
+    while (!armed && getTime() - t0 < 0.6) await nextFrame()
+    evt.enabled = false
+    log(`head = auto: editor replay ${armed ? "armed -> preview head" : "not armed -> walker"}`)
+    return armed
+  }
+
+  /** Replay video: hide the LEAF on-screen log strip ("RUNS: DEMO ...") while the DEMO plays; restored at the end. */
+  private setLeafOverlay(on: boolean): void {
+    const so = findSceneObjectByName("LeafDebugUICamera")
+    if (so && so.enabled !== on) {
+      so.enabled = on
+      log(`LEAF overlay ${on ? "shown again" : "hidden for the replay"}`)
+    }
+  }
+
   /** Per frame: frame count, closest wall distance of the camera, and (sampled) whether the whole piece is in view. */
   private onFrame(): void {
     this.frames++
     if (!this.head) return
+    const fdt = getDeltaTime()
+    if (this.T0 > 0 && fdt > 0.06) log(`slow frame ${(fdt * 1000).toFixed(0)} ms at ${(getTime() - this.T0).toFixed(2)} s, S${this.sceneN}, ${this.c.pieceCount} pieces, current ${this.c.currentPieceKey}`)
+    if (backdrop && this.walker) this.walkFrame()
     const p = this.head.pose
-    const wall = Math.min(p.x - ROOM.minX, ROOM.maxX - p.x, p.z - ROOM.minZ, ROOM.maxZ - p.z)
+    const wall = cameraWallCm(p.x, p.z)
     this.minWall = Math.min(this.minWall, wall)
-    if (this.followCentroid) {
+    if (this.followCentroid && !backdrop) {
       const cen = this.centroid()
       this.head.set({...p, look: lerp3(p.look, cen, CONFIG.s6.aimFollow)})
+    }
+    if (this.followPiece && !backdrop) {
+      const q = this.c.piecePosition
+      this.head.set({...p, look: lerp3(p.look, new vec3(q.x, this.c.currentDims.h / 2, q.z), CONFIG.s6.aimFollow)})
     }
     if (this.frames % CONFIG.frame.sampleEveryFrames === 0) {
       this.samples++
       const piece = screenBox(this.pieceCorners())
       if (boxInside(piece, 0, 100)) this.pieceIn++
-      if (this.sceneN === 6 && this.allPiecesCorners().every((pts) => boxInside(screenBox(pts), 0, 100))) this.allIn++
-      if (this.sceneN === 4 || this.sceneN === 5) this.maxCover = Math.max(this.maxCover, coverPct(screenBox(visualCorners(panelObj(this.c), true)), piece))
+      if ((this.sceneN === 6 || (backdrop && this.sceneN === 9)) && this.allPiecesCorners().every((pts) => boxInside(screenBox(pts), 0, 100))) this.allIn++
+      const pb = screenBox(visualCorners(panelObj(this.c), true))
+      if (this.sceneN === 4 || this.sceneN === 5) this.maxCover = Math.max(this.maxCover, coverPct(pb, piece))
+      if (boxInside(pb, 3, 97)) this.panelIn++
+      else {
+        const over = boxOverflow(pb, 3, 97)
+        if (over > this.panelWorst.over) this.panelWorst = {over, t: getTime() - this.sceneStart}
+      }
     }
+  }
+
+  /** Backdrop: one walker step (head pose) and the motion metrics (travel, yaw, still periods, peak speed and turn rate). */
+  private walkFrame(): void {
+    const dt = Math.max(1e-4, getDeltaTime())
+    const wk = this.walker!.update(dt)
+    if (!previewHead) this.head.set({x: wk.x, z: wk.z, look: wk.look})
+    // Metrics from the actual camera (in replay the preview head moves it, not the walker).
+    const t = cameraTransform()
+    const cp = worldToRoom(t.getWorldPosition())
+    const cf = worldToRoom(t.getWorldPosition().add(t.back.uniformScale(100))).sub(cp)
+    const w = {x: cp.x, z: cp.z}
+    const yaw = Math.atan2(cf.x, -cf.z) / DEG
+    if (recordPath && this.T0 > 0) {
+      const wp = t.getWorldPosition()
+      const f = t.back
+      const wyaw = Math.atan2(-f.x, -f.z) / DEG
+      const wpitch = Math.asin(Math.max(-1, Math.min(1, f.y))) / DEG
+      print(`[SidlePath] ${(getTime() - this.T0).toFixed(3)} ${wp.x.toFixed(2)} ${wp.y.toFixed(2)} ${wp.z.toFixed(2)} ${wyaw.toFixed(3)} ${wpitch.toFixed(3)} ${this.sceneN} ${this.walker!.tau.toFixed(4)}`)
+    }
+
+    if (this.sceneN > 0 && this.lastCam) {
+      const d = Math.sqrt((w.x - this.lastCam.x) ** 2 + (w.z - this.lastCam.z) ** 2)
+      let dy = yaw - this.lastCam.yaw
+      dy = ((dy + 540) % 360) - 180
+      const m = this.mot
+      m.travel += d
+      m.yaw += Math.abs(dy)
+      this.steps.push(d)
+      if (dt > 0.1) this.slowFrames++
+      const v = d / dt
+      const yr = Math.abs(dy) / dt
+      if (dt < 0.2) {
+        m.maxSpeed = Math.max(m.maxSpeed, v)
+        m.maxYawRate = Math.max(m.maxYawRate, yr)
+      }
+      if (dt > 0.25) {
+        // a frame hitch (e.g. a model loading), not the camera standing still
+      } else if (v < 1 && yr < 1) {
+        m.stillCur += dt
+        m.still = Math.max(m.still, m.stillCur)
+      } else m.stillCur = 0
+    }
+    this.lastCam = {x: w.x, z: w.z, yaw}
   }
 
   /** Corner sets of every placed piece and the current piece (catalog sizes, current yaws). */
@@ -576,8 +1035,7 @@ export class DemoScenario extends Scenario {
     const m = CONFIG.frame.wallMarginCm
     const x0 = aim.x - d * Math.sin(azDeg * DEG)
     const z0 = aim.z + d * Math.cos(azDeg * DEG)
-    const x = Math.min(ROOM.maxX - m, Math.max(ROOM.minX + m, x0))
-    const z = Math.min(ROOM.maxZ - m, Math.max(ROOM.minZ + m, z0))
+    const {x, z} = clampCamera(x0, z0, m)
     if (x !== x0 || z !== z0) log(`shot: camera clamped from (${x0.toFixed(0)}, ${z0.toFixed(0)}) to (${x.toFixed(0)}, ${z.toFixed(0)}) to stay ${m} cm off the walls`)
     return {x, z, look: aim}
   }
@@ -605,11 +1063,11 @@ export class DemoScenario extends Scenario {
     aim = aim.uniformScale(1 / pts.length)
     // Height: midway between the floor and the highest point (the gap number may be lifted).
     aim = new vec3(aim.x, Math.max(...pts.map((q) => q.y)) / 2, aim.z)
-    await this.head.glide(this.shotPose(aim, azDeg, CONFIG.frame.pitchDeg, subjectYPct), sec)
+    await this.head.glide(this.shotPose(aim, azDeg, holdPitch(), subjectYPct), sec)
   }
 
   /** Room-local points of the facing edge and the obstacle face at a clearance hold (piece at 0° in S3). */
-  private facingPoints(obstacle: "RightWall" | "CoffeeTable"): {edge: vec3[]; face: vec3[]} {
+  private facingPoints(obstacle: "RightWall" | "CoffeeTable" | "Pillar"): {edge: vec3[]; face: vec3[]} {
     const pos = this.c.piecePosition
     const w = this.c.currentDims.w / 2
     const d = this.c.currentDims.d / 2
@@ -619,12 +1077,13 @@ export class DemoScenario extends Scenario {
         face: [new vec3(ROOM.maxX, 0, pos.z - d), new vec3(ROOM.maxX, 0, pos.z + d), new vec3(ROOM.maxX, 45, pos.z)],
       }
     }
-    // The part of the back edge that faces the table, and the table front over the same x-range.
-    const x0 = Math.max(COFFEE.minX, pos.x - w)
-    const x1 = Math.min(COFFEE.maxX, pos.x + w)
+    // The part of the back edge that faces the table (pillar), and its front over the same x-range.
+    const B = holdBox()
+    const x0 = Math.max(B.minX, pos.x - w)
+    const x1 = Math.min(B.maxX, pos.x + w)
     return {
       edge: [new vec3(x0, 0, pos.z - d), new vec3(x1, 0, pos.z - d)],
-      face: [new vec3(x0, 0, COFFEE.maxZ), new vec3(x1, 0, COFFEE.maxZ), new vec3((x0 + x1) / 2, 45, COFFEE.maxZ)],
+      face: [new vec3(x0, 0, B.maxZ), new vec3(x1, 0, B.maxZ), new vec3((x0 + x1) / 2, 45, B.maxZ)],
     }
   }
 
@@ -635,6 +1094,20 @@ export class DemoScenario extends Scenario {
       log("panel: PanelGrabBar not found, offset kept")
       return
     }
+    if (backdrop && this.walker) {
+      // A slow crawl, not a stop, while the grab bar is dragged (a few cm over the move).
+      await this.walker.brake(BD.walk.panelCrawl)
+      try {
+        await this.movePanelSteps(bar, targetDeg)
+      } finally {
+        this.walker.resume()
+      }
+      return
+    }
+    await this.movePanelSteps(bar, targetDeg)
+  }
+
+  private async movePanelSteps(bar: Interactable, targetDeg: number): Promise<void> {
     for (let i = 0; i < 8 && Math.abs(this.c.panelOffset.verticalDeg - targetDeg) > 0.5; i++) {
       const o = this.c.panelOffset
       // Move the held point along the sphere around the head (same distance, lower angle).
@@ -657,6 +1130,7 @@ export class DemoScenario extends Scenario {
 
   private async setup(): Promise<void> {
     const c = (this.c = controller())
+    backdrop = c.mode === "backdrop"
     roomT = findSceneObjectByName("VirtualRoom")!.getTransform()
     if (c.galleryOpen) c.closeGallery()
     if (c.isDragging) c.endDrag()
@@ -671,13 +1145,19 @@ export class DemoScenario extends Scenario {
     while (c.rotationDeg > 0.01 && c.rotationDeg < 359.99 && g++ < 30) c.rotateLeft()
     if (c.measureOn) c.toggleMeasure()
     if (c.currentColorIndex !== 0) c.setColor(0)
-    c.setPiecePosition(START.x, START.z)
+    // The Lens's own start spot: the room centre (stand-in), about 300 cm ahead (backdrop).
+    if (backdrop) c.setPiecePosition(BACKDROP_START.x, BACKDROP_START.z)
+    else c.setPiecePosition(START.x, START.z)
 
     // Camera at the normal start (room-local (0, 0), about 1 m inside the doorway), facing the sofa.
     const inv = roomT.getInvertedWorldTransform()
     const camRoom = inv.multiplyPoint(START_HEAD.pos)
-    this.startPose = {x: camRoom.x, z: camRoom.z, look: this.sofaLook()}
-    this.head = new DemoHead(camRoom.y, this.startPose)
+    this.startPose = backdrop ? {x: BD.walk.s1From.x, z: BD.walk.s1From.z, look: this.sofaLook()} : {x: camRoom.x, z: camRoom.z, look: this.sofaLook()}
+    this.head = new DemoHead(camRoom.y, this.startPose, backdrop && previewHead)
+    if (backdrop) {
+      this.walker = new BdWalker({x: this.startPose.x, z: this.startPose.z}, this.sofaLook())
+      log(`setup: DEMO head starts in the hall at (${this.startPose.x}, ${this.startPose.z}), ${Math.sqrt((this.startPose.x - c.piecePosition.x) ** 2 + (this.startPose.z - c.piecePosition.z) ** 2).toFixed(0)} cm from the sofa`)
+    }
     await nextFrame()
     c.resetPanelOffset()
     c.resetPanelScale()
@@ -692,9 +1172,10 @@ export class DemoScenario extends Scenario {
     // Panel for the DEMO: smaller and lower (existing size steps and grab-bar offset, inside the limits).
     for (let i = 0; i < CONFIG.panel.scaleDownSteps; i++) c.panelScaleDown()
     await sleep(200)
-    await this.movePanelTo(CONFIG.panel.verticalDeg)
+    await this.movePanelTo(backdrop ? BD.panel.openingDeg : lowPanelDeg())
     log(`setup: panel ${c.panelScale * 100}% at ${this.fmtOffset()}; viewport aspect ${cameraComp().aspect.toFixed(3)}, vertical fov ${(cameraComp().fov / DEG).toFixed(1)}°`)
     await sleep(1400) // let any gap label fade, panel settle
+    log(`setup: room mode ${c.mode}`)
     log(`setup: piece ${c.currentPieceKey} at ${JSON.stringify(c.piecePosition)}, placeholders ${c.showPlaceholderPieces}, panel ${c.panelScale * 100}%, eye ${camRoom.y.toFixed(1)} cm, cam room (${camRoom.x.toFixed(1)}, ${camRoom.z.toFixed(1)})`)
   }
 
@@ -702,18 +1183,19 @@ export class DemoScenario extends Scenario {
   private async prepAlone(n: number): Promise<void> {
     if (n === 5) {
       // S5 starts where S4 leaves it: piece at the S3 coffee-table stop, turned 4 x 15° right, far measure shot, panel raised.
-      this.c.setPiecePosition(COFFEE.minX + 20, COFFEE.maxZ + 20)
+      this.c.setPiecePosition(holdBox().minX + 20, holdBox().maxZ + 20)
       for (let i = 0; i < CONFIG.s4.rotations; i++) this.c.rotateRight()
       log(`prep S5: piece at ${JSON.stringify(this.c.piecePosition)}, ${this.c.rotationDeg.toFixed(0)}°`)
       const p = this.c.piecePosition
-      this.head.set(this.poseAt(new vec3(p.x, this.c.currentDims.h / 2, p.z), CONFIG.s4.azDeg, CONFIG.s4.distCm))
+      const k4 = backdrop ? {...CONFIG.s4, ...BD.s4} : CONFIG.s4
+      this.head.set(this.poseAt(new vec3(p.x, this.c.currentDims.h / 2, p.z), k4.azDeg, k4.distCm))
       await this.movePanelTo(CONFIG.s4.panelRaiseDeg)
       await sleep(500)
       log(`prep S5: panel at ${this.fmtOffset()}`)
     }
     if (n === 2) {
       const p = this.startPose
-      this.head.set({x: p.x, z: p.z - CONFIG.s1.walkCm, look: this.sofaLook()})
+      this.head.set({x: p.x, z: p.z - (backdrop ? BD.s1.walkCm : CONFIG.s1.walkCm), look: this.sofaLook()})
       await sleep(500)
       this.c.resetPanelOffset()
     }
@@ -734,10 +1216,17 @@ export class DemoScenario extends Scenario {
     this.samples = 0
     this.allIn = 0
     this.maxCover = 0
+    this.ringExt = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, n: 0}
+    this.mot = {travel: 0, yaw: 0, still: 0, stillCur: 0, maxSpeed: 0, maxYawRate: 0}
+    this.panelIn = 0
+    this.panelWorst = {over: 0, t: 0}
+    this.steps = []
+    this.slowFrames = 0
     this.sceneN = n
     const f0 = this.frames
     const start = this.sceneStart - this.T0
     log(`S${n} ${SCENE_NAMES[n]} START ${start.toFixed(2)} s (target ${target} s)`)
+    postEditor({type: "SidleDemoScene", n, t: start})
     try {
       await (this as any)[`s${n}`]()
     } catch (e) {
@@ -750,7 +1239,7 @@ export class DemoScenario extends Scenario {
     this.report(`S${n} end`)
     log(`S${n} ${SCENE_NAMES[n]} END ${end.toFixed(2)} s (choreography ${used.toFixed(2)} s)`)
     this.sceneN = 0
-    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover}
+    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover, panelIn: this.panelIn, panelWorst: {...this.panelWorst}, step: stepStats(this.steps, this.slowFrames), ring: this.ringExt, motion: {travel: this.mot.travel, yaw: this.mot.yaw, still: this.mot.still, maxSpeed: this.mot.maxSpeed, maxYawRate: this.mot.maxYawRate}}
   }
 
   /** Waits until `sec` after the scene started (no-op if already past). */
@@ -770,26 +1259,84 @@ export class DemoScenario extends Scenario {
     }
     const wall = records.length ? records[records.length - 1].end : 0
     log(`TOTAL ${total.toFixed(2)} s, ${this.frames} frames, measured average ${wall > 0 ? (this.frames / wall).toFixed(1) : "-"} fps`)
-    log(`scene | min camera-wall cm (rule >= ${CONFIG.frame.wallRuleCm}) | piece fully in viewport (sampled frames) | S6: all pieces fully in viewport | S4/S5: max panel cover of piece box`)
+    log(`scene | min camera-wall cm (rule >= ${CONFIG.frame.wallRuleCm}) | piece fully in viewport (sampled frames) | S6: all pieces fully in viewport | S4/S5: max panel cover of piece box | pinch/drag rings x, y range (%)`)
     for (const r of records) {
       const ok = r.minWallCm >= CONFIG.frame.wallRuleCm ? "ok" : "TOO CLOSE"
       const pct = (k: number) => (r.samples ? ((100 * k) / r.samples).toFixed(1) : "-")
-      const all = r.n === 6 ? `${r.allIn}/${r.samples} (${pct(r.allIn)}%)` : "-"
+      const all = r.n === 6 || (backdrop && r.n === 9) ? `${r.allIn}/${r.samples} (${pct(r.allIn)}%)` : "-"
       const cover = r.n === 4 || r.n === 5 ? `${r.maxCover.toFixed(1)}%` : "-"
-      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.minWallCm.toFixed(1)} ${ok} | ${r.pieceIn}/${r.samples} (${pct(r.pieceIn)}%) | ${all} | ${cover}`)
+      const g = r.ring
+      const inBand = g.x0 >= 10 && g.x1 <= 90 && g.y0 >= 10 && g.y1 <= 90
+      const rings = g.n ? `${g.n} rings, x ${g.x0.toFixed(1)}..${g.x1.toFixed(1)}, y ${g.y0.toFixed(1)}..${g.y1.toFixed(1)}${inBand ? " ok" : " OUTSIDE 10-90"}` : "-"
+      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.minWallCm.toFixed(1)} ${ok} | ${r.pieceIn}/${r.samples} (${pct(r.pieceIn)}%) | ${all} | ${cover} | ${rings}`)
+    }
+    log("scene | panel fully inside (3% margin, sampled frames) | worst panel overflow | camera step cm median / p99 | frames over 100 ms")
+    for (const r of records) {
+      const pct = r.samples ? ((100 * r.panelIn) / r.samples).toFixed(1) : "-"
+      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.panelIn}/${r.samples} (${pct}%) | ${r.panelWorst.over.toFixed(1)}% at ${r.panelWorst.t.toFixed(1)} s | ${r.step.median.toFixed(2)} / ${r.step.p99.toFixed(2)} | ${r.step.slow}`)
+    }
+    if (backdrop) {
+      log("scene | camera travel cm (>= 80) | yaw change deg | longest still s (<= 1.5) | peak speed cm/s (<= 15) | peak turn deg/s (<= 10)")
+      for (const r of records) {
+        const m = r.motion
+        log(`S${r.n} ${SCENE_NAMES[r.n]} | ${m.travel.toFixed(0)} | ${m.yaw.toFixed(1)} | ${m.still.toFixed(2)} | ${m.maxSpeed.toFixed(1)} | ${m.maxYawRate.toFixed(1)}`)
+      }
     }
   }
 
   // ── Pinch helpers ──────────────────────────────────────────────────────────
 
-  private async pinch(name: string): Promise<void> {
+  /** Replay: wait (at most `maxSec`) until the preview-driven camera has been still for 3 frames. */
+  private async waitHeadStill(maxSec: number): Promise<void> {
+    const t = cameraTransform()
+    let last = t.getWorldPosition()
+    let lastF = t.back
+    let still = 0
+    const t0 = getTime()
+    while (still < 3 && getTime() - t0 < maxSec) {
+      await nextFrame()
+      const p = t.getWorldPosition()
+      const f = t.back
+      if (p.distance(last) < 0.2 && f.dot(lastF) > 0.999998) still++
+      else still = 0
+      last = p
+      lastF = f
+    }
+    if (still < 3) log(`pinch: head still moving after ${maxSec} s (replay out of step), pinching anyway`)
+  }
+
+  /** Remember where a pinch/drag ring landed on screen (for the 10-90% check). */
+  private noteRing(s: {x: number; y: number}): void {
+    const r = this.ringExt
+    r.x0 = Math.min(r.x0, s.x)
+    r.x1 = Math.max(r.x1, s.x)
+    r.y0 = Math.min(r.y0, s.y)
+    r.y1 = Math.max(r.y1, s.y)
+    r.n++
+  }
+
+  /** stayStopped: the backdrop walk stays stopped after the pinch (a run of pinches with no step between); the caller resumes it. */
+  private async pinch(name: string, stayStopped: boolean = false): Promise<void> {
     const inter = findInteractableByName(name, undefined, true)
     if (!inter) {
       log(`pinch: "${name}" not found or not enabled, skipped`)
       return
     }
-    await this.ring.glideTo(() => inter.getSceneObject().getTransform().getWorldPosition(), CONFIG.ring.glide)
+    // Backdrop: the walk eases to a stop while the ring glides in (the panel follows the head), resumes after the pinch.
+    const stop = backdrop && this.walker ? this.walker.brake() : Promise.resolve()
+    await Promise.all([this.ring.glideTo(() => inter.getSceneObject().getTransform().getWorldPosition(), CONFIG.ring.glide), stop])
+    if (backdrop && this.T0 > 0) {
+      // Pinch markers: the recording logs when each pinch's stop is reached; in the replay the editor
+      // lines its path time up with that recorded stop (the head is still there, so nothing jumps).
+      const k = this.pinchIdx++
+      if (recordPath) print(`[SidlePinch] ${k} ${(getTime() - this.T0).toFixed(3)}`)
+      if (previewHead) {
+        postEditor({type: "SidleDemoPinch", k})
+        await this.waitHeadStill(0.6)
+      }
+    }
     const s = toScreen(inter.getSceneObject().getTransform().getWorldPosition())
+    this.noteRing(s)
     const inView = s.front && s.x >= 0 && s.x <= 100 && s.y >= 0 && s.y <= 100
     const press = this.ring.press(CONFIG.ring.press)
     let ok = true
@@ -799,6 +1346,7 @@ export class DemoScenario extends Scenario {
       ok = false
       log(`pinch: "${name}" did not complete (${e})`)
     }
+    if (backdrop && this.walker && !stayStopped) this.walker.resume()
     await press
     log(`pinch ${name}: ring at (${s.x.toFixed(1)}%, ${s.y.toFixed(1)}%) in viewport=${inView}, completed=${ok}`)
   }
@@ -812,6 +1360,9 @@ export class DemoScenario extends Scenario {
     }
     const at = () => grab.getSceneObject().getTransform().getWorldPosition()
     await this.ring.glideTo(at, CONFIG.ring.glide)
+    const sg = toScreen(at())
+    this.noteRing(sg)
+    log(`drag ring at (${sg.x.toFixed(1)}%, ${sg.y.toFixed(1)}%)`)
     const press = this.ring.press(CONFIG.ring.press)
     try {
       await this.it.dragEased(grab, roomDirToWorld(roomOffset), sec)
@@ -847,7 +1398,14 @@ export class DemoScenario extends Scenario {
 
   /** S1 Hook: hold at the start, then walk forward about 1 m. */
   private async s1(): Promise<void> {
-    const k = CONFIG.s1
+    if (backdrop) {
+      // Walk in from the hall through the open side, toward the sofa.
+      const w = this.walker!
+      w.lookAt(this.sofaLook())
+      w.walkTo(BD.walk.s1.x, BD.walk.s1.z, BD.walk.s1.sec)
+      return
+    }
+    const k = backdrop ? {...CONFIG.s1, ...BD.s1} : CONFIG.s1
     await this.at(k.hold)
     const p = this.head.pose
     await this.head.glide({x: p.x, z: p.z - k.walkCm, look: this.sofaLook()}, k.walk)
@@ -855,6 +1413,14 @@ export class DemoScenario extends Scenario {
 
   /** S2 Walk-around: to ~1.5 m from the sofa, a quarter turn around it, pause on the green outline. */
   private async s2(): Promise<void> {
+    if (backdrop) {
+      const s = this.c.piecePosition
+      const a = BD.walk.s2
+      this.walker!.lookAt(this.sofaLook())
+      this.walker!.arcAround(s.x, s.z, a.toDeg, a.radiusCm, a.sec)
+      log(`S2 arc around (${s.x.toFixed(0)}, ${s.z.toFixed(0)}) to ${a.toDeg} deg at ${a.radiusCm} cm over ${a.sec} s`)
+      return
+    }
     const k = CONFIG.s2
     const s = this.c.piecePosition
     const look = this.sofaLook()
@@ -864,21 +1430,26 @@ export class DemoScenario extends Scenario {
     }
     // Stay >= 60 cm inside the walls (the camera must never pass through one).
     const r = k.radiusCm
-    const margin = Math.min(ROOM.maxX - (s.x + r), s.x - r - ROOM.minX, ROOM.maxZ - (s.z + r), s.z - r - ROOM.minZ)
-    log(`S2 circle radius ${r} cm around (${s.x.toFixed(0)}, ${s.z.toFixed(0)}); worst-case wall margin ${margin.toFixed(0)} cm`)
+    let margin = Infinity
+    for (let i = 0; i <= 20; i++) {
+      const q = onCircle(k.startDeg + (k.sweepDeg * i) / 20)
+      margin = Math.min(margin, cameraWallCm(q.x, q.z))
+    }
+    log(`S2 circle radius ${r} cm around (${s.x.toFixed(0)}, ${s.z.toFixed(0)}), ${k.startDeg} to ${k.startDeg + k.sweepDeg} deg; closest wall on the arc ${margin.toFixed(0)} cm`)
     await this.head.glide(onCircle(k.startDeg), k.approach)
     await animate(k.circle, (e) => this.head.set(onCircle(k.startDeg + k.sweepDeg * e)))
     const end = this.head.pose
-    const minWall = Math.min(ROOM.maxX - end.x, end.x - ROOM.minX, ROOM.maxZ - end.z, end.z - ROOM.minZ)
+    const minWall = cameraWallCm(end.x, end.z)
     log(`S2 end camera (${end.x.toFixed(0)}, ${end.z.toFixed(0)}), ${minWall.toFixed(0)} cm from the nearest wall; outline ${this.c.outlineEdgeColors.join(",")}`)
     await sleep(k.pause * 1000)
   }
 
   /** S3 Clearance: toward a wall (red + gap number), back to open floor (green), toward the coffee table. */
   private async s3(): Promise<void> {
+    if (backdrop) return this.s3Backdrop()
     const k = CONFIG.s3
     const c = this.c
-    const overview: Pose = {x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}
+    const overview: Pose = backdrop ? {...BD.s3.overview} : {x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}
     await this.head.glide(overview, k.camera)
     const halfW = c.currentDims.w / 2
     const toX = ROOM.maxX - halfW - k.wallGapCm
@@ -887,7 +1458,7 @@ export class DemoScenario extends Scenario {
     const wallAim = new vec3(ROOM.maxX - k.wallGapCm / 2, 0, pz)
     await Promise.all([
       this.dragPiece(new vec3(toX - c.piecePosition.x, 0, 0), k.toWall),
-      this.head.glide(this.shotPose(wallAim, k.wallAzDeg, CONFIG.frame.pitchDeg), k.toWall),
+      this.head.glide(this.shotPose(wallAim, k.wallAzDeg, holdPitch()), k.toWall),
     ])
     await this.settleOnGap(k.wallAzDeg, k.settle)
     log(`S3 at wall: edges ${c.outlineEdgeColors.join(",")}, gap "${c.gapLabelText}" visible=${c.gapLabelVisible}`)
@@ -895,28 +1466,75 @@ export class DemoScenario extends Scenario {
     await sleep(k.hold * 1000)
     await Promise.all([this.dragPiece(new vec3(-c.piecePosition.x, 0, 0), k.back), this.head.glide(overview, k.back)])
     log(`S3 open floor: clear=${c.isClear}, edges ${c.outlineEdgeColors.join(",")}`)
-    await this.head.glide({x: -40, z: -10, look: new vec3(110, 30, START.z - 180)}, k.turn)
-    const goal = new vec3(COFFEE.minX + 20, 0, COFFEE.maxZ + 20)
-    // Planned contact: back edge on the table front, gap number over the shared x-range.
-    const lo = Math.max(goal.x - halfW, COFFEE.minX)
-    const hi = Math.min(goal.x + halfW, COFFEE.maxX)
-    const tableAim = new vec3((lo + hi) / 2, 20, COFFEE.maxZ)
+    await this.head.glide(backdrop ? {x: overview.x, z: overview.z, look: BD.s3.turnLook} : {x: -40, z: -10, look: new vec3(110, 30, START.z - 180)}, k.turn)
+    const B = holdBox()
+    const goal = new vec3(B.minX + 20, 0, B.maxZ + 20)
+    // Planned contact: back edge on the table (pillar) front, gap number over the shared x-range.
+    const gx = Math.min(goal.x, ROOM.maxX - halfW) // where the room lets the piece end up
+    const lo = Math.max(gx - halfW, B.minX)
+    const hi = Math.min(gx + halfW, B.maxX)
+    const tableAim = new vec3((lo + hi) / 2, 20, B.maxZ)
     await Promise.all([
       this.dragPiece(new vec3(goal.x - c.piecePosition.x, 0, goal.z - c.piecePosition.z), k.toTable),
-      this.head.glide(this.shotPose(tableAim, k.tableAzDeg, CONFIG.frame.pitchDeg), k.toTable),
+      this.head.glide(this.shotPose(tableAim, k.tableAzDeg, holdPitch()), k.toTable),
     ])
-    const tf = this.facingPoints("CoffeeTable")
+    const tf = this.facingPoints(holdName())
     await this.settleOnGap(k.tableAzDeg, k.settle, [tf.edge[0].add(tf.edge[1]).uniformScale(0.5), tf.face[2]], k.tableSubjectYPct)
     log(`S3 stopped at ${JSON.stringify(c.piecePosition)}: nearest ${c.nearestObstacle} ${c.nearestGapCm.toFixed(1)} cm`)
-    this.holdReport("S3 table hold", "CoffeeTable")
+    this.holdReport(backdrop ? "S3 pillar hold" : "S3 table hold", holdName())
     await sleep(k.tableHold * 1000)
+  }
+
+  /** S3 in the Colorful Home living room: same beats and timing as the stand-in S3, shot from the hall. */
+  private async s3Backdrop(): Promise<void> {
+    const k = CONFIG.s3
+    const c = this.c
+    const b = BD.s3
+    const w = this.walker!
+    w.walkTo(BD.walk.s3.x, BD.walk.s3.z, BD.walk.s3.sec)
+    await this.movePanelTo(lowPanelDeg()) // from the slightly lower opening angle
+    // The gaze follows the piece, leaning toward the wall (and later the pillar) so both stay in view.
+    const pieceAt = (): vec3 => {
+      const q = c.piecePosition
+      return new vec3(q.x, 30, q.z)
+    }
+    w.follow(pieceAt)
+    await sleep(k.camera * 1000)
+    const halfW = c.currentDims.w / 2
+    const toX = ROOM.maxX - halfW - k.wallGapCm
+    w.follow(() => lerp3(pieceAt(), new vec3(ROOM.maxX, 25, c.piecePosition.z), BD.s3.wallLean))
+    await this.dragPiece(new vec3(toX - c.piecePosition.x, 0, 0), k.toWall)
+    await sleep(k.settle * 1000)
+    log(`S3 at wall: edges ${c.outlineEdgeColors.join(",")}, gap "${c.gapLabelText}" visible=${c.gapLabelVisible}`)
+    this.holdReport("S3 wall hold", "RightWall")
+    await sleep(k.hold * 1000)
+    w.follow(pieceAt)
+    await this.dragPiece(new vec3(-c.piecePosition.x, 0, 0), k.back)
+    log(`S3 open floor: clear=${c.isClear}, edges ${c.outlineEdgeColors.join(",")}`)
+    w.follow(() => lerp3(pieceAt(), b.pillar.look, BD.s3.pillarLean))
+    await sleep(k.turn * 1000)
+    const B = holdBox()
+    const goal = new vec3(B.minX + 20, 0, B.maxZ + 20)
+    await this.dragPiece(new vec3(goal.x - c.piecePosition.x, 0, goal.z - c.piecePosition.z), k.toTable)
+    await sleep(k.settle * 1000)
+    log(`S3 stopped at ${JSON.stringify(c.piecePosition)}: nearest ${c.nearestObstacle} ${c.nearestGapCm.toFixed(1)} cm`)
+    this.holdReport("S3 pillar hold", "Pillar")
+    await sleep(k.tableHold * 1000)
+  }
+
+  /** Room-local positions of every piece (backdrop tuning log). */
+  private logPieces(tag: string): void {
+    const c = this.c
+    const cur = c.piecePosition
+    const placed = c.placedPieces.map((pp) => `${pp.key} (${pp.x.toFixed(0)}, ${pp.z.toFixed(0)}) ${pp.yawDeg.toFixed(0)}°`).join("; ")
+    log(`${tag}: current ${c.currentPieceKey} (${cur.x.toFixed(0)}, ${cur.z.toFixed(0)}) ${c.rotationDeg.toFixed(0)}°; placed: ${placed || "none"}; camera (${this.head.pose.x.toFixed(0)}, ${this.head.pose.z.toFixed(0)}) looking down ${this.head.pitchDownDeg().toFixed(1)}°`)
   }
 
   /**
    * At a clearance hold: camera pitch, gap number position (viewport %), and whether
    * the gap number, the footprint edge facing the obstacle and the obstacle are inside the central 70%.
    */
-  private holdReport(tag: string, obstacle: "RightWall" | "CoffeeTable"): void {
+  private holdReport(tag: string, obstacle: "RightWall" | "CoffeeTable" | "Pillar"): void {
     const c = this.c
     const p = this.head.pose
     const pitch = this.head.pitchDownDeg()
@@ -929,7 +1547,7 @@ export class DemoScenario extends Scenario {
     // Footprint edge facing the obstacle and the obstacle face opposite it (floor, plus 45 cm up on the obstacle).
     const {edge, face} = this.facingPoints(obstacle)
     const panel = screenBox(visualCorners(panelObj(c), true))
-    for (const [name, pts] of [["footprint edge (facing part)", edge], [obstacle === "RightWall" ? "wall" : "coffee table front", face]] as [string, vec3[]][]) {
+    for (const [name, pts] of [["footprint edge (facing part)", edge], [obstacle === "RightWall" ? "wall" : obstacle === "Pillar" ? "pillar front" : "coffee table front", face]] as [string, vec3[]][]) {
       const b = screenBox(pts.map(roomToWorld))
       const inside = boxInside(b, lo, hi)
       log(`${tag}: ${name} ${fmtBox(b)} inside central ${CONFIG.frame.centralPct}%=${inside}${inside ? "" : ` (out by ${boxOverflow(b, lo, hi).toFixed(1)}%)`}; panel overlaps it=${boxesOverlap(panel, b)}`)
@@ -939,7 +1557,8 @@ export class DemoScenario extends Scenario {
 
   /** S4 Measure, rotate right 4 times, Measure off. */
   private async s4(): Promise<void> {
-    const k = CONFIG.s4
+    if (backdrop) return this.s4Backdrop()
+    const k = backdrop ? {...CONFIG.s4, ...BD.s4} : CONFIG.s4
     // Frame the piece (and its W/D/H labels) while Measure is pinched.
     const p = this.c.piecePosition
     const aim = new vec3(p.x, this.c.currentDims.h / 2, p.z)
@@ -963,10 +1582,54 @@ export class DemoScenario extends Scenario {
     await this.pinch("MeasureButton")
   }
 
+  /** S4 in the living room: far shot from the hall; the panel is raised first so the Measure button is on screen at this distance. */
+  private async s4Backdrop(): Promise<void> {
+    const k = {...CONFIG.s4, ...BD.s4}
+    const w = this.walker!
+    w.walkTo(BD.walk.s4.x, BD.walk.s4.z, BD.walk.s4.sec)
+    w.follow(() => {
+      const q = this.c.piecePosition
+      return new vec3(q.x, this.c.currentDims.h / 2, q.z)
+    })
+    await sleep(k.camera * 1000)
+    await this.movePanelTo(k.panelRaiseDeg)
+    log(`S4 panel raised to ${this.fmtOffset()}`)
+    await this.pinch("MeasureButton")
+    await sleep(500)
+    for (const n of ["WidthLabel", "DepthLabel", "HeightLabel"]) this.labelCheck("S4 measure on", n)
+    await this.at(CONFIG.s4.camera + k.measureHold + 2)
+    for (let i = 0; i < k.rotations; i++) {
+      const t = getTime()
+      await this.pinch("RotateRightButton")
+      const rest = k.rotateGap - (getTime() - t)
+      if (rest > 0) await sleep(rest * 1000)
+    }
+    log(`S4 rotation ${this.c.rotationDeg.toFixed(0)}°`)
+    for (const n of ["WidthLabel", "DepthLabel", "HeightLabel"]) this.labelCheck("S4 after rotations", n)
+    this.report("S4 after rotations")
+    await this.pinch("MeasureButton")
+  }
+
   /** S5 Next through every type, then Compare twice on a type with variants. */
   private async s5(): Promise<void> {
     const k = CONFIG.s5
     const c = this.c
+    if (backdrop) {
+      const w = this.walker!
+      w.walkTo(BD.walk.s5.x, BD.walk.s5.z, BD.walk.s5.sec)
+      w.follow(() => {
+        const q = this.c.piecePosition
+        return new vec3(q.x, this.c.currentDims.h / 2, q.z)
+      })
+    }
+    try {
+      await this.s5Body(k, c)
+    } finally {
+      this.followPiece = false
+    }
+  }
+
+  private async s5Body(k: typeof CONFIG.s5, c: SidleController): Promise<void> {
     const n = c.availableTypes.length
     for (let i = 0; i < n; i++) {
       await this.pinch("NextButton")
@@ -976,10 +1639,12 @@ export class DemoScenario extends Scenario {
     let g = 0
     while (c.variantKeys(c.currentPieceType).length < 2 && g++ < n) await this.pinch("NextButton")
     for (let i = 0; i < 2; i++) {
-      await this.pinch("CompareButton")
+      await this.pinch("CompareButton", true) // the camera stays put between the Compare pinches
       log(`S5 compare: ${c.currentPieceKey}`)
       await sleep(k.comparePause * 1000)
     }
+    if (backdrop && this.walker) this.walker.resume()
+    if (backdrop) return // backdrop: the panel stays raised through S6 (lowered at the end of S6)
     this.report("S5 before panel back")
     await this.movePanelTo(CONFIG.panel.verticalDeg)
     log(`S5 panel back to ${this.fmtOffset()}`)
@@ -992,6 +1657,17 @@ export class DemoScenario extends Scenario {
     // Back off along the line from the pieces' centroid through the old (0, 0) spot, k.backCm further,
     // sliding along the wall margin if the line runs into it; then keep the gaze on the centroid.
     const C = this.centroid()
+    if (backdrop) {
+      // Living room: straight back from the pieces' centroid toward the open side, into the opening.
+      const w = this.walker!
+      const to = BD.walk.s6
+      log(`S6 walk to (${to.x}, ${to.z}), ${Math.sqrt((to.x - C.x) ** 2 + (to.z - C.z) ** 2).toFixed(0)} cm from the centroid (${C.x.toFixed(0)}, ${C.z.toFixed(0)})`)
+      w.walkTo(to.x, to.z, to.sec)
+      w.follow(() => this.centroid())
+      await this.s6Body({...k, ...BD.s6}, c)
+      this.logPieces("S6 end")
+      return // backdrop: the panel stays raised through S7 (lowered at the end of S7)
+    }
     const D0 = Math.sqrt(C.x * C.x + C.z * C.z)
     const D = D0 + k.backCm
     const m = CONFIG.frame.wallMarginCm
@@ -1026,9 +1702,11 @@ export class DemoScenario extends Scenario {
     await this.pinch("GalleryTile_1")
     log(`S6 picked ${c.currentPieceKey}`)
     await this.pinch("AddButton")
+    log(`S6 add 1 at ${(getTime() - this.T0).toFixed(2)} s: ${c.pieceCount} pieces, new current ${c.currentPieceKey}`)
     await sleep(k.afterAdd * 1000)
     await this.dragPiece(k.dragA, k.drag)
     await this.pinch("AddButton")
+    log(`S6 add 2 at ${(getTime() - this.T0).toFixed(2)} s: ${c.pieceCount} pieces, new current ${c.currentPieceKey}`)
     await sleep(k.afterAdd * 1000)
     await this.dragPiece(k.dragB, k.drag)
     log(`S6 pieces in the room: ${c.pieceCount}`)
@@ -1040,7 +1718,29 @@ export class DemoScenario extends Scenario {
   private async s7(): Promise<void> {
     const k = CONFIG.s7
     // Back to the S7 opening view of round 1 (S6 now ends further back, where the gallery is below the view).
-    await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.startCamera)
+    if (backdrop) {
+      const w = this.walker!
+      w.walkTo(BD.walk.s7.x, BD.walk.s7.z, BD.walk.s7.sec)
+      // Gaze pitchDeg down in total (with the subject tilt), aimed at the piece's spot, as the camera walks.
+      w.follow(() => {
+        const p = this.c.piecePosition
+        const dist = Math.sqrt((w.cam.x - p.x) ** 2 + (w.cam.z - p.z) ** 2)
+        return new vec3(p.x, this.head.eyeY - dist * Math.tan((BD.s7.pitchDeg - subjectTiltDeg()) * DEG), p.z)
+      })
+      await sleep(k.startCamera * 1000)
+      this.logPieces("S7 start")
+      for (const key of [k.bigKey, k.fitKey]) {
+        await this.pickFromGallery(key)
+        this.labelCheck(`S7 ${key}`, "DoorFitLabel")
+        this.report(`S7 ${key}`)
+        await sleep(k.hold * 1000)
+      }
+      await this.movePanelTo(lowPanelDeg())
+      log(`S7 panel back to ${this.fmtOffset()}`)
+      return
+    } else {
+      await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.startCamera)
+    }
     for (const key of [k.bigKey, k.fitKey]) {
       await this.pickFromGallery(key)
       const label = findSceneObjectByName("DoorFitLabel")
@@ -1063,12 +1763,28 @@ export class DemoScenario extends Scenario {
     log("S8 not driven (VS Code footage)")
   }
 
-  /** S9 Closing: a clean wide view, held (no pinches). */
+  /** S9 Closing: on the chair from S7, flip through its colours (backdrop); the stand-in holds a wide view. */
   private async s9(): Promise<void> {
     const c = this.c
     if (c.measureOn) await this.pinch("MeasureButton")
     const cam = cameraTransform()
     await this.ring.glideTo(() => cam.getWorldPosition().add(cam.back.uniformScale(40)).add(cam.down.uniformScale(80)), 0.4)
-    await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, CONFIG.s9.camera)
+    if (backdrop) {
+      const w = this.walker!
+      w.walkTo(BD.walk.s9.x, BD.walk.s9.z, BD.walk.s9.sec, true)
+      w.follow(() => {
+        const q = c.piecePosition
+        return new vec3(q.x, c.currentDims.h / 2, q.z)
+      })
+      await sleep(CONFIG.s9.camera * 1000)
+      log(`S9 colours on ${c.currentPieceKey}`)
+      for (const i of CONFIG.s9.swatches) {
+        await this.pinch(`ColorSwatch_${i}`, true) // the camera stays put while the colours change
+        log(`S9 colour ${i}: current ${c.currentColorIndex}`)
+        await sleep(CONFIG.s9.swatchPause * 1000)
+      }
+      w.resume()
+      this.logPieces("S9")
+    } else await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, 3)
   }
 }

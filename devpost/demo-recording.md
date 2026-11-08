@@ -1,3 +1,14 @@
-Run the demo: open the LEAF panel in Lens Studio (Preview, not device) and run scenario `DEMO`; the scenario sets up its own start state.
-One scene only: set parameter `scene` to 1..9 (default `all`); every duration is in the `CONFIG` block at the top of `Assets/Tests/SidleDemo/DemoScenario.ts`.
-Timings: grep the Lens Studio log for `[SidleDemo]`; the run ends with a SUMMARY table (scene, start, end, duration, target, fps).
+The walkthrough in the video is driven by an automated script, not by hand: an editor-side replay (`tools/demo/play_demo.ts`) walks the Lens Studio Preview head along a recorded camera path (`Assets/Tests/SidleDemo/DemoPath.json`) while the LEAF scenario `DEMO` performs the pinches and drags through the real UI. Because the Preview head moves (as with WASD), the Colorful Home room shows true parallax around the furniture.
+
+Recording the video (backdrop room, about 2.5 minutes):
+1. Preview panel: Interactive, source Colorful Home, device SPECS 27 (with the Plane source the Lens shows no room). The saved scene already uses room mode backdrop.
+2. Refresh the Preview once (Preview panel refresh button, or PreviewPanelTool action refresh) and start your screen recorder on the Preview panel.
+3. Run the one command that starts both the replay and the DEMO: in Claude Code with the Lens Studio MCP, run ExecuteEditorCode with path `tools/demo/play_demo.ts` (no arguments). The LEAF text strip at the top of the Preview is hidden while the DEMO plays.
+4. It runs about 3.5 s of setup plus 155 s (S1 14, S2 26, S3 30, S4 15, S5 20, S6 25, S7 15, S9 10 s; S8 is the VS Code footage; S9 flips the chair through its colours). Don't touch the Preview while it runs; the Lens log ends with `[SidleReplay] stopped: DEMO ended` and `[DEMO] PASSED`.
+5. If the log shows a `[SidleReplay] FAILED` line, it names the cause (for example the DEMO started with head = walker, so the room would not move); fix that and run the same command again (it replaces any previous replay). Don't start `DEMO` from the LEAF panel on its own: without the replay armed it moves only the Lens camera and the room stays still. (Arming with args `{"start": false}` and then pressing Run on `DEMO` also works: its default head = auto finds the armed replay.)
+
+Details:
+- Shorter replays: args `{"scene": "1"}` or `{"scene": "1,2"}` play only those scenes; `{"rate": 30}` changes the head update rate (default 62 per second, the smoothest). One scene only from the LEAF panel: set parameter `scene` to 1..9 on `DEMO`; every duration is in the `CONFIG` block at the top of `Assets/Tests/SidleDemo/DemoScenario.ts`, the backdrop route in the `BD` block next to it.
+- Timings and checks: grep the Lens Studio log for `[SidleDemo]`; the run ends with a SUMMARY table (scene, start, end, duration, target, fps), a per-scene table (camera-wall distance, piece in view, panel cover, pinch-ring range) and, in backdrop mode, a camera-motion table (travel, yaw change, longest still period, peak speed and turn rate).
+- New camera path: change the route in the `BD.walk` block, run `DEMO` with head = walker and record = 1, then `python tools/demo/make_path.py "<Lens Studio log file>"` rewrites `DemoPath.json`.
+- Stand-in room (the virtual 7 m x 8 m room, any preview source): set Room mode on `SidleController` to Stand-in and run `DEMO` from the LEAF panel; it moves the Lens camera itself and uses `CONFIG` alone. Scene order and durations are the same in both modes.
