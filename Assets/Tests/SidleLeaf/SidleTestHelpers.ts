@@ -12,25 +12,23 @@ import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interactio
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {SidleController} from "../../Scripts/SidleController"
-import {ROOM_DEPTH_CM, ROOM_WIDTH_CM} from "../../Scripts/SidleGeometry"
-
-/** Doorway wall line distance behind the start position (SidleController.startInsetCm), read from c.roomSpec. */
-function startInset(): number {
-  return controller().roomSpec.maxZ
-}
-/** Room footprint from the size constants and the start inset (read on access, so it follows the Lens). */
+/**
+ * Room footprint, read from the Lens on access (c.roomSpec): in stand-in mode the
+ * centred ROOM_WIDTH_CM x ROOM_DEPTH_CM room with the doorway wall startInsetCm
+ * behind the start; in backdrop mode the Colorful Home living room bounds.
+ */
 export const ROOM = {
   get minX(): number {
-    return -ROOM_WIDTH_CM / 2
+    return controller().roomSpec.minX
   },
   get maxX(): number {
-    return ROOM_WIDTH_CM / 2
+    return controller().roomSpec.maxX
   },
   get minZ(): number {
-    return startInset() - ROOM_DEPTH_CM
+    return controller().roomSpec.minZ
   },
   get maxZ(): number {
-    return startInset()
+    return controller().roomSpec.maxZ
   },
 }
 /** 100 x 50 coffee table in the far right corner. */

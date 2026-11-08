@@ -51,6 +51,7 @@
     plankLineColor: false
     plankWidthCm: false
     room: false
+    roomMode: false
     rotateStepDeg: false
     rugColor: false
     showPlaceholderPieces: false
@@ -87,6 +88,7 @@
       thumbnailTextures: !<reference.Texture[]>
         []
       showPlaceholderPieces: true
+      roomMode: standin
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 30.000000
       wallColor: !<Vec4> {x: 0.920000, y: 0.910000, z: 0.880000, w: 1.000000}
@@ -134,6 +136,7 @@
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'
+    - '// @input string roomMode = "standin" {"hint":"standin: the virtual 7 x 8 m room built by the Lens around the start pose. backdrop: the living room of the Interactive Preview scene Colorful Home (Preview: Interactive, source Colorful Home); the Lens builds no room and measures against its walls", "widget":"combobox", "values":[{"label":"Stand-in room (7 x 8 m)", "value":"standin"}, {"label":"Colorful Home living room (backdrop)", "value":"backdrop"}]}'
     - '// @input float wallHeight = 250 {"hint":"Wall height, cm", "widget":"slider", "min":200, "max":350, "step":5}'
     - '// @input float startInsetCm = 100 {"hint":"How far the doorway wall line is behind the start position, cm", "widget":"slider", "min":10, "max":100, "step":1}'
     - '// @input vec4 wallColor = "{0.95, 0.93, 0.88, 1.0}" {"hint":"Wall color: warm white (left, right and doorway walls)", "widget":"color"}'
