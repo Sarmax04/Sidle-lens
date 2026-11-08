@@ -90,7 +90,7 @@ const BD = {
   },
   /** Shot pitch for the clearance holds: flatter than the stand-in (eye 135 cm instead of 160) so the shots sit as far back. */
   pitchDeg: 19,
-  s4: {azDeg: 12, distCm: 750},
+  s4: {azDeg: 12, distCm: 750, panelRaiseDeg: -20},
   s1: {walkCm: 15},
   /** S6 pieces spread less (smaller room); the camera stands still at camX (the pieces' final centroid; a moving head drags the panel off the pinch), the gaze follows the centroid. Shorter beats: hovering the far piece before each drag takes 2-7 s at this distance, so S6 still ends on time. */
   s6: {dragA: new vec3(-45, 0, 40), dragB: new vec3(100, 0, 60), camX: -40, tabPause: 1.2, drag: 1.8, afterAdd: 0.4},
@@ -101,6 +101,18 @@ const BD = {
   s7: {distCm: 620, xOffsetCm: -40, pitchDeg: 15.8},
   /** S9: wide closing view from deep in the opening, looking at the pieces. */
   s9: {z: 404},
+  /**
+   * Lowered panel angle in the backdrop (the stand-in uses CONFIG.panel.verticalDeg = -40). The backdrop
+   * camera looks down only about 15-20 deg (far shots from the hall), so a -40 deg panel hangs below the
+   * screen. The panel box (grab bar, buttons, colour strip) is about 40% of the view tall, so it is kept
+   * at -23 deg (lowered) and -20 deg (raised, S4-S7), where it stays inside with a 3% margin.
+   */
+  panel: {lowDeg: -23},
+}
+
+/** The DEMO's lowered panel angle for the current room mode. */
+function lowPanelDeg(): number {
+  return backdrop ? BD.panel.lowDeg : CONFIG.panel.verticalDeg
 }
 
 /** Clearance-hold pitch for the current room mode. */
@@ -577,6 +589,13 @@ function clampCamera(x: number, z: number, m: number): {x: number; z: number} {
   return {x, z}
 }
 
+/** Median and 99th percentile of the per-frame camera steps, and the number of frames over 100 ms. */
+function stepStats(steps: number[], slow: number): {median: number; p99: number; slow: number} {
+  if (!steps.length) return {median: 0, p99: 0, slow}
+  const a = steps.slice().sort((x, y) => x - y)
+  return {median: a[Math.floor(a.length / 2)], p99: a[Math.min(a.length - 1, Math.floor(a.length * 0.99))], slow}
+}
+
 // ── Backdrop walking camera ───────────────────────────────────────────────────
 
 interface P2 {
@@ -705,7 +724,9 @@ class BdWalker {
   }
 
   /** Advance one frame; returns the camera position (room-local) and the eased look target. */
-  update(dt: number): {x: number; z: number; look: vec3} {
+  update(dtIn: number): {x: number; z: number; look: vec3} {
+    // A frame hitch (e.g. a model loading) must not make the camera leap: at most 50 ms of walking per frame.
+    const dt = Math.min(dtIn, 0.05)
     const k = BD.walk
     const step = dt / k.brakeSec
     this.rate = Math.max(0, Math.min(1, this.rate + Math.max(-step, Math.min(step, this.rateTarget - this.rate))))
@@ -745,6 +766,11 @@ interface SceneRecord {
   allIn: number
   /** largest share of the current piece box covered by the panel box (sampled, %) */
   maxCover: number
+  /** sampled frames with the whole panel (grab bar and buttons) inside the view with a 3% margin; worst overflow (%) and when */
+  panelIn: number
+  panelWorst: {over: number; t: number}
+  /** per-frame camera step (cm): median, 99th percentile; frames over 100 ms */
+  step: {median: number; p99: number; slow: number}
   /** pinch/drag ring positions in the viewport this scene (%) */
   ring: {x0: number; x1: number; y0: number; y1: number; n: number}
   /** backdrop walking camera: travel (cm), total yaw change (deg), longest still period (s), peak speed (cm/s), peak turn rate (deg/s) */
@@ -773,6 +799,10 @@ export class DemoScenario extends Scenario {
   private mot = {travel: 0, yaw: 0, still: 0, stillCur: 0, maxSpeed: 0, maxYawRate: 0}
   private lastCam: {x: number; z: number; yaw: number} | null = null
   private sceneN = 0
+  private panelIn = 0
+  private panelWorst = {over: 0, t: 0}
+  private steps: number[] = []
+  private slowFrames = 0
   private followCentroid = false
   /** Backdrop S5: the gaze eases toward the current piece (types and variants differ in size and get nudged). */
   private followPiece = false
@@ -847,6 +877,8 @@ export class DemoScenario extends Scenario {
   private onFrame(): void {
     this.frames++
     if (!this.head) return
+    const fdt = getDeltaTime()
+    if (this.T0 > 0 && fdt > 0.06) log(`slow frame ${(fdt * 1000).toFixed(0)} ms at ${(getTime() - this.T0).toFixed(2)} s, S${this.sceneN}, ${this.c.pieceCount} pieces, current ${this.c.currentPieceKey}`)
     if (backdrop && this.walker) this.walkFrame()
     const p = this.head.pose
     const wall = cameraWallCm(p.x, p.z)
@@ -864,7 +896,13 @@ export class DemoScenario extends Scenario {
       const piece = screenBox(this.pieceCorners())
       if (boxInside(piece, 0, 100)) this.pieceIn++
       if ((this.sceneN === 6 || (backdrop && this.sceneN === 9)) && this.allPiecesCorners().every((pts) => boxInside(screenBox(pts), 0, 100))) this.allIn++
-      if (this.sceneN === 4 || this.sceneN === 5) this.maxCover = Math.max(this.maxCover, coverPct(screenBox(visualCorners(panelObj(this.c), true)), piece))
+      const pb = screenBox(visualCorners(panelObj(this.c), true))
+      if (this.sceneN === 4 || this.sceneN === 5) this.maxCover = Math.max(this.maxCover, coverPct(pb, piece))
+      if (boxInside(pb, 3, 97)) this.panelIn++
+      else {
+        const over = boxOverflow(pb, 3, 97)
+        if (over > this.panelWorst.over) this.panelWorst = {over, t: getTime() - this.sceneStart}
+      }
     }
   }
 
@@ -894,6 +932,8 @@ export class DemoScenario extends Scenario {
       const m = this.mot
       m.travel += d
       m.yaw += Math.abs(dy)
+      this.steps.push(d)
+      if (dt > 0.1) this.slowFrames++
       const v = d / dt
       const yr = Math.abs(dy) / dt
       if (dt < 0.2) {
@@ -1130,7 +1170,7 @@ export class DemoScenario extends Scenario {
     // Panel for the DEMO: smaller and lower (existing size steps and grab-bar offset, inside the limits).
     for (let i = 0; i < CONFIG.panel.scaleDownSteps; i++) c.panelScaleDown()
     await sleep(200)
-    await this.movePanelTo(CONFIG.panel.verticalDeg)
+    await this.movePanelTo(lowPanelDeg())
     log(`setup: panel ${c.panelScale * 100}% at ${this.fmtOffset()}; viewport aspect ${cameraComp().aspect.toFixed(3)}, vertical fov ${(cameraComp().fov / DEG).toFixed(1)}°`)
     await sleep(1400) // let any gap label fade, panel settle
     log(`setup: room mode ${c.mode}`)
@@ -1176,6 +1216,10 @@ export class DemoScenario extends Scenario {
     this.maxCover = 0
     this.ringExt = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, n: 0}
     this.mot = {travel: 0, yaw: 0, still: 0, stillCur: 0, maxSpeed: 0, maxYawRate: 0}
+    this.panelIn = 0
+    this.panelWorst = {over: 0, t: 0}
+    this.steps = []
+    this.slowFrames = 0
     this.sceneN = n
     const f0 = this.frames
     const start = this.sceneStart - this.T0
@@ -1193,7 +1237,7 @@ export class DemoScenario extends Scenario {
     this.report(`S${n} end`)
     log(`S${n} ${SCENE_NAMES[n]} END ${end.toFixed(2)} s (choreography ${used.toFixed(2)} s)`)
     this.sceneN = 0
-    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover, ring: this.ringExt, motion: {travel: this.mot.travel, yaw: this.mot.yaw, still: this.mot.still, maxSpeed: this.mot.maxSpeed, maxYawRate: this.mot.maxYawRate}}
+    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover, panelIn: this.panelIn, panelWorst: {...this.panelWorst}, step: stepStats(this.steps, this.slowFrames), ring: this.ringExt, motion: {travel: this.mot.travel, yaw: this.mot.yaw, still: this.mot.still, maxSpeed: this.mot.maxSpeed, maxYawRate: this.mot.maxYawRate}}
   }
 
   /** Waits until `sec` after the scene started (no-op if already past). */
@@ -1223,6 +1267,11 @@ export class DemoScenario extends Scenario {
       const inBand = g.x0 >= 10 && g.x1 <= 90 && g.y0 >= 10 && g.y1 <= 90
       const rings = g.n ? `${g.n} rings, x ${g.x0.toFixed(1)}..${g.x1.toFixed(1)}, y ${g.y0.toFixed(1)}..${g.y1.toFixed(1)}${inBand ? " ok" : " OUTSIDE 10-90"}` : "-"
       log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.minWallCm.toFixed(1)} ${ok} | ${r.pieceIn}/${r.samples} (${pct(r.pieceIn)}%) | ${all} | ${cover} | ${rings}`)
+    }
+    log("scene | panel fully inside (3% margin, sampled frames) | worst panel overflow | camera step cm median / p99 | frames over 100 ms")
+    for (const r of records) {
+      const pct = r.samples ? ((100 * r.panelIn) / r.samples).toFixed(1) : "-"
+      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.panelIn}/${r.samples} (${pct}%) | ${r.panelWorst.over.toFixed(1)}% at ${r.panelWorst.t.toFixed(1)} s | ${r.step.median.toFixed(2)} / ${r.step.p99.toFixed(2)} | ${r.step.slow}`)
     }
     if (backdrop) {
       log("scene | camera travel cm (>= 80) | yaw change deg | longest still s (<= 1.5) | peak speed cm/s (<= 15) | peak turn deg/s (<= 10)")
@@ -1648,9 +1697,11 @@ export class DemoScenario extends Scenario {
     await this.pinch("GalleryTile_1")
     log(`S6 picked ${c.currentPieceKey}`)
     await this.pinch("AddButton")
+    log(`S6 add 1 at ${(getTime() - this.T0).toFixed(2)} s: ${c.pieceCount} pieces, new current ${c.currentPieceKey}`)
     await sleep(k.afterAdd * 1000)
     await this.dragPiece(k.dragA, k.drag)
     await this.pinch("AddButton")
+    log(`S6 add 2 at ${(getTime() - this.T0).toFixed(2)} s: ${c.pieceCount} pieces, new current ${c.currentPieceKey}`)
     await sleep(k.afterAdd * 1000)
     await this.dragPiece(k.dragB, k.drag)
     log(`S6 pieces in the room: ${c.pieceCount}`)
@@ -1679,7 +1730,7 @@ export class DemoScenario extends Scenario {
         this.report(`S7 ${key}`)
         await sleep(k.hold * 1000)
       }
-      await this.movePanelTo(CONFIG.panel.verticalDeg)
+      await this.movePanelTo(lowPanelDeg())
       log(`S7 panel back to ${this.fmtOffset()}`)
       return
     } else {

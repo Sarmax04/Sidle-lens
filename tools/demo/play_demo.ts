@@ -6,8 +6,8 @@
 // Sync: the head is held at the path's first pose until the DEMO posts "SidleDemoStart" (its clock
 // zero). A timer then plays the path by DEMO time, interpolating between the recorded samples. At every
 // scene start ("SidleDemoScene") and every pinch ("SidleDemoPinch", sent when the DEMO's camera has
-// stopped for it) the replay's time is eased (over 0.25 s) onto the recorded time of that moment, so no
-// skew builds up and each pinch lands in its recorded stop.
+// stopped for it) the replay's time is pulled onto the recorded time of that moment, gently (drift under
+// 0.1 s is ignored, corrections run at most 0.1 s per s, so the walk never speeds up by more than 10%).
 //
 // Robustness: one owner object (globalThis.__sidleReplay) owns the timer and the message listener;
 // a new run stops the old owner first and the owner cleans up when the DEMO ends, the path ends or a
@@ -17,7 +17,8 @@
 //
 // args (all optional): {scene: "1" | "1,2" | "all", rate: updates per second (default 62: smoothest
 //   camera; 30 or 20 per second gave 1-2 fps more but 28-70% more frame-to-frame jitter),
-//   record: "1" (the DEMO logs the actual camera pose for the accuracy check), start: false (only arm;
+//   record: "1" (the DEMO logs the actual camera pose for the accuracy check), logTicks: true (log every
+//   commanded pose as [SidleTick] lines), start: false (only arm;
 //   then press Run on DEMO in the LEAF panel: its default head = auto finds the armed replay)}
 
 const fs = await import("LensStudio:FileSystem")
@@ -37,6 +38,9 @@ if (!panel || Editor.isNull(panel)) throw new Error("Preview panel not found: op
 const RATE = Math.max(5, Math.min(120, Number(A.rate ?? 62)))
 const SCENE = String(A.scene ?? "all")
 const DEG = Math.PI / 180
+/** Re-anchoring: drift below DEADBAND s is ignored; corrections run at most MAX_CORR s of path time per s. */
+const DEADBAND = 0.1
+const MAX_CORR = 0.1
 
 /** Pose (x, y, z, yaw, pitch) at DEMO time t, interpolated between the recorded samples. */
 function poseAt(t: number): number[] {
@@ -176,9 +180,18 @@ own.timer = setInterval(() => {
     return
   }
   const t1 = now()
-  own.offset += (own.target - own.offset) * Math.min(1, (t1 - own.last) / 0.25)
+  // Re-anchoring without speed spikes: ignore drift under DEADBAND s, and change the path time at most
+  // MAX_CORR s per s (the walk then runs at 0.9-1.1x speed, about 1.3 cm/s more or less at walking pace).
+  const err = own.target - own.offset
+  if (Math.abs(err) > DEADBAND) {
+    const step = MAX_CORR * (t1 - own.last)
+    own.offset += Math.max(-step, Math.min(step, err))
+  }
   own.last = t1
-  apply(poseAt(t1 - own.t0 + own.offset))
+  const pathT = t1 - own.t0 + own.offset
+  const pose = poseAt(pathT)
+  apply(pose)
+  if (A.logTicks) console.log(`[SidleTick] ${(t1 - own.t0).toFixed(3)} ${pathT.toFixed(3)} ${pose[1].toFixed(2)} ${pose[3].toFixed(2)} ${pose[4].toFixed(3)} ${own.offset.toFixed(3)} ${own.target.toFixed(3)}`)
   own.ticks++
   if (t1 - own.t0 > P.duration + 3.0) own.stop("path finished")
 }, 1000 / RATE)
