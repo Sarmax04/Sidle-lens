@@ -22,7 +22,7 @@ import {BUILT_INS, bundledCatalog, cameraTransform, COFFEE, controller, footprin
 // ═══ CONFIG: tune everything here (seconds unless noted; positions in room cm) ═══
 const CONFIG = {
   /** Target length of each scene; a scene that finishes early holds until its target. */
-  target: {1: 14, 2: 26, 3: 30, 4: 15, 5: 20, 6: 25, 7: 15, 8: 0, 9: 8} as Record<number, number>,
+  target: {1: 14, 2: 26, 3: 30, 4: 15, 5: 20, 6: 25, 7: 15, 8: 0, 9: 10} as Record<number, number>,
   startPiece: "Imported_sofa_01",
   ring: {glide: 0.45, press: 0.25, colour: new vec4(1.0, 0.96, 0.78, 1), sizePerCm: 0.012},
   s1: {hold: 3, walkCm: 30, walk: 7},
@@ -34,7 +34,8 @@ const CONFIG = {
   /** backCm: extra distance from the pieces' centroid vs the old (0, 0) spot; aimFollow: per-frame easing of the gaze toward the moving centroid. */
   s6: {camera: 2, tabPause: 1.6, drag: 2.5, dragA: new vec3(-140, 0, 40), dragB: new vec3(130, 0, 60), afterAdd: 0.8, backCm: 125, aimFollow: 0.12},
   s7: {bigKey: "Imported_gothicbed_01", fitKey: "Imported_painted_wooden_chair_01", hold: 3, camera: 0.8, startCamera: 1},
-  s9: {camera: 3},
+  /** S9: after the walk-in, flip through the colour swatches on the current piece (the S7 chair), then back to original. */
+  s9: {camera: 1, swatchPause: 0.5, swatches: [1, 2, 3, 4, 5, 0]},
   /** Panel during the DEMO only (restored at the end): one size step down (75%), then lowered to verticalDeg (limit -50). */
   panel: {scaleDownSteps: 1, verticalDeg: -40},
   /** Framing: shot pitch for the clearance holds, camera kept >= wallMarginCm from walls (rule: >= 40), labels checked against the central 70%. */
@@ -57,16 +58,17 @@ const BD = {
    * is about 1.5 x length / time, kept <= 14 cm/s; the gaze turns at most maxYawDegPerSec.
    */
   walk: {
-    s1From: {x: 95, z: 140}, // in the hall, about 1.2 m behind the open side ("walking in through the doorway")
+    s1From: {x: 95, z: 70}, // just outside the open side: a short walk in, no wandering
     s1: {x: 90, z: 0, sec: 14},
     s2: {toDeg: -8, radiusCm: 400, sec: 25.5}, // arc around the sofa, widening, ending in the opening (>= 86 cm off its edge)
     s3: {x: -55, z: 290, sec: 30}, // back out into the hall while the piece is dragged
-    s4: {x: -105, z: 404, sec: 15},
-    s5: {x: 40, z: 390, sec: 20},
-    s6: {x: -45, z: 404, sec: 25}, // closer than the old 744 cm (hovering the far piece was slow), wide enough for all pieces
-    s7: {x: -105, z: 330, sec: 12},
-    s9: {x: -22, z: 372, sec: 8},
-    swayCm: 4,
+    // S4-S9 stay near one spot in the opening (short legs, 20-80 cm): less walking around.
+    s4: {x: -75, z: 370, sec: 15},
+    s5: {x: -55, z: 390, sec: 20},
+    s6: {x: -45, z: 404, sec: 25}, // wide enough for all pieces
+    s7: {x: -70, z: 350, sec: 12},
+    s9: {x: -50, z: 370, sec: 10},
+    swayCm: 1.5,
     swayPeriodSec: 10,
     maxYawDegPerSec: 8,
     lookTauSec: 0.5,
@@ -107,7 +109,7 @@ const BD = {
    * screen. The panel box (grab bar, buttons, colour strip) is about 40% of the view tall, so it is kept
    * at -23 deg (lowered) and -20 deg (raised, S4-S7), where it stays inside with a 3% margin.
    */
-  panel: {lowDeg: -23},
+  panel: {lowDeg: -23, openingDeg: -26}, // openingDeg: S1-S2 (looking at the sofa), slightly lower; back to lowDeg at the S3 start
 }
 
 /** The DEMO's lowered panel angle for the current room mode. */
@@ -1170,7 +1172,7 @@ export class DemoScenario extends Scenario {
     // Panel for the DEMO: smaller and lower (existing size steps and grab-bar offset, inside the limits).
     for (let i = 0; i < CONFIG.panel.scaleDownSteps; i++) c.panelScaleDown()
     await sleep(200)
-    await this.movePanelTo(lowPanelDeg())
+    await this.movePanelTo(backdrop ? BD.panel.openingDeg : lowPanelDeg())
     log(`setup: panel ${c.panelScale * 100}% at ${this.fmtOffset()}; viewport aspect ${cameraComp().aspect.toFixed(3)}, vertical fov ${(cameraComp().fov / DEG).toFixed(1)}°`)
     await sleep(1400) // let any gap label fade, panel settle
     log(`setup: room mode ${c.mode}`)
@@ -1313,7 +1315,8 @@ export class DemoScenario extends Scenario {
     r.n++
   }
 
-  private async pinch(name: string): Promise<void> {
+  /** stayStopped: the backdrop walk stays stopped after the pinch (a run of pinches with no step between); the caller resumes it. */
+  private async pinch(name: string, stayStopped: boolean = false): Promise<void> {
     const inter = findInteractableByName(name, undefined, true)
     if (!inter) {
       log(`pinch: "${name}" not found or not enabled, skipped`)
@@ -1343,7 +1346,7 @@ export class DemoScenario extends Scenario {
       ok = false
       log(`pinch: "${name}" did not complete (${e})`)
     }
-    if (backdrop && this.walker) this.walker.resume()
+    if (backdrop && this.walker && !stayStopped) this.walker.resume()
     await press
     log(`pinch ${name}: ring at (${s.x.toFixed(1)}%, ${s.y.toFixed(1)}%) in viewport=${inView}, completed=${ok}`)
   }
@@ -1489,6 +1492,7 @@ export class DemoScenario extends Scenario {
     const b = BD.s3
     const w = this.walker!
     w.walkTo(BD.walk.s3.x, BD.walk.s3.z, BD.walk.s3.sec)
+    await this.movePanelTo(lowPanelDeg()) // from the slightly lower opening angle
     // The gaze follows the piece, leaning toward the wall (and later the pillar) so both stay in view.
     const pieceAt = (): vec3 => {
       const q = c.piecePosition
@@ -1635,10 +1639,11 @@ export class DemoScenario extends Scenario {
     let g = 0
     while (c.variantKeys(c.currentPieceType).length < 2 && g++ < n) await this.pinch("NextButton")
     for (let i = 0; i < 2; i++) {
-      await this.pinch("CompareButton")
+      await this.pinch("CompareButton", true) // the camera stays put between the Compare pinches
       log(`S5 compare: ${c.currentPieceKey}`)
       await sleep(k.comparePause * 1000)
     }
+    if (backdrop && this.walker) this.walker.resume()
     if (backdrop) return // backdrop: the panel stays raised through S6 (lowered at the end of S6)
     this.report("S5 before panel back")
     await this.movePanelTo(CONFIG.panel.verticalDeg)
@@ -1758,7 +1763,7 @@ export class DemoScenario extends Scenario {
     log("S8 not driven (VS Code footage)")
   }
 
-  /** S9 Closing: a clean wide view, held (no pinches). */
+  /** S9 Closing: on the chair from S7, flip through its colours (backdrop); the stand-in holds a wide view. */
   private async s9(): Promise<void> {
     const c = this.c
     if (c.measureOn) await this.pinch("MeasureButton")
@@ -1767,9 +1772,19 @@ export class DemoScenario extends Scenario {
     if (backdrop) {
       const w = this.walker!
       w.walkTo(BD.walk.s9.x, BD.walk.s9.z, BD.walk.s9.sec, true)
-      w.follow(() => this.centroid())
+      w.follow(() => {
+        const q = c.piecePosition
+        return new vec3(q.x, c.currentDims.h / 2, q.z)
+      })
       await sleep(CONFIG.s9.camera * 1000)
+      log(`S9 colours on ${c.currentPieceKey}`)
+      for (const i of CONFIG.s9.swatches) {
+        await this.pinch(`ColorSwatch_${i}`, true) // the camera stays put while the colours change
+        log(`S9 colour ${i}: current ${c.currentColorIndex}`)
+        await sleep(CONFIG.s9.swatchPause * 1000)
+      }
+      w.resume()
       this.logPieces("S9")
-    } else await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, CONFIG.s9.camera)
+    } else await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, 3)
   }
 }

@@ -4,7 +4,7 @@ Recording the video (backdrop room, about 2.5 minutes):
 1. Preview panel: Interactive, source Colorful Home, device SPECS 27 (with the Plane source the Lens shows no room). The saved scene already uses room mode backdrop.
 2. Refresh the Preview once (Preview panel refresh button, or PreviewPanelTool action refresh) and start your screen recorder on the Preview panel.
 3. Run the one command that starts both the replay and the DEMO: in Claude Code with the Lens Studio MCP, run ExecuteEditorCode with path `tools/demo/play_demo.ts` (no arguments). The LEAF text strip at the top of the Preview is hidden while the DEMO plays.
-4. It runs about 3.5 s of setup plus 153 s (S1 14, S2 26, S3 30, S4 15, S5 20, S6 25, S7 15, S9 8 s; S8 is the VS Code footage). Don't touch the Preview while it runs; the Lens log ends with `[SidleReplay] stopped: DEMO ended` and `[DEMO] PASSED`.
+4. It runs about 3.5 s of setup plus 155 s (S1 14, S2 26, S3 30, S4 15, S5 20, S6 25, S7 15, S9 10 s; S8 is the VS Code footage; S9 flips the chair through its colours). Don't touch the Preview while it runs; the Lens log ends with `[SidleReplay] stopped: DEMO ended` and `[DEMO] PASSED`.
 5. If the log shows a `[SidleReplay] FAILED` line, it names the cause (for example the DEMO started with head = walker, so the room would not move); fix that and run the same command again (it replaces any previous replay). Don't start `DEMO` from the LEAF panel on its own: without the replay armed it moves only the Lens camera and the room stays still. (Arming with args `{"start": false}` and then pressing Run on `DEMO` also works: its default head = auto finds the armed replay.)
 
 Details:
