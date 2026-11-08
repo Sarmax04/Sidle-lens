@@ -184,7 +184,7 @@ export class SidleController extends BaseScriptComponent {
   @input
   @hint("Gallery view (Update 4); has its own SidleLazyFollow")
   @allowUndefined
-  galleryUI: SidleGalleryUI
+  galleryUI!: SidleGalleryUI
 
   @input
   @hint("Lit template material for room + furniture boxes (cloned per color)")
@@ -200,7 +200,7 @@ export class SidleController extends BaseScriptComponent {
   @input
   @hint("Bundled Assets/Models/catalog.json")
   @allowUndefined
-  catalog: JsonAsset
+  catalog!: JsonAsset
 
   @input
   @hint("GLB prefabs from Assets/Models; matched to catalog entries by file name")
