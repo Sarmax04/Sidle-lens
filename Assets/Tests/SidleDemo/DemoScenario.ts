@@ -16,7 +16,7 @@ import {awaitEventOnce, findSceneObjectByName, nextFrame, sleep, withTimeout} fr
 import {InteractorTriggerType} from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {SidleController} from "../../Scripts/SidleController"
-import {cameraTransform, COFFEE, controller, ROOM, START, START_HEAD} from "../SidleLeaf/SidleTestHelpers"
+import {BUILT_INS, bundledCatalog, cameraTransform, COFFEE, controller, footprint, levelHeadFrame, panelObj, ROOM, START, START_HEAD, visualCorners} from "../SidleLeaf/SidleTestHelpers"
 
 // ═══ CONFIG: tune everything here (seconds unless noted; positions in room cm) ═══
 const CONFIG = {
@@ -24,14 +24,20 @@ const CONFIG = {
   target: {1: 14, 2: 26, 3: 30, 4: 15, 5: 20, 6: 25, 7: 15, 8: 0, 9: 8} as Record<number, number>,
   startPiece: "Imported_sofa_01",
   ring: {glide: 0.45, press: 0.25, colour: new vec4(1.0, 0.96, 0.78, 1), sizePerCm: 0.012},
-  s1: {hold: 3, walkCm: 100, walk: 7},
-  s2: {radiusCm: 150, approach: 4, startDeg: -15, sweepDeg: 90, circle: 13, pause: 3},
-  s3: {camera: 2.5, wallGapCm: 40, toWall: 5, hold: 3, back: 4, turn: 2, toTable: 6, tableHold: 3},
-  s4: {measureHold: 3, rotations: 4, rotateGap: 1},
+  s1: {hold: 3, walkCm: 30, walk: 7},
+  s2: {radiusCm: 300, approach: 4, startDeg: -15, sweepDeg: 90, circle: 13, pause: 3},
+  s3: {camera: 2.5, wallGapCm: 40, toWall: 5, hold: 3, back: 4, turn: 2, toTable: 6, tableHold: 3, settle: 0.5, wallAzDeg: 60, tableAzDeg: 40, tableSubjectYPct: 40},
+  /** panelRaiseDeg: panel offset from after the Measure-on labels until the end of S5 (buttons on screen at the far shot), then back to panel.verticalDeg. */
+  s4: {measureHold: 3, rotations: 4, rotateGap: 1, camera: 1.5, azDeg: 35, distCm: 780, panelRaiseDeg: -23},
   s5: {typePause: 2, comparePause: 2},
-  s6: {camera: 2, tabPause: 1.6, drag: 2.5, dragA: new vec3(-140, 0, 40), dragB: new vec3(130, 0, 60), afterAdd: 0.8},
-  s7: {bigKey: "Imported_gothicbed_01", fitKey: "Imported_painted_wooden_chair_01", hold: 3},
+  /** backCm: extra distance from the pieces' centroid vs the old (0, 0) spot; aimFollow: per-frame easing of the gaze toward the moving centroid. */
+  s6: {camera: 2, tabPause: 1.6, drag: 2.5, dragA: new vec3(-140, 0, 40), dragB: new vec3(130, 0, 60), afterAdd: 0.8, backCm: 125, aimFollow: 0.12},
+  s7: {bigKey: "Imported_gothicbed_01", fitKey: "Imported_painted_wooden_chair_01", hold: 3, camera: 0.8, startCamera: 1},
   s9: {camera: 3},
+  /** Panel during the DEMO only (restored at the end): one size step down (75%), then lowered to verticalDeg (limit -50). */
+  panel: {scaleDownSteps: 1, verticalDeg: -40},
+  /** Framing: shot pitch for the clearance holds, camera kept >= wallMarginCm from walls (rule: >= 40), labels checked against the central 70%. */
+  frame: {pitchDeg: 27.5, subjectYPct: 32, wallMarginCm: 60, wallRuleCm: 40, centralPct: 70, sampleEveryFrames: 3},
 }
 
 const SCENE_NAMES: Record<number, string> = {
@@ -81,12 +87,108 @@ function roomDirToWorld(d: vec3): vec3 {
   return roomT.getWorldTransform().multiplyDirection(d)
 }
 
+function worldToRoom(p: vec3): vec3 {
+  return roomT.getInvertedWorldTransform().multiplyPoint(p)
+}
+
+// ── Screen-space checks (viewport %, (0,0) top-left, (100,100) bottom-right) ──
+
+const DEG = Math.PI / 180
+
+interface ScreenBox {
+  x0: number
+  x1: number
+  y0: number
+  y1: number
+  /** every point in front of the camera */
+  front: boolean
+  n: number
+}
+
+function cameraComp(): Camera {
+  return cameraTransform().getSceneObject().getComponent("Component.Camera") as Camera
+}
+
+/** Viewport % of a world point and whether it is in front of the camera. */
+function toScreen(p: vec3): {x: number; y: number; front: boolean} {
+  const t = cameraTransform()
+  const s = cameraComp().worldSpaceToScreenSpace(p)
+  return {x: s.x * 100, y: s.y * 100, front: p.sub(t.getWorldPosition()).dot(t.back) > 0}
+}
+
+function screenBox(points: vec3[]): ScreenBox | null {
+  if (!points.length) return null
+  const b: ScreenBox = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, front: true, n: points.length}
+  for (const p of points) {
+    const s = toScreen(p)
+    b.front = b.front && s.front
+    b.x0 = Math.min(b.x0, s.x)
+    b.x1 = Math.max(b.x1, s.x)
+    b.y0 = Math.min(b.y0, s.y)
+    b.y1 = Math.max(b.y1, s.y)
+  }
+  return b
+}
+
+/** Box fully inside [lo, hi] % on both axes (and in front of the camera). */
+function boxInside(b: ScreenBox | null, lo: number, hi: number): boolean {
+  return !!b && b.front && b.x0 >= lo && b.x1 <= hi && b.y0 >= lo && b.y1 <= hi
+}
+
+/** How far (in viewport %) a box sticks out of [lo, hi]; 0 when inside. */
+function boxOverflow(b: ScreenBox | null, lo: number, hi: number): number {
+  if (!b) return NaN
+  return Math.max(0, lo - b.x0, b.x1 - hi, lo - b.y0, b.y1 - hi)
+}
+
+function boxesOverlap(a: ScreenBox | null, b: ScreenBox | null): boolean {
+  if (!a || !b || !a.front || !b.front) return false
+  return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
+}
+
+/** Share (%) of box `b` covered by box `a`, on screen. */
+function coverPct(a: ScreenBox | null, b: ScreenBox | null): number {
+  if (!a || !b || !a.front || !b.front) return 0
+  const w = Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0))
+  const h = Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0))
+  const area = Math.max(1e-6, (b.x1 - b.x0) * (b.y1 - b.y0))
+  return (100 * w * h) / area
+}
+
+function fmtBox(b: ScreenBox | null): string {
+  if (!b) return "none"
+  return `x ${b.x0.toFixed(1)}..${b.x1.toFixed(1)}%, y ${b.y0.toFixed(1)}..${b.y1.toFixed(1)}%${b.front ? "" : " (partly behind camera)"}`
+}
+
+/** Visual corners of a named object (enabled parts only); [] if missing or hidden. */
+function cornersOf(name: string): vec3[] {
+  const so = findSceneObjectByName(name)
+  if (!so || !so.isEnabledInHierarchy) return []
+  return visualCorners(so, true)
+}
+
+function centralLo(): number {
+  return (100 - CONFIG.frame.centralPct) / 2
+}
+function centralHi(): number {
+  return 100 - centralLo()
+}
+
 // ── Head (preview camera) ─────────────────────────────────────────────────────
 
 interface Pose {
   x: number
   z: number
-  look: vec3 // room-local point the head looks at
+  look: vec3 // room-local point the head looks at (the subject)
+  /** true: subject at the viewport centre; otherwise it sits at subjectYPct (default CONFIG.frame.subjectYPct) from the top (panel below it). */
+  center?: boolean
+  subjectYPct?: number
+}
+
+/** Extra downward tilt (deg) that puts a looked-at subject at `pct` (default CONFIG.frame.subjectYPct) from the top of the viewport. */
+function subjectTiltDeg(pct: number = CONFIG.frame.subjectYPct): number {
+  const halfFov = cameraComp().fov / 2
+  return Math.atan(((50 - pct) / 50) * Math.tan(halfFov)) / DEG
 }
 
 /** Holds the camera at a room-local pose (tracking off, pose re-applied every frame); stop() restores it. */
@@ -114,13 +216,37 @@ class DemoHead {
 
   set(p: Pose): void {
     this.pose = p
+    if (!this.gliding) this.tiltMix = p.center ? 0 : 1
     this.apply()
   }
+
+  private gliding = false
 
   /** Eased glide (position and gaze target) to `to` over `sec`. */
   async glide(to: Pose, sec: number): Promise<void> {
     const from = this.pose
-    await animate(sec, (e) => this.set({x: from.x + (to.x - from.x) * e, z: from.z + (to.z - from.z) * e, look: lerp3(from.look, to.look, e)}))
+    // The subject's screen height eases from the old framing to the new one with the move.
+    const t0 = from.center ? 0 : 1
+    const t1 = to.center ? 0 : 1
+    this.gliding = true
+    try {
+      await animate(sec, (e) => {
+        this.tiltMix = t0 + (t1 - t0) * e
+        this.set({x: from.x + (to.x - from.x) * e, z: from.z + (to.z - from.z) * e, look: lerp3(from.look, to.look, e), center: to.center, subjectYPct: to.subjectYPct})
+      })
+    } finally {
+      this.gliding = false
+    }
+    this.tiltMix = t1
+  }
+
+  /** 1 = subject at CONFIG.frame.subjectYPct, 0 = centred; eased during glides. */
+  private tiltMix = 1
+
+  /** Current downward gaze angle (deg) of the camera. */
+  pitchDownDeg(): number {
+    const b = cameraTransform().back
+    return Math.asin(Math.max(-1, Math.min(1, -b.y))) / DEG
   }
 
   async stop(): Promise<void> {
@@ -136,7 +262,8 @@ class DemoHead {
     const pos = roomToWorld(new vec3(this.pose.x, this.eyeY, this.pose.z))
     const d = roomToWorld(this.pose.look).sub(pos)
     const yaw = Math.atan2(d.x, -d.z) // > 0 turns right
-    const pitch = Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))
+    // Look a little below the subject so it sits above centre and the panel has the lower part of the view.
+    const pitch = Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)) - subjectTiltDeg(this.pose.subjectYPct) * DEG * this.tiltMix
     const rot = quat.angleAxis(-yaw, vec3.up()).multiply(quat.angleAxis(pitch, vec3.right()))
     const t = cameraTransform()
     t.setWorldPosition(pos)
@@ -288,6 +415,15 @@ interface SceneRecord {
   start: number
   end: number
   frames: number
+  /** closest the camera came to any wall during the scene (cm, room-local) */
+  minWallCm: number
+  /** sampled frames with the whole current piece inside the viewport / all samples */
+  pieceIn: number
+  samples: number
+  /** sampled frames with every placed piece and the current piece fully in the viewport */
+  allIn: number
+  /** largest share of the current piece box covered by the panel box (sampled, %) */
+  maxCover: number
 }
 
 @component
@@ -300,6 +436,14 @@ export class DemoScenario extends Scenario {
   private frames = 0
   private sceneStart = 0
   private startPose: Pose
+  private minWall = Infinity
+  private pieceIn = 0
+  private samples = 0
+  private allIn = 0
+  private maxCover = 0
+  private sceneN = 0
+  private followCentroid = false
+  private dimsByKey: {[key: string]: {w: number; d: number; h: number}} = {}
 
   async run(config?: ScenarioConfig): Promise<void> {
     const raw = (config?.get("scene") ?? "all").trim().toLowerCase()
@@ -309,7 +453,7 @@ export class DemoScenario extends Scenario {
 
     await this.setup()
     const frameEvt = this.createEvent("UpdateEvent")
-    frameEvt.bind(() => this.frames++)
+    frameEvt.bind(() => this.onFrame())
     const records: SceneRecord[] = []
     try {
       if (scenes.length === 1) await this.prepAlone(scenes[0])
@@ -323,7 +467,189 @@ export class DemoScenario extends Scenario {
       this.summary(records)
       this.ring.destroy()
       await this.head.stop()
-      log("DEMO done (pointer ring removed, camera tracking restored)")
+      this.c.resetPanelScale()
+      this.c.resetPanelOffset()
+      log(`DEMO done (pointer ring removed, camera tracking restored, panel back to ${this.c.panelScale * 100}% at ${this.fmtOffset()})`)
+    }
+  }
+
+  /** Per frame: frame count, closest wall distance of the camera, and (sampled) whether the whole piece is in view. */
+  private onFrame(): void {
+    this.frames++
+    if (!this.head) return
+    const p = this.head.pose
+    const wall = Math.min(p.x - ROOM.minX, ROOM.maxX - p.x, p.z - ROOM.minZ, ROOM.maxZ - p.z)
+    this.minWall = Math.min(this.minWall, wall)
+    if (this.followCentroid) {
+      const cen = this.centroid()
+      this.head.set({...p, look: lerp3(p.look, cen, CONFIG.s6.aimFollow)})
+    }
+    if (this.frames % CONFIG.frame.sampleEveryFrames === 0) {
+      this.samples++
+      const piece = screenBox(this.pieceCorners())
+      if (boxInside(piece, 0, 100)) this.pieceIn++
+      if (this.sceneN === 6 && this.allPiecesCorners().every((pts) => boxInside(screenBox(pts), 0, 100))) this.allIn++
+      if (this.sceneN === 4 || this.sceneN === 5) this.maxCover = Math.max(this.maxCover, coverPct(screenBox(visualCorners(panelObj(this.c), true)), piece))
+    }
+  }
+
+  /** Corner sets of every placed piece and the current piece (catalog sizes, current yaws). */
+  private allPiecesCorners(): vec3[][] {
+    const out: vec3[][] = [this.pieceCorners()]
+    for (const pp of this.c.placedPieces) {
+      const dims = this.dimsByKey[pp.key]
+      if (!dims) continue
+      const pts: vec3[] = []
+      for (const q of footprint(pp.x, pp.z, dims.w, dims.d, pp.yawDeg)) pts.push(roomToWorld(new vec3(q.x, 0, q.z)), roomToWorld(new vec3(q.x, dims.h, q.z)))
+      out.push(pts)
+    }
+    return out
+  }
+
+  /** Room-local centroid (at 40 cm) of every placed piece and the current one. */
+  private centroid(): vec3 {
+    const c = this.c
+    let x = c.piecePosition.x
+    let z = c.piecePosition.z
+    for (const pp of c.placedPieces) {
+      x += pp.x
+      z += pp.z
+    }
+    const n = 1 + c.placedPieces.length
+    return new vec3(x / n, 40, z / n)
+  }
+
+  /** World corners of the current piece's box: its footprint (catalog W x D, current yaw) from the floor to its height. */
+  private pieceCorners(): vec3[] {
+    const c = this.c
+    const p = c.piecePosition
+    const dims = c.currentDims
+    const out: vec3[] = []
+    for (const q of footprint(p.x, p.z, dims.w, dims.d, c.rotationDeg)) {
+      out.push(roomToWorld(new vec3(q.x, 0, q.z)), roomToWorld(new vec3(q.x, dims.h, q.z)))
+    }
+    return out
+  }
+
+  private fmtOffset(): string {
+    const o = this.c.panelOffset
+    return `${o.distanceCm.toFixed(1)} cm, h ${o.horizontalDeg.toFixed(1)}°, v ${o.verticalDeg.toFixed(1)}°`
+  }
+
+  /**
+   * Screen-space report: current piece (fully in viewport?), footprint outline, gap
+   * number and panel boxes in viewport %, and whether the panel overlaps any of them.
+   */
+  private report(tag: string): void {
+    const piece = screenBox(this.pieceCorners())
+    const outline = screenBox(cornersOf("FloorOutline"))
+    const gap = screenBox(cornersOf("GapLabel"))
+    const panel = screenBox(visualCorners(panelObj(this.c), true))
+    log(`${tag}: piece ${fmtBox(piece)} fully in viewport=${boxInside(piece, 0, 100)}`)
+    log(`${tag}: outline ${fmtBox(outline)}; gap number ${fmtBox(gap)}; panel ${fmtBox(panel)}`)
+    log(`${tag}: panel overlaps piece=${boxesOverlap(panel, piece)} outline=${boxesOverlap(panel, outline)} gap number=${boxesOverlap(panel, gap)}`)
+  }
+
+  /** One label's box and whether it is inside the central CONFIG.frame.centralPct % (logs the overflow if not). */
+  private labelCheck(tag: string, name: string): void {
+    const b = screenBox(cornersOf(name))
+    const lo = centralLo()
+    const hi = centralHi()
+    const inside = boxInside(b, lo, hi)
+    const c = b ? `centre (${((b.x0 + b.x1) / 2).toFixed(1)}%, ${((b.y0 + b.y1) / 2).toFixed(1)}%)` : "not shown"
+    log(`${tag}: ${name} ${c}, box ${fmtBox(b)}, inside central ${CONFIG.frame.centralPct}%=${inside}${inside || !b ? "" : ` (out by ${boxOverflow(b, lo, hi).toFixed(1)}%)`}`)
+  }
+
+  /**
+   * Room-local pose whose gaze points pitchDeg below level, with `aim` at CONFIG.frame.subjectYPct
+   * from the top of the view, coming from azimuth azDeg (0 = from +Z, 90 = from -X), kept off the walls.
+   */
+  private shotPose(aim: vec3, azDeg: number, pitchDeg: number, subjectYPct?: number): Pose {
+    const elev = pitchDeg - subjectTiltDeg(subjectYPct) // angle down from the eye to the subject itself
+    const pose = this.poseAt(aim, azDeg, (this.head.eyeY - aim.y) / Math.tan(elev * DEG))
+    pose.subjectYPct = subjectYPct
+    return pose
+  }
+
+  /** Room-local pose `d` cm (horizontal) from `aim` at azimuth azDeg, looking at it, kept off the walls. */
+  private poseAt(aim: vec3, azDeg: number, d: number): Pose {
+    const m = CONFIG.frame.wallMarginCm
+    const x0 = aim.x - d * Math.sin(azDeg * DEG)
+    const z0 = aim.z + d * Math.cos(azDeg * DEG)
+    const x = Math.min(ROOM.maxX - m, Math.max(ROOM.minX + m, x0))
+    const z = Math.min(ROOM.maxZ - m, Math.max(ROOM.minZ + m, z0))
+    if (x !== x0 || z !== z0) log(`shot: camera clamped from (${x0.toFixed(0)}, ${z0.toFixed(0)}) to (${x.toFixed(0)}, ${z.toFixed(0)}) to stay ${m} cm off the walls`)
+    return {x, z, look: aim}
+  }
+
+  /** The gap number's room-local position, or null if it is not shown. */
+  private gapLabelRoom(): vec3 | null {
+    const so = findSceneObjectByName("GapLabel")
+    if (!so || !so.isEnabledInHierarchy) return null
+    return worldToRoom(so.getTransform().getWorldPosition())
+  }
+
+  /**
+   * Re-aim the shot at the middle of the actual gap number and the given room-local points
+   * (facing edge, obstacle), same pitch and azimuth.
+   */
+  private async settleOnGap(azDeg: number, sec: number, extra: vec3[] = [], subjectYPct?: number): Promise<void> {
+    const L = this.gapLabelRoom()
+    if (!L) {
+      log("settle: gap number not shown, shot kept")
+      return
+    }
+    const pts = [L].concat(extra)
+    let aim = vec3.zero()
+    for (const q of pts) aim = aim.add(q)
+    aim = aim.uniformScale(1 / pts.length)
+    // Height: midway between the floor and the highest point (the gap number may be lifted).
+    aim = new vec3(aim.x, Math.max(...pts.map((q) => q.y)) / 2, aim.z)
+    await this.head.glide(this.shotPose(aim, azDeg, CONFIG.frame.pitchDeg, subjectYPct), sec)
+  }
+
+  /** Room-local points of the facing edge and the obstacle face at a clearance hold (piece at 0° in S3). */
+  private facingPoints(obstacle: "RightWall" | "CoffeeTable"): {edge: vec3[]; face: vec3[]} {
+    const pos = this.c.piecePosition
+    const w = this.c.currentDims.w / 2
+    const d = this.c.currentDims.d / 2
+    if (obstacle === "RightWall") {
+      return {
+        edge: [new vec3(pos.x + w, 0, pos.z - d), new vec3(pos.x + w, 0, pos.z + d)],
+        face: [new vec3(ROOM.maxX, 0, pos.z - d), new vec3(ROOM.maxX, 0, pos.z + d), new vec3(ROOM.maxX, 45, pos.z)],
+      }
+    }
+    // The part of the back edge that faces the table, and the table front over the same x-range.
+    const x0 = Math.max(COFFEE.minX, pos.x - w)
+    const x1 = Math.min(COFFEE.maxX, pos.x + w)
+    return {
+      edge: [new vec3(x0, 0, pos.z - d), new vec3(x1, 0, pos.z - d)],
+      face: [new vec3(x0, 0, COFFEE.maxZ), new vec3(x1, 0, COFFEE.maxZ), new vec3((x0 + x1) / 2, 45, COFFEE.maxZ)],
+    }
+  }
+
+  /** Move the panel through its grab bar (real drag) to about `targetDeg` (vertical offset), up or down. */
+  private async movePanelTo(targetDeg: number): Promise<void> {
+    const bar = findInteractableByName("PanelGrabBar")
+    if (!bar) {
+      log("panel: PanelGrabBar not found, offset kept")
+      return
+    }
+    for (let i = 0; i < 8 && Math.abs(this.c.panelOffset.verticalDeg - targetDeg) > 0.5; i++) {
+      const o = this.c.panelOffset
+      // Move the held point along the sphere around the head (same distance, lower angle).
+      const D = o.distanceCm
+      const f = levelHeadFrame()
+      const v = f.fwd
+        .uniformScale(D * (Math.cos(targetDeg * DEG) - Math.cos(o.verticalDeg * DEG)))
+        .add(vec3.up().uniformScale(D * (Math.sin(targetDeg * DEG) - Math.sin(o.verticalDeg * DEG))))
+      try {
+        await this.it.dragEased(bar, v, 0.4)
+      } catch (e) {
+        log(`panel: drag did not complete (${e})`)
+        break
+      }
+      await nextFrame()
     }
   }
 
@@ -356,15 +682,35 @@ export class DemoScenario extends Scenario {
     c.resetPanelOffset()
     c.resetPanelScale()
 
+    for (const b of BUILT_INS) this.dimsByKey[b.key] = {w: b.w, d: b.d, h: b.h}
+    for (const e of bundledCatalog()) this.dimsByKey[`Imported_${e.id}`] = {w: e.widthCm, d: e.depthCm, h: e.heightCm}
+
     this.it = new DemoInteractor("DemoInteractor")
     const edge = findSceneObjectByName("Edge_Front")!.getComponent("Component.RenderMeshVisual") as RenderMeshVisual
     this.ring = new PointerRing(edge, CONFIG.ring.colour)
+
+    // Panel for the DEMO: smaller and lower (existing size steps and grab-bar offset, inside the limits).
+    for (let i = 0; i < CONFIG.panel.scaleDownSteps; i++) c.panelScaleDown()
+    await sleep(200)
+    await this.movePanelTo(CONFIG.panel.verticalDeg)
+    log(`setup: panel ${c.panelScale * 100}% at ${this.fmtOffset()}; viewport aspect ${cameraComp().aspect.toFixed(3)}, vertical fov ${(cameraComp().fov / DEG).toFixed(1)}°`)
     await sleep(1400) // let any gap label fade, panel settle
     log(`setup: piece ${c.currentPieceKey} at ${JSON.stringify(c.piecePosition)}, placeholders ${c.showPlaceholderPieces}, panel ${c.panelScale * 100}%, eye ${camRoom.y.toFixed(1)} cm, cam room (${camRoom.x.toFixed(1)}, ${camRoom.z.toFixed(1)})`)
   }
 
   /** Puts the state a scene expects when it runs alone. */
   private async prepAlone(n: number): Promise<void> {
+    if (n === 5) {
+      // S5 starts where S4 leaves it: piece at the S3 coffee-table stop, turned 4 x 15° right, far measure shot, panel raised.
+      this.c.setPiecePosition(COFFEE.minX + 20, COFFEE.maxZ + 20)
+      for (let i = 0; i < CONFIG.s4.rotations; i++) this.c.rotateRight()
+      log(`prep S5: piece at ${JSON.stringify(this.c.piecePosition)}, ${this.c.rotationDeg.toFixed(0)}°`)
+      const p = this.c.piecePosition
+      this.head.set(this.poseAt(new vec3(p.x, this.c.currentDims.h / 2, p.z), CONFIG.s4.azDeg, CONFIG.s4.distCm))
+      await this.movePanelTo(CONFIG.s4.panelRaiseDeg)
+      await sleep(500)
+      log(`prep S5: panel at ${this.fmtOffset()}`)
+    }
     if (n === 2) {
       const p = this.startPose
       this.head.set({x: p.x, z: p.z - CONFIG.s1.walkCm, look: this.sofaLook()})
@@ -383,6 +729,12 @@ export class DemoScenario extends Scenario {
   private async playScene(n: number): Promise<SceneRecord> {
     const target = CONFIG.target[n]
     this.sceneStart = getTime()
+    this.minWall = Infinity
+    this.pieceIn = 0
+    this.samples = 0
+    this.allIn = 0
+    this.maxCover = 0
+    this.sceneN = n
     const f0 = this.frames
     const start = this.sceneStart - this.T0
     log(`S${n} ${SCENE_NAMES[n]} START ${start.toFixed(2)} s (target ${target} s)`)
@@ -395,8 +747,10 @@ export class DemoScenario extends Scenario {
     if (used < target) await sleep((target - used) * 1000)
     else if (used > target + 0.05) log(`S${n} NEEDED MORE TIME: ${used.toFixed(2)} s for a ${target} s target (+${(used - target).toFixed(2)} s)`)
     const end = getTime() - this.T0
+    this.report(`S${n} end`)
     log(`S${n} ${SCENE_NAMES[n]} END ${end.toFixed(2)} s (choreography ${used.toFixed(2)} s)`)
-    return {n, start, end, frames: this.frames - f0}
+    this.sceneN = 0
+    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover}
   }
 
   /** Waits until `sec` after the scene started (no-op if already past). */
@@ -416,6 +770,14 @@ export class DemoScenario extends Scenario {
     }
     const wall = records.length ? records[records.length - 1].end : 0
     log(`TOTAL ${total.toFixed(2)} s, ${this.frames} frames, measured average ${wall > 0 ? (this.frames / wall).toFixed(1) : "-"} fps`)
+    log(`scene | min camera-wall cm (rule >= ${CONFIG.frame.wallRuleCm}) | piece fully in viewport (sampled frames) | S6: all pieces fully in viewport | S4/S5: max panel cover of piece box`)
+    for (const r of records) {
+      const ok = r.minWallCm >= CONFIG.frame.wallRuleCm ? "ok" : "TOO CLOSE"
+      const pct = (k: number) => (r.samples ? ((100 * k) / r.samples).toFixed(1) : "-")
+      const all = r.n === 6 ? `${r.allIn}/${r.samples} (${pct(r.allIn)}%)` : "-"
+      const cover = r.n === 4 || r.n === 5 ? `${r.maxCover.toFixed(1)}%` : "-"
+      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.minWallCm.toFixed(1)} ${ok} | ${r.pieceIn}/${r.samples} (${pct(r.pieceIn)}%) | ${all} | ${cover}`)
+    }
   }
 
   // ── Pinch helpers ──────────────────────────────────────────────────────────
@@ -427,13 +789,18 @@ export class DemoScenario extends Scenario {
       return
     }
     await this.ring.glideTo(() => inter.getSceneObject().getTransform().getWorldPosition(), CONFIG.ring.glide)
+    const s = toScreen(inter.getSceneObject().getTransform().getWorldPosition())
+    const inView = s.front && s.x >= 0 && s.x <= 100 && s.y >= 0 && s.y <= 100
     const press = this.ring.press(CONFIG.ring.press)
+    let ok = true
     try {
       await withTimeout(this.it.trigger(inter), 3000, "trigger timeout")
     } catch (e) {
+      ok = false
       log(`pinch: "${name}" did not complete (${e})`)
     }
     await press
+    log(`pinch ${name}: ring at (${s.x.toFixed(1)}%, ${s.y.toFixed(1)}%) in viewport=${inView}, completed=${ok}`)
   }
 
   /** Grab the current piece and drag it by a room-local offset along an eased, time-based path. */
@@ -511,26 +878,79 @@ export class DemoScenario extends Scenario {
   private async s3(): Promise<void> {
     const k = CONFIG.s3
     const c = this.c
-    await this.head.glide({x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}, k.camera)
+    const overview: Pose = {x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}
+    await this.head.glide(overview, k.camera)
     const halfW = c.currentDims.w / 2
     const toX = ROOM.maxX - halfW - k.wallGapCm
-    await this.dragPiece(new vec3(toX - c.piecePosition.x, 0, 0), k.toWall)
+    const pz = c.piecePosition.z
+    // While the piece nears the wall, the camera moves to a shot looking down CONFIG.frame.pitchDeg at the planned gap number.
+    const wallAim = new vec3(ROOM.maxX - k.wallGapCm / 2, 0, pz)
+    await Promise.all([
+      this.dragPiece(new vec3(toX - c.piecePosition.x, 0, 0), k.toWall),
+      this.head.glide(this.shotPose(wallAim, k.wallAzDeg, CONFIG.frame.pitchDeg), k.toWall),
+    ])
+    await this.settleOnGap(k.wallAzDeg, k.settle)
     log(`S3 at wall: edges ${c.outlineEdgeColors.join(",")}, gap "${c.gapLabelText}" visible=${c.gapLabelVisible}`)
+    this.holdReport("S3 wall hold", "RightWall")
     await sleep(k.hold * 1000)
-    await this.dragPiece(new vec3(-c.piecePosition.x, 0, 0), k.back)
+    await Promise.all([this.dragPiece(new vec3(-c.piecePosition.x, 0, 0), k.back), this.head.glide(overview, k.back)])
     log(`S3 open floor: clear=${c.isClear}, edges ${c.outlineEdgeColors.join(",")}`)
     await this.head.glide({x: -40, z: -10, look: new vec3(110, 30, START.z - 180)}, k.turn)
     const goal = new vec3(COFFEE.minX + 20, 0, COFFEE.maxZ + 20)
-    await this.dragPiece(new vec3(goal.x - c.piecePosition.x, 0, goal.z - c.piecePosition.z), k.toTable)
+    // Planned contact: back edge on the table front, gap number over the shared x-range.
+    const lo = Math.max(goal.x - halfW, COFFEE.minX)
+    const hi = Math.min(goal.x + halfW, COFFEE.maxX)
+    const tableAim = new vec3((lo + hi) / 2, 20, COFFEE.maxZ)
+    await Promise.all([
+      this.dragPiece(new vec3(goal.x - c.piecePosition.x, 0, goal.z - c.piecePosition.z), k.toTable),
+      this.head.glide(this.shotPose(tableAim, k.tableAzDeg, CONFIG.frame.pitchDeg), k.toTable),
+    ])
+    const tf = this.facingPoints("CoffeeTable")
+    await this.settleOnGap(k.tableAzDeg, k.settle, [tf.edge[0].add(tf.edge[1]).uniformScale(0.5), tf.face[2]], k.tableSubjectYPct)
     log(`S3 stopped at ${JSON.stringify(c.piecePosition)}: nearest ${c.nearestObstacle} ${c.nearestGapCm.toFixed(1)} cm`)
+    this.holdReport("S3 table hold", "CoffeeTable")
     await sleep(k.tableHold * 1000)
+  }
+
+  /**
+   * At a clearance hold: camera pitch, gap number position (viewport %), and whether
+   * the gap number, the footprint edge facing the obstacle and the obstacle are inside the central 70%.
+   */
+  private holdReport(tag: string, obstacle: "RightWall" | "CoffeeTable"): void {
+    const c = this.c
+    const p = this.head.pose
+    const pitch = this.head.pitchDownDeg()
+    const lo = centralLo()
+    const hi = centralHi()
+    const L = findSceneObjectByName("GapLabel")
+    const gs = L && L.isEnabledInHierarchy ? toScreen(L.getTransform().getWorldPosition()) : null
+    log(`${tag}: camera (${p.x.toFixed(0)}, ${p.z.toFixed(0)}) looking down ${pitch.toFixed(1)}°; gap number "${c.gapLabelText}" at ${gs ? `(${gs.x.toFixed(1)}%, ${gs.y.toFixed(1)}%)` : "not shown"}`)
+    this.labelCheck(tag, "GapLabel")
+    // Footprint edge facing the obstacle and the obstacle face opposite it (floor, plus 45 cm up on the obstacle).
+    const {edge, face} = this.facingPoints(obstacle)
+    const panel = screenBox(visualCorners(panelObj(c), true))
+    for (const [name, pts] of [["footprint edge (facing part)", edge], [obstacle === "RightWall" ? "wall" : "coffee table front", face]] as [string, vec3[]][]) {
+      const b = screenBox(pts.map(roomToWorld))
+      const inside = boxInside(b, lo, hi)
+      log(`${tag}: ${name} ${fmtBox(b)} inside central ${CONFIG.frame.centralPct}%=${inside}${inside ? "" : ` (out by ${boxOverflow(b, lo, hi).toFixed(1)}%)`}; panel overlaps it=${boxesOverlap(panel, b)}`)
+    }
+    this.report(tag)
   }
 
   /** S4 Measure, rotate right 4 times, Measure off. */
   private async s4(): Promise<void> {
     const k = CONFIG.s4
-    await this.pinch("MeasureButton")
-    await sleep(k.measureHold * 1000)
+    // Frame the piece (and its W/D/H labels) while Measure is pinched.
+    const p = this.c.piecePosition
+    const aim = new vec3(p.x, this.c.currentDims.h / 2, p.z)
+    await Promise.all([this.pinch("MeasureButton"), this.head.glide(this.poseAt(aim, k.azDeg, k.distCm), k.camera)])
+    await sleep(500)
+    for (const n of ["WidthLabel", "DepthLabel", "HeightLabel"]) this.labelCheck("S4 measure on", n)
+    // Raise the panel (real grab-bar drag) so its buttons are on screen at this far shot; lowered again after S5.
+    const t0 = getTime()
+    await this.movePanelTo(k.panelRaiseDeg)
+    log(`S4 panel raised to ${this.fmtOffset()}`)
+    await sleep(Math.max(0, k.measureHold - 0.5 - (getTime() - t0)) * 1000)
     for (let i = 0; i < k.rotations; i++) {
       const t = getTime()
       await this.pinch("RotateRightButton")
@@ -538,6 +958,8 @@ export class DemoScenario extends Scenario {
       if (rest > 0) await sleep(rest * 1000)
     }
     log(`S4 rotation ${this.c.rotationDeg.toFixed(0)}°`)
+    for (const n of ["WidthLabel", "DepthLabel", "HeightLabel"]) this.labelCheck("S4 after rotations", n)
+    this.report("S4 after rotations")
     await this.pinch("MeasureButton")
   }
 
@@ -558,13 +980,41 @@ export class DemoScenario extends Scenario {
       log(`S5 compare: ${c.currentPieceKey}`)
       await sleep(k.comparePause * 1000)
     }
+    this.report("S5 before panel back")
+    await this.movePanelTo(CONFIG.panel.verticalDeg)
+    log(`S5 panel back to ${this.fmtOffset()}`)
   }
 
   /** S6 Gallery (two tabs, a tile), Add and move, place 3 pieces, Remove once. */
   private async s6(): Promise<void> {
     const k = CONFIG.s6
     const c = this.c
-    await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.camera)
+    // Back off along the line from the pieces' centroid through the old (0, 0) spot, k.backCm further,
+    // sliding along the wall margin if the line runs into it; then keep the gaze on the centroid.
+    const C = this.centroid()
+    const D0 = Math.sqrt(C.x * C.x + C.z * C.z)
+    const D = D0 + k.backCm
+    const m = CONFIG.frame.wallMarginCm
+    const ux = -C.x / Math.max(1e-6, D0)
+    const uz = -C.z / Math.max(1e-6, D0)
+    let cx = C.x + ux * D
+    let cz = C.z + uz * D
+    if (cz > ROOM.maxZ - m) {
+      cz = ROOM.maxZ - m
+      cx = C.x + (ux > 0 ? 1 : -1) * Math.sqrt(Math.max(0, D * D - (cz - C.z) ** 2))
+    }
+    cx = Math.min(ROOM.maxX - m, Math.max(ROOM.minX + m, cx))
+    log(`S6 camera (${cx.toFixed(0)}, ${cz.toFixed(0)}), ${Math.sqrt((cx - C.x) ** 2 + (cz - C.z) ** 2).toFixed(0)} cm from the centroid (${C.x.toFixed(0)}, ${C.z.toFixed(0)}); old spot (0, 0) was ${D0.toFixed(0)} cm`)
+    await this.head.glide({x: cx, z: cz, look: C}, k.camera)
+    this.followCentroid = true
+    try {
+      await this.s6Body(k, c)
+    } finally {
+      this.followCentroid = false
+    }
+  }
+
+  private async s6Body(k: typeof CONFIG.s6, c: SidleController): Promise<void> {
     await this.pinch("GalleryButton")
     const types = c.availableTypes
     const tabA = Math.min(3, types.length)
@@ -589,10 +1039,21 @@ export class DemoScenario extends Scenario {
   /** S7 Door check: a piece too big for the door, then a chair that fits. */
   private async s7(): Promise<void> {
     const k = CONFIG.s7
+    // Back to the S7 opening view of round 1 (S6 now ends further back, where the gallery is below the view).
+    await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.startCamera)
     for (const key of [k.bigKey, k.fitKey]) {
       await this.pickFromGallery(key)
       const label = findSceneObjectByName("DoorFitLabel")
-      if (label) await this.ring.glideTo(() => label.getTransform().getWorldPosition(), CONFIG.ring.glide)
+      if (label) {
+        // Look at the door-fit line on the panel (the panel follows head position and yaw only, so it stays put).
+        const at = worldToRoom(label.getTransform().getWorldPosition())
+        const pose = this.head.pose
+        await Promise.all([
+          this.ring.glideTo(() => label.getTransform().getWorldPosition(), CONFIG.ring.glide),
+          this.head.glide({x: pose.x, z: pose.z, look: at, center: true}, k.camera),
+        ])
+        this.labelCheck(`S7 ${key}`, "DoorFitLabel")
+      }
       await sleep(k.hold * 1000)
     }
   }
