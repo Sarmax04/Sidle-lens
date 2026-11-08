@@ -33,6 +33,7 @@ import {C27RoomLookScenario} from "./C27RoomLookScenario"
 import {C28DoorFitScenario} from "./C28DoorFitScenario"
 import {C29ColorSwatchScenario} from "./C29ColorSwatchScenario"
 import {C30ColorPersistScenario} from "./C30ColorPersistScenario"
+import {C31BackdropRoomScenario} from "./C31BackdropRoomScenario"
 import {DemoScenario} from "../SidleDemo/DemoScenario"
 
 @component
@@ -72,6 +73,8 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "c28-door-fit", typename: C28DoorFitScenario.getTypeName()},
     {id: "c29-color-swatch", typename: C29ColorSwatchScenario.getTypeName()},
     {id: "c30-color-persist", typename: C30ColorPersistScenario.getTypeName()},
+    // Backdrop room mode only (roomMode = backdrop, Preview: Interactive / Colorful Home)
+    {id: "c31-backdrop-room", typename: C31BackdropRoomScenario.getTypeName()},
     // Demo walkthrough for the video (no assertions); scene = all | 1..9
     {id: "DEMO", typename: DemoScenario.getTypeName(), parameters: {scene: "all"}},
   ]

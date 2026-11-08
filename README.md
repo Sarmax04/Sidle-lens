@@ -2,7 +2,7 @@
 
 **Try furniture in your room at real size, before you buy it.**
 
-Sidle is an AR Lens for Snap Spectacles (SPECS), built for the Devpost "Learn AR with SPECS" hackathon. A real-scale sofa, chair, table or bed stands on the floor of a virtual living room. You walk around it, see its size from every side, and a floor outline tells you whether you would still have room to walk past it.
+Sidle is an AR Lens for Snap Spectacles (SPECS), built for the Devpost "Learn AR with SPECS" hackathon. A real-scale sofa, chair, table or bed stands on the floor of a living room in the preview. You walk around it, see its size from every side, and a floor outline tells you whether you would still have room to walk past it.
 
 > Demo video: _add the YouTube link here_
 
@@ -15,7 +15,14 @@ Photos and 3D viewers on a phone show you a picture of furniture. Sidle puts the
 - You can drag the piece along the floor, rotate it in 15 degree steps and show its width, depth and height.
 - You can switch between types (sofa, chair, table, bed) and compare variants of the same type in the same spot.
 
-In the preview, the "room" is a virtual stand-in: 7 m x 8 m, four walls, a 90 x 200 cm doorway and a 100 x 50 x 45 cm coffee table in a far corner. The Lens places the room around where you start, so you always begin about 1 m inside the doorway, facing into the room. On real glasses the same indicator would measure against the actual room.
+### Two room modes
+
+The controller's **Room mode** input (`roomMode` on `SidleController`) picks the room the Lens is played in:
+
+- **Backdrop (default in the saved scene): the Colorful Home living room.** The living room of Lens Studio's built-in Interactive Preview scene *Colorful Home* is the room: 520.5 x 501.9 cm, measured from the scene's own meshes. The Lens builds no room of its own; the outline measures against the living room's walls and a corner pillar. The backdrop's furniture is not an obstacle (a virtual piece may overlap a real sofa or table). You start just inside the living room's wide open side to the hall, facing into the room, with the first sofa about 3 m ahead. **This mode needs the Preview panel set to Interactive with the source Colorful Home.** With the Plane source (or any other scene) the Lens shows no room at all.
+- **Stand-in: a virtual 7 m x 8 m room.** Four walls, a 90 x 200 cm doorway and a 100 x 50 x 45 cm coffee table in a far corner. The Lens places this room around where you start, so you always begin about 1 m inside the doorway, facing into the room. It works with any preview source.
+
+In both modes the panel's door line checks each piece against a 90 x 200 cm door, and the clearance rule is the same 80 cm. On real glasses the same indicator would measure against the actual room.
 
 ## Controls
 
@@ -23,7 +30,7 @@ All controls use the Spectacles Interaction Kit and UI Kit, so they work with th
 
 | Control | What it does |
 |---|---|
-| Drag the piece | Moves it along the floor. It cannot pass through walls or the coffee table. |
+| Drag the piece | Moves it along the floor. It cannot pass through walls, the coffee table (stand-in) or the pillar (backdrop). |
 | Next piece | Goes to the next type (sofa, chair, table, bed) and shows its first variant in the same spot and facing. |
 | Compare | Switches to the next variant of the current type in the same spot and facing. Greyed out when a type has only one variant. |
 | Measure | Shows or hides width, depth and height in cm. They also show while you drag. |
@@ -39,9 +46,9 @@ An arrow on the panel points to the piece when it is behind you.
 1. Install **Lens Studio 5.22 or newer**.
 2. Clone this repo and open `RoomFit.esproj` in Lens Studio. (RoomFit was the original working name of the project; the Lens is called Sidle.)
 3. Lens Studio fetches the packages it needs (Spectacles Interaction Kit, Spectacles UI Kit, and the LEAF test plugin).
-4. Open the Preview panel and choose Interactive Preview. Move with WASD, Q and E to go down and up, and right-drag to look around.
+4. Open the Preview panel and choose Interactive Preview with the source **Colorful Home** (needed for the default backdrop room mode). Move with WASD, Q and E to go down and up, and right-drag to look around.
 
-No SPECS glasses are needed. The Lens starts about 1 m inside the doorway, facing a three-seater sofa about 3 m away.
+No SPECS glasses are needed. In backdrop mode the sofa stands about 3 m ahead of the preview's start position in the Colorful Home living room. To use the 7 m x 8 m stand-in room instead (any preview source), set **Room mode** on the `SidleController` object to Stand-in; the Lens then starts about 1 m inside its doorway, facing a three-seater sofa about 3 m away.
 
 ## The furniture
 
@@ -78,7 +85,7 @@ node import.mjs --model <file-or-folder> --name "..." --category sofa --credit "
 | Script | Role |
 |---|---|
 | `SidleController.ts` | Single owner of state: current piece, position, rotation, Measure, panel offset and size, gallery. |
-| `SidleGeometry.ts` | Pure floor-plan math: oriented rectangles, clearance to walls and obstacles. |
+| `SidleGeometry.ts` | Pure floor-plan math: oriented rectangles, clearance to walls and obstacles; the room bounds of both room modes. |
 | `SidleCatalog.ts` | Catalog parsing and model normalisation. |
 | `SidlePanelUI.ts`, `SidleGalleryUI.ts`, `SidleLabelsUI.ts` | Passive views. |
 | `SidleLazyFollow.ts`, `SidlePanelOffset.ts` | Panel follows your head at an offset you can change. |
@@ -86,7 +93,7 @@ node import.mjs --model <file-or-folder> --name "..." --category sofa --credit "
 ## What is proven and what is not
 
 - **Logic proven:** clearance maths, piece switching, gallery, panel movement and size, and fallback on missing models are covered by LEAF tests and checked in the preview.
-- **Feel unproven (needs real glasses):** comfort over time, real hand tracking, how a large piece fills the real field of view, text legibility on the additive display, and measuring a real room instead of the virtual one.
+- **Feel unproven (needs real glasses):** comfort over time, real hand tracking, how a large piece fills the real field of view, text legibility on the additive display, and measuring a real room live (the backdrop room's walls were measured once from the preview scene, not sensed).
 
 ## Credits
 

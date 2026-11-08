@@ -16,12 +16,12 @@ I'm standing in the middle of my living room and a sofa stands there at real siz
 ## Product or overlay
 - Type: overlay. The furniture responds to the real room it's placed in.
 - What the real version would sense: the fixed things in the room — the walls, the doorway, and other furniture — to measure clearance against.
-- Stand-in for the preview: the Lens provides a simple virtual living room, 7 m wide by 8 m deep, with four walls, one doorway (90 cm wide, 200 cm tall) in one of the short walls, and a coffee table (100 × 50 × 45 cm) as a fixed obstacle against the far wall in a corner. These are plain, obviously fake shapes, so it's clear they stand in for the real room. The Lens places the room around where you start, so you always begin about 1 m inside the doorway, facing into the room. On real glasses the same indicator would measure against the actual room instead.
+- Stand-in for the preview (room mode "stand-in"; see Update 10 for the backdrop room mode, the default): the Lens provides a simple virtual living room, 7 m wide by 8 m deep, with four walls, one doorway (90 cm wide, 200 cm tall) in one of the short walls, and a coffee table (100 × 50 × 45 cm) as a fixed obstacle against the far wall in a corner. These are plain, obviously fake shapes, so it's clear they stand in for the real room. The Lens places the room around where you start, so you always begin about 1 m inside the doorway, facing into the room. On real glasses the same indicator would measure against the actual room instead.
 
 ## Where things live
 - Where the user is looking during the main task: at the piece on the floor, walking around it, glancing down at the outline and numbers.
-- Start position: about 1 m inside the doorway, facing into the room.
-- Virtual room: 7 × 8 m, walls about 250 cm tall (default), light plain colors (default). Doorway centered in the near short wall (default). The doorway is an opening in the near short wall; clearance to the doorway is measured to the wall line across the opening, the same as for the other walls.
+- Start position: about 1 m inside the doorway, facing into the room (stand-in room; backdrop room: see Update 10).
+- Virtual stand-in room: 7 × 8 m, walls about 250 cm tall (default), light plain colors (default). Doorway centered in the near short wall (default). The doorway is an opening in the near short wall; clearance to the doorway is measured to the wall line across the opening, the same as for the other walls.
 - Furniture piece: Sofa A is shown at the start, on the floor in the middle of the room, about 3 m in front of the start, back toward the far wall. Fixed in the room, not following the user. At the start there's at least 80 cm clear on every side.
 - Pieces (plain, generic shapes in light and mid tones so they stay visible on the glasses):
   - Sofa A: 220 × 90 × 85 cm three-seater, light gray.
@@ -210,6 +210,19 @@ Problem: the user wants to see the same piece in other colours.
 - Done criteria:
   28. Pinching a swatch tints the current piece, "original" restores it, and the selected swatch is marked; the tint does not make the piece darker than the original on average.
   29. The colour stays across variant changes and rotation, a placed piece keeps its colour after Add, a new current piece starts at "original", and the strip follows the panel and its size.
+
+## Update 10: Two room modes (Colorful Home backdrop)
+Problem: the plain stand-in room looks fake on video, while Lens Studio's built-in Interactive Preview scene "Colorful Home" already shows a real-looking apartment.
+
+1. A Room mode setting on the controller picks the room: "stand-in" is the 7 × 8 m virtual room above, exactly as before; "backdrop" uses the living room of the Interactive Preview scene Colorful Home. The saved project uses "backdrop".
+2. Backdrop mode needs the Preview panel set to Interactive with the source Colorful Home. With the Plane source (or another scene) the Lens shows no room at all.
+3. The backdrop living room is 520.5 × 501.9 cm (measured from the preview scene's own meshes). Its walls, a corner pillar and a short wall end at its wide open side count as obstacles; the backdrop's furniture does not (a virtual piece may overlap a real sofa or table). The piece can't be dragged through the walls, the pillar or the wall end.
+4. In backdrop mode the Lens builds no room of its own (no floor, walls, decoration, door frame, window, rug or coffee table). The room sits at a fixed place lined up with the living room (floor 135 cm below the preview's start head height), not placed around the start pose.
+5. You start just inside the living room's 3.4 m wide open side to the hall, facing into the room; the first piece stands about 3 m ahead, with at least 80 cm clear on every side.
+6. The 80 cm clearance rule and the door check (a 90 cm × 200 cm door, Update 8) are the same in both modes.
+- Out of scope: other rooms of the apartment, the backdrop's furniture as obstacles, any room sensing.
+- Done criteria:
+  30. In backdrop mode the room is lined up with the Colorful Home living room (floor at -135 cm, room turned 45°), uses the measured bounds and the pillar and wall-end obstacles, builds no stand-in room, starts the piece about 3 m ahead and green, keeps 80 cm clearance to walls and the pillar, stops drags at the pillar and the wall end, shows the door line by the 90 × 200 rule, and the piece's feet sit within 2 cm of the floor. In stand-in mode every earlier criterion holds unchanged.
 
 ## Build notes for CLAD
 - Build for SPECS so it runs and can be demonstrated in Lens Studio's preview. No SPECS device is available.

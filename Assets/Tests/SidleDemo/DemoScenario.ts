@@ -16,6 +16,7 @@ import {awaitEventOnce, findSceneObjectByName, nextFrame, sleep, withTimeout} fr
 import {InteractorTriggerType} from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {SidleController} from "../../Scripts/SidleController"
+import {BACKDROP_OBSTACLES, BACKDROP_START, Obstacle} from "../../Scripts/SidleGeometry"
 import {BUILT_INS, bundledCatalog, cameraTransform, COFFEE, controller, footprint, levelHeadFrame, panelObj, ROOM, START, START_HEAD, visualCorners} from "../SidleLeaf/SidleTestHelpers"
 
 // ═══ CONFIG: tune everything here (seconds unless noted; positions in room cm) ═══
@@ -38,6 +39,40 @@ const CONFIG = {
   panel: {scaleDownSteps: 1, verticalDeg: -40},
   /** Framing: shot pitch for the clearance holds, camera kept >= wallMarginCm from walls (rule: >= 40), labels checked against the central 70%. */
   frame: {pitchDeg: 27.5, subjectYPct: 32, wallMarginCm: 60, wallRuleCm: 40, centralPct: 70, sampleEveryFrames: 3},
+}
+
+/**
+ * Backdrop room mode (Colorful Home living room, 520.5 x 501.9 cm, room-local: start at (0, 0),
+ * open side to the hall at +Z). Only the values that differ from CONFIG; the stand-in DEMO
+ * uses CONFIG alone. Same scenes, order and durations.
+ */
+const BD = {
+  /** The open side to the hall (room-local x range at the near line); the camera may step up to intoOpeningCm into the hall (its walls stay >= 60 cm away there). */
+  opening: {minX: -166.8, maxX: 168.8, intoOpeningCm: 250},
+  /**
+   * The DEMO head starts startBackCm behind the Lens start position (in the opening), so the
+   * 157 cm sofa about 300 cm ahead fits the narrow view (about 32 deg wide); S1 walks walkCm forward.
+   */
+  startBackCm: 30,
+  s1: {walkCm: 15},
+  /** Arc around the sofa: wider radius, 40 deg across the open side (5.2 m wide room; further left the arc meets the wall stub). */
+  s2: {radiusCm: 330, startDeg: 25, sweepDeg: -40},
+  /** S3 overview (the glide there from the S2 end stays >= 50 cm off the wall stub) and the turn toward the pillar (it takes the coffee table's part). */
+  s3: {overview: {x: -150, z: -70, look: new vec3(40, 30, -330)}, turnLook: new vec3(110, 30, -420)},
+  /** Shot pitch for the clearance holds: flatter than the stand-in (eye 135 cm instead of 160) so the shots sit as far back. */
+  pitchDeg: 19,
+  s4: {azDeg: 15, distCm: 650},
+  /** S6 pieces spread less (smaller room). */
+  s6: {dragA: new vec3(-110, 0, 40), dragB: new vec3(100, 0, 60)},
+  /** S7: closer to the piece, looking down so the piece and the panel's door line are both in view. */
+  s7: {x: -20, z: -60, subjectYPct: 30},
+  /** S9: wide closing view from the hall, looking at the pieces. */
+  s9: {x: 0, z: 100},
+}
+
+/** Clearance-hold pitch for the current room mode. */
+function holdPitch(): number {
+  return backdrop ? BD.pitchDeg : CONFIG.frame.pitchDeg
 }
 
 const SCENE_NAMES: Record<number, string> = {
@@ -408,6 +443,68 @@ class DemoInteractor extends DefaultLeafInteractor {
   }
 }
 
+// ── Room mode helpers ─────────────────────────────────────────────────────────
+
+interface Box {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+function boxOf(o: Obstacle): Box {
+  return {minX: o.cx - o.w / 2, maxX: o.cx + o.w / 2, minZ: o.cz - o.d / 2, maxZ: o.cz + o.d / 2}
+}
+
+/** Horizontal distance from (x, z) to a box (0 inside). */
+function boxDist(x: number, z: number, b: Box): number {
+  const dx = Math.max(0, b.minX - x, x - b.maxX)
+  const dz = Math.max(0, b.minZ - z, z - b.maxZ)
+  return Math.sqrt(dx * dx + dz * dz)
+}
+
+let backdrop = false
+
+/** The obstacle box the S3 second hold drives into: the coffee table (stand-in) or the pillar, clipped to the room (backdrop). */
+function holdBox(): Box {
+  if (!backdrop) return {minX: COFFEE.minX, maxX: COFFEE.maxX, minZ: COFFEE.minZ, maxZ: COFFEE.maxZ}
+  const b = boxOf(BACKDROP_OBSTACLES[0])
+  return {minX: b.minX, maxX: Math.min(b.maxX, ROOM.maxX), minZ: Math.max(b.minZ, ROOM.minZ), maxZ: b.maxZ}
+}
+function holdName(): "CoffeeTable" | "Pillar" {
+  return backdrop ? "Pillar" : "CoffeeTable"
+}
+
+/**
+ * Camera distance (room-local cm) to the nearest wall. Stand-in: the four wall lines.
+ * Backdrop: the living-room walls, the pillar and the wall stub; at the open side only
+ * the opening's edges count (the camera may step into the opening).
+ */
+function cameraWallCm(x: number, z: number): number {
+  if (!backdrop) return Math.min(x - ROOM.minX, ROOM.maxX - x, z - ROOM.minZ, ROOM.maxZ - z)
+  let d = z <= ROOM.maxZ ? Math.min(x - ROOM.minX, ROOM.maxX - x, z - ROOM.minZ) : Math.min(x - BD.opening.minX, BD.opening.maxX - x)
+  for (const o of BACKDROP_OBSTACLES) d = Math.min(d, boxDist(x, z, boxOf(o)))
+  return d
+}
+
+/** Keeps a camera position `m` cm off every wall (backdrop: may step into the opening, pushed off the pillar and stub). */
+function clampCamera(x: number, z: number, m: number): {x: number; z: number} {
+  x = Math.min(ROOM.maxX - m, Math.max(ROOM.minX + m, x))
+  if (!backdrop) return {x, z: Math.min(ROOM.maxZ - m, Math.max(ROOM.minZ + m, z))}
+  const inOpening = x >= BD.opening.minX + m && x <= BD.opening.maxX - m
+  z = Math.min(inOpening ? ROOM.maxZ + BD.opening.intoOpeningCm : ROOM.maxZ - m, Math.max(ROOM.minZ + m, z))
+  for (const o of BACKDROP_OBSTACLES) {
+    const b = boxOf(o)
+    if (boxDist(x, z, b) >= m) continue
+    // Push out along the cheaper axis.
+    const px = x < (b.minX + b.maxX) / 2 ? b.minX - m - x : b.maxX + m - x
+    const pz = z < (b.minZ + b.maxZ) / 2 ? b.minZ - m - z : b.maxZ + m - z
+    if (Math.abs(px) < Math.abs(pz)) x += px
+    else z += pz
+  }
+  return {x, z}
+}
+
 // ── Scenario ──────────────────────────────────────────────────────────────────
 
 interface SceneRecord {
@@ -424,6 +521,8 @@ interface SceneRecord {
   allIn: number
   /** largest share of the current piece box covered by the panel box (sampled, %) */
   maxCover: number
+  /** pinch/drag ring positions in the viewport this scene (%) */
+  ring: {x0: number; x1: number; y0: number; y1: number; n: number}
 }
 
 @component
@@ -441,6 +540,7 @@ export class DemoScenario extends Scenario {
   private samples = 0
   private allIn = 0
   private maxCover = 0
+  private ringExt = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, n: 0}
   private sceneN = 0
   private followCentroid = false
   private dimsByKey: {[key: string]: {w: number; d: number; h: number}} = {}
@@ -478,7 +578,7 @@ export class DemoScenario extends Scenario {
     this.frames++
     if (!this.head) return
     const p = this.head.pose
-    const wall = Math.min(p.x - ROOM.minX, ROOM.maxX - p.x, p.z - ROOM.minZ, ROOM.maxZ - p.z)
+    const wall = cameraWallCm(p.x, p.z)
     this.minWall = Math.min(this.minWall, wall)
     if (this.followCentroid) {
       const cen = this.centroid()
@@ -576,8 +676,7 @@ export class DemoScenario extends Scenario {
     const m = CONFIG.frame.wallMarginCm
     const x0 = aim.x - d * Math.sin(azDeg * DEG)
     const z0 = aim.z + d * Math.cos(azDeg * DEG)
-    const x = Math.min(ROOM.maxX - m, Math.max(ROOM.minX + m, x0))
-    const z = Math.min(ROOM.maxZ - m, Math.max(ROOM.minZ + m, z0))
+    const {x, z} = clampCamera(x0, z0, m)
     if (x !== x0 || z !== z0) log(`shot: camera clamped from (${x0.toFixed(0)}, ${z0.toFixed(0)}) to (${x.toFixed(0)}, ${z.toFixed(0)}) to stay ${m} cm off the walls`)
     return {x, z, look: aim}
   }
@@ -605,11 +704,11 @@ export class DemoScenario extends Scenario {
     aim = aim.uniformScale(1 / pts.length)
     // Height: midway between the floor and the highest point (the gap number may be lifted).
     aim = new vec3(aim.x, Math.max(...pts.map((q) => q.y)) / 2, aim.z)
-    await this.head.glide(this.shotPose(aim, azDeg, CONFIG.frame.pitchDeg, subjectYPct), sec)
+    await this.head.glide(this.shotPose(aim, azDeg, holdPitch(), subjectYPct), sec)
   }
 
   /** Room-local points of the facing edge and the obstacle face at a clearance hold (piece at 0° in S3). */
-  private facingPoints(obstacle: "RightWall" | "CoffeeTable"): {edge: vec3[]; face: vec3[]} {
+  private facingPoints(obstacle: "RightWall" | "CoffeeTable" | "Pillar"): {edge: vec3[]; face: vec3[]} {
     const pos = this.c.piecePosition
     const w = this.c.currentDims.w / 2
     const d = this.c.currentDims.d / 2
@@ -619,12 +718,13 @@ export class DemoScenario extends Scenario {
         face: [new vec3(ROOM.maxX, 0, pos.z - d), new vec3(ROOM.maxX, 0, pos.z + d), new vec3(ROOM.maxX, 45, pos.z)],
       }
     }
-    // The part of the back edge that faces the table, and the table front over the same x-range.
-    const x0 = Math.max(COFFEE.minX, pos.x - w)
-    const x1 = Math.min(COFFEE.maxX, pos.x + w)
+    // The part of the back edge that faces the table (pillar), and its front over the same x-range.
+    const B = holdBox()
+    const x0 = Math.max(B.minX, pos.x - w)
+    const x1 = Math.min(B.maxX, pos.x + w)
     return {
       edge: [new vec3(x0, 0, pos.z - d), new vec3(x1, 0, pos.z - d)],
-      face: [new vec3(x0, 0, COFFEE.maxZ), new vec3(x1, 0, COFFEE.maxZ), new vec3((x0 + x1) / 2, 45, COFFEE.maxZ)],
+      face: [new vec3(x0, 0, B.maxZ), new vec3(x1, 0, B.maxZ), new vec3((x0 + x1) / 2, 45, B.maxZ)],
     }
   }
 
@@ -657,6 +757,7 @@ export class DemoScenario extends Scenario {
 
   private async setup(): Promise<void> {
     const c = (this.c = controller())
+    backdrop = c.mode === "backdrop"
     roomT = findSceneObjectByName("VirtualRoom")!.getTransform()
     if (c.galleryOpen) c.closeGallery()
     if (c.isDragging) c.endDrag()
@@ -671,13 +772,16 @@ export class DemoScenario extends Scenario {
     while (c.rotationDeg > 0.01 && c.rotationDeg < 359.99 && g++ < 30) c.rotateLeft()
     if (c.measureOn) c.toggleMeasure()
     if (c.currentColorIndex !== 0) c.setColor(0)
-    c.setPiecePosition(START.x, START.z)
+    // The Lens's own start spot: the room centre (stand-in), about 300 cm ahead (backdrop).
+    if (backdrop) c.setPiecePosition(BACKDROP_START.x, BACKDROP_START.z)
+    else c.setPiecePosition(START.x, START.z)
 
     // Camera at the normal start (room-local (0, 0), about 1 m inside the doorway), facing the sofa.
     const inv = roomT.getInvertedWorldTransform()
     const camRoom = inv.multiplyPoint(START_HEAD.pos)
-    this.startPose = {x: camRoom.x, z: camRoom.z, look: this.sofaLook()}
+    this.startPose = {x: camRoom.x, z: camRoom.z + (backdrop ? BD.startBackCm : 0), look: this.sofaLook()}
     this.head = new DemoHead(camRoom.y, this.startPose)
+    if (backdrop) log(`setup: DEMO head starts ${BD.startBackCm} cm behind the Lens start, ${Math.sqrt((this.startPose.x - c.piecePosition.x) ** 2 + (this.startPose.z - c.piecePosition.z) ** 2).toFixed(0)} cm from the sofa`)
     await nextFrame()
     c.resetPanelOffset()
     c.resetPanelScale()
@@ -695,6 +799,7 @@ export class DemoScenario extends Scenario {
     await this.movePanelTo(CONFIG.panel.verticalDeg)
     log(`setup: panel ${c.panelScale * 100}% at ${this.fmtOffset()}; viewport aspect ${cameraComp().aspect.toFixed(3)}, vertical fov ${(cameraComp().fov / DEG).toFixed(1)}°`)
     await sleep(1400) // let any gap label fade, panel settle
+    log(`setup: room mode ${c.mode}`)
     log(`setup: piece ${c.currentPieceKey} at ${JSON.stringify(c.piecePosition)}, placeholders ${c.showPlaceholderPieces}, panel ${c.panelScale * 100}%, eye ${camRoom.y.toFixed(1)} cm, cam room (${camRoom.x.toFixed(1)}, ${camRoom.z.toFixed(1)})`)
   }
 
@@ -702,18 +807,19 @@ export class DemoScenario extends Scenario {
   private async prepAlone(n: number): Promise<void> {
     if (n === 5) {
       // S5 starts where S4 leaves it: piece at the S3 coffee-table stop, turned 4 x 15° right, far measure shot, panel raised.
-      this.c.setPiecePosition(COFFEE.minX + 20, COFFEE.maxZ + 20)
+      this.c.setPiecePosition(holdBox().minX + 20, holdBox().maxZ + 20)
       for (let i = 0; i < CONFIG.s4.rotations; i++) this.c.rotateRight()
       log(`prep S5: piece at ${JSON.stringify(this.c.piecePosition)}, ${this.c.rotationDeg.toFixed(0)}°`)
       const p = this.c.piecePosition
-      this.head.set(this.poseAt(new vec3(p.x, this.c.currentDims.h / 2, p.z), CONFIG.s4.azDeg, CONFIG.s4.distCm))
+      const k4 = backdrop ? {...CONFIG.s4, ...BD.s4} : CONFIG.s4
+      this.head.set(this.poseAt(new vec3(p.x, this.c.currentDims.h / 2, p.z), k4.azDeg, k4.distCm))
       await this.movePanelTo(CONFIG.s4.panelRaiseDeg)
       await sleep(500)
       log(`prep S5: panel at ${this.fmtOffset()}`)
     }
     if (n === 2) {
       const p = this.startPose
-      this.head.set({x: p.x, z: p.z - CONFIG.s1.walkCm, look: this.sofaLook()})
+      this.head.set({x: p.x, z: p.z - (backdrop ? BD.s1.walkCm : CONFIG.s1.walkCm), look: this.sofaLook()})
       await sleep(500)
       this.c.resetPanelOffset()
     }
@@ -734,6 +840,7 @@ export class DemoScenario extends Scenario {
     this.samples = 0
     this.allIn = 0
     this.maxCover = 0
+    this.ringExt = {x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, n: 0}
     this.sceneN = n
     const f0 = this.frames
     const start = this.sceneStart - this.T0
@@ -750,7 +857,7 @@ export class DemoScenario extends Scenario {
     this.report(`S${n} end`)
     log(`S${n} ${SCENE_NAMES[n]} END ${end.toFixed(2)} s (choreography ${used.toFixed(2)} s)`)
     this.sceneN = 0
-    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover}
+    return {n, start, end, frames: this.frames - f0, minWallCm: this.minWall, pieceIn: this.pieceIn, samples: this.samples, allIn: this.allIn, maxCover: this.maxCover, ring: this.ringExt}
   }
 
   /** Waits until `sec` after the scene started (no-op if already past). */
@@ -770,17 +877,30 @@ export class DemoScenario extends Scenario {
     }
     const wall = records.length ? records[records.length - 1].end : 0
     log(`TOTAL ${total.toFixed(2)} s, ${this.frames} frames, measured average ${wall > 0 ? (this.frames / wall).toFixed(1) : "-"} fps`)
-    log(`scene | min camera-wall cm (rule >= ${CONFIG.frame.wallRuleCm}) | piece fully in viewport (sampled frames) | S6: all pieces fully in viewport | S4/S5: max panel cover of piece box`)
+    log(`scene | min camera-wall cm (rule >= ${CONFIG.frame.wallRuleCm}) | piece fully in viewport (sampled frames) | S6: all pieces fully in viewport | S4/S5: max panel cover of piece box | pinch/drag rings x, y range (%)`)
     for (const r of records) {
       const ok = r.minWallCm >= CONFIG.frame.wallRuleCm ? "ok" : "TOO CLOSE"
       const pct = (k: number) => (r.samples ? ((100 * k) / r.samples).toFixed(1) : "-")
       const all = r.n === 6 ? `${r.allIn}/${r.samples} (${pct(r.allIn)}%)` : "-"
       const cover = r.n === 4 || r.n === 5 ? `${r.maxCover.toFixed(1)}%` : "-"
-      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.minWallCm.toFixed(1)} ${ok} | ${r.pieceIn}/${r.samples} (${pct(r.pieceIn)}%) | ${all} | ${cover}`)
+      const g = r.ring
+      const inBand = g.x0 >= 10 && g.x1 <= 90 && g.y0 >= 10 && g.y1 <= 90
+      const rings = g.n ? `${g.n} rings, x ${g.x0.toFixed(1)}..${g.x1.toFixed(1)}, y ${g.y0.toFixed(1)}..${g.y1.toFixed(1)}${inBand ? " ok" : " OUTSIDE 10-90"}` : "-"
+      log(`S${r.n} ${SCENE_NAMES[r.n]} | ${r.minWallCm.toFixed(1)} ${ok} | ${r.pieceIn}/${r.samples} (${pct(r.pieceIn)}%) | ${all} | ${cover} | ${rings}`)
     }
   }
 
   // ── Pinch helpers ──────────────────────────────────────────────────────────
+
+  /** Remember where a pinch/drag ring landed on screen (for the 10-90% check). */
+  private noteRing(s: {x: number; y: number}): void {
+    const r = this.ringExt
+    r.x0 = Math.min(r.x0, s.x)
+    r.x1 = Math.max(r.x1, s.x)
+    r.y0 = Math.min(r.y0, s.y)
+    r.y1 = Math.max(r.y1, s.y)
+    r.n++
+  }
 
   private async pinch(name: string): Promise<void> {
     const inter = findInteractableByName(name, undefined, true)
@@ -790,6 +910,7 @@ export class DemoScenario extends Scenario {
     }
     await this.ring.glideTo(() => inter.getSceneObject().getTransform().getWorldPosition(), CONFIG.ring.glide)
     const s = toScreen(inter.getSceneObject().getTransform().getWorldPosition())
+    this.noteRing(s)
     const inView = s.front && s.x >= 0 && s.x <= 100 && s.y >= 0 && s.y <= 100
     const press = this.ring.press(CONFIG.ring.press)
     let ok = true
@@ -812,6 +933,9 @@ export class DemoScenario extends Scenario {
     }
     const at = () => grab.getSceneObject().getTransform().getWorldPosition()
     await this.ring.glideTo(at, CONFIG.ring.glide)
+    const sg = toScreen(at())
+    this.noteRing(sg)
+    log(`drag ring at (${sg.x.toFixed(1)}%, ${sg.y.toFixed(1)}%)`)
     const press = this.ring.press(CONFIG.ring.press)
     try {
       await this.it.dragEased(grab, roomDirToWorld(roomOffset), sec)
@@ -847,7 +971,7 @@ export class DemoScenario extends Scenario {
 
   /** S1 Hook: hold at the start, then walk forward about 1 m. */
   private async s1(): Promise<void> {
-    const k = CONFIG.s1
+    const k = backdrop ? {...CONFIG.s1, ...BD.s1} : CONFIG.s1
     await this.at(k.hold)
     const p = this.head.pose
     await this.head.glide({x: p.x, z: p.z - k.walkCm, look: this.sofaLook()}, k.walk)
@@ -855,7 +979,7 @@ export class DemoScenario extends Scenario {
 
   /** S2 Walk-around: to ~1.5 m from the sofa, a quarter turn around it, pause on the green outline. */
   private async s2(): Promise<void> {
-    const k = CONFIG.s2
+    const k = backdrop ? {...CONFIG.s2, ...BD.s2} : CONFIG.s2
     const s = this.c.piecePosition
     const look = this.sofaLook()
     const onCircle = (deg: number): Pose => {
@@ -864,12 +988,16 @@ export class DemoScenario extends Scenario {
     }
     // Stay >= 60 cm inside the walls (the camera must never pass through one).
     const r = k.radiusCm
-    const margin = Math.min(ROOM.maxX - (s.x + r), s.x - r - ROOM.minX, ROOM.maxZ - (s.z + r), s.z - r - ROOM.minZ)
-    log(`S2 circle radius ${r} cm around (${s.x.toFixed(0)}, ${s.z.toFixed(0)}); worst-case wall margin ${margin.toFixed(0)} cm`)
+    let margin = Infinity
+    for (let i = 0; i <= 20; i++) {
+      const q = onCircle(k.startDeg + (k.sweepDeg * i) / 20)
+      margin = Math.min(margin, cameraWallCm(q.x, q.z))
+    }
+    log(`S2 circle radius ${r} cm around (${s.x.toFixed(0)}, ${s.z.toFixed(0)}), ${k.startDeg} to ${k.startDeg + k.sweepDeg} deg; closest wall on the arc ${margin.toFixed(0)} cm`)
     await this.head.glide(onCircle(k.startDeg), k.approach)
     await animate(k.circle, (e) => this.head.set(onCircle(k.startDeg + k.sweepDeg * e)))
     const end = this.head.pose
-    const minWall = Math.min(ROOM.maxX - end.x, end.x - ROOM.minX, ROOM.maxZ - end.z, end.z - ROOM.minZ)
+    const minWall = cameraWallCm(end.x, end.z)
     log(`S2 end camera (${end.x.toFixed(0)}, ${end.z.toFixed(0)}), ${minWall.toFixed(0)} cm from the nearest wall; outline ${this.c.outlineEdgeColors.join(",")}`)
     await sleep(k.pause * 1000)
   }
@@ -878,7 +1006,7 @@ export class DemoScenario extends Scenario {
   private async s3(): Promise<void> {
     const k = CONFIG.s3
     const c = this.c
-    const overview: Pose = {x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}
+    const overview: Pose = backdrop ? {...BD.s3.overview} : {x: -40, z: -10, look: new vec3(60, 30, START.z - 30)}
     await this.head.glide(overview, k.camera)
     const halfW = c.currentDims.w / 2
     const toX = ROOM.maxX - halfW - k.wallGapCm
@@ -887,7 +1015,7 @@ export class DemoScenario extends Scenario {
     const wallAim = new vec3(ROOM.maxX - k.wallGapCm / 2, 0, pz)
     await Promise.all([
       this.dragPiece(new vec3(toX - c.piecePosition.x, 0, 0), k.toWall),
-      this.head.glide(this.shotPose(wallAim, k.wallAzDeg, CONFIG.frame.pitchDeg), k.toWall),
+      this.head.glide(this.shotPose(wallAim, k.wallAzDeg, holdPitch()), k.toWall),
     ])
     await this.settleOnGap(k.wallAzDeg, k.settle)
     log(`S3 at wall: edges ${c.outlineEdgeColors.join(",")}, gap "${c.gapLabelText}" visible=${c.gapLabelVisible}`)
@@ -895,20 +1023,22 @@ export class DemoScenario extends Scenario {
     await sleep(k.hold * 1000)
     await Promise.all([this.dragPiece(new vec3(-c.piecePosition.x, 0, 0), k.back), this.head.glide(overview, k.back)])
     log(`S3 open floor: clear=${c.isClear}, edges ${c.outlineEdgeColors.join(",")}`)
-    await this.head.glide({x: -40, z: -10, look: new vec3(110, 30, START.z - 180)}, k.turn)
-    const goal = new vec3(COFFEE.minX + 20, 0, COFFEE.maxZ + 20)
-    // Planned contact: back edge on the table front, gap number over the shared x-range.
-    const lo = Math.max(goal.x - halfW, COFFEE.minX)
-    const hi = Math.min(goal.x + halfW, COFFEE.maxX)
-    const tableAim = new vec3((lo + hi) / 2, 20, COFFEE.maxZ)
+    await this.head.glide(backdrop ? {x: overview.x, z: overview.z, look: BD.s3.turnLook} : {x: -40, z: -10, look: new vec3(110, 30, START.z - 180)}, k.turn)
+    const B = holdBox()
+    const goal = new vec3(B.minX + 20, 0, B.maxZ + 20)
+    // Planned contact: back edge on the table (pillar) front, gap number over the shared x-range.
+    const gx = Math.min(goal.x, ROOM.maxX - halfW) // where the room lets the piece end up
+    const lo = Math.max(gx - halfW, B.minX)
+    const hi = Math.min(gx + halfW, B.maxX)
+    const tableAim = new vec3((lo + hi) / 2, 20, B.maxZ)
     await Promise.all([
       this.dragPiece(new vec3(goal.x - c.piecePosition.x, 0, goal.z - c.piecePosition.z), k.toTable),
-      this.head.glide(this.shotPose(tableAim, k.tableAzDeg, CONFIG.frame.pitchDeg), k.toTable),
+      this.head.glide(this.shotPose(tableAim, k.tableAzDeg, holdPitch()), k.toTable),
     ])
-    const tf = this.facingPoints("CoffeeTable")
+    const tf = this.facingPoints(holdName())
     await this.settleOnGap(k.tableAzDeg, k.settle, [tf.edge[0].add(tf.edge[1]).uniformScale(0.5), tf.face[2]], k.tableSubjectYPct)
     log(`S3 stopped at ${JSON.stringify(c.piecePosition)}: nearest ${c.nearestObstacle} ${c.nearestGapCm.toFixed(1)} cm`)
-    this.holdReport("S3 table hold", "CoffeeTable")
+    this.holdReport(backdrop ? "S3 pillar hold" : "S3 table hold", holdName())
     await sleep(k.tableHold * 1000)
   }
 
@@ -916,7 +1046,7 @@ export class DemoScenario extends Scenario {
    * At a clearance hold: camera pitch, gap number position (viewport %), and whether
    * the gap number, the footprint edge facing the obstacle and the obstacle are inside the central 70%.
    */
-  private holdReport(tag: string, obstacle: "RightWall" | "CoffeeTable"): void {
+  private holdReport(tag: string, obstacle: "RightWall" | "CoffeeTable" | "Pillar"): void {
     const c = this.c
     const p = this.head.pose
     const pitch = this.head.pitchDownDeg()
@@ -929,7 +1059,7 @@ export class DemoScenario extends Scenario {
     // Footprint edge facing the obstacle and the obstacle face opposite it (floor, plus 45 cm up on the obstacle).
     const {edge, face} = this.facingPoints(obstacle)
     const panel = screenBox(visualCorners(panelObj(c), true))
-    for (const [name, pts] of [["footprint edge (facing part)", edge], [obstacle === "RightWall" ? "wall" : "coffee table front", face]] as [string, vec3[]][]) {
+    for (const [name, pts] of [["footprint edge (facing part)", edge], [obstacle === "RightWall" ? "wall" : obstacle === "Pillar" ? "pillar front" : "coffee table front", face]] as [string, vec3[]][]) {
       const b = screenBox(pts.map(roomToWorld))
       const inside = boxInside(b, lo, hi)
       log(`${tag}: ${name} ${fmtBox(b)} inside central ${CONFIG.frame.centralPct}%=${inside}${inside ? "" : ` (out by ${boxOverflow(b, lo, hi).toFixed(1)}%)`}; panel overlaps it=${boxesOverlap(panel, b)}`)
@@ -939,7 +1069,7 @@ export class DemoScenario extends Scenario {
 
   /** S4 Measure, rotate right 4 times, Measure off. */
   private async s4(): Promise<void> {
-    const k = CONFIG.s4
+    const k = backdrop ? {...CONFIG.s4, ...BD.s4} : CONFIG.s4
     // Frame the piece (and its W/D/H labels) while Measure is pinched.
     const p = this.c.piecePosition
     const aim = new vec3(p.x, this.c.currentDims.h / 2, p.z)
@@ -980,6 +1110,7 @@ export class DemoScenario extends Scenario {
       log(`S5 compare: ${c.currentPieceKey}`)
       await sleep(k.comparePause * 1000)
     }
+    if (backdrop) return // backdrop: the panel stays raised through S6 (lowered at the end of S6)
     this.report("S5 before panel back")
     await this.movePanelTo(CONFIG.panel.verticalDeg)
     log(`S5 panel back to ${this.fmtOffset()}`)
@@ -992,6 +1123,21 @@ export class DemoScenario extends Scenario {
     // Back off along the line from the pieces' centroid through the old (0, 0) spot, k.backCm further,
     // sliding along the wall margin if the line runs into it; then keep the gaze on the centroid.
     const C = this.centroid()
+    if (backdrop) {
+      // Living room: straight back from the pieces' centroid toward the open side, into the opening.
+      const cam = clampCamera(C.x, ROOM.maxZ + BD.opening.intoOpeningCm, CONFIG.frame.wallMarginCm)
+      log(`S6 camera (${cam.x.toFixed(0)}, ${cam.z.toFixed(0)}), ${Math.sqrt((cam.x - C.x) ** 2 + (cam.z - C.z) ** 2).toFixed(0)} cm from the centroid (${C.x.toFixed(0)}, ${C.z.toFixed(0)})`)
+      await this.head.glide({x: cam.x, z: cam.z, look: C}, k.camera)
+      this.followCentroid = true
+      try {
+        await this.s6Body({...k, ...BD.s6}, c)
+      } finally {
+        this.followCentroid = false
+      }
+      await this.movePanelTo(CONFIG.panel.verticalDeg)
+      log(`S6 panel back to ${this.fmtOffset()}`)
+      return
+    }
     const D0 = Math.sqrt(C.x * C.x + C.z * C.z)
     const D = D0 + k.backCm
     const m = CONFIG.frame.wallMarginCm
@@ -1040,7 +1186,18 @@ export class DemoScenario extends Scenario {
   private async s7(): Promise<void> {
     const k = CONFIG.s7
     // Back to the S7 opening view of round 1 (S6 now ends further back, where the gallery is below the view).
-    await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.startCamera)
+    if (backdrop) {
+      const p = this.c.piecePosition
+      await this.head.glide({x: BD.s7.x, z: BD.s7.z, look: new vec3(p.x, this.c.currentDims.h / 2, p.z), subjectYPct: BD.s7.subjectYPct}, k.startCamera)
+      for (const key of [k.bigKey, k.fitKey]) {
+        await this.pickFromGallery(key)
+        this.labelCheck(`S7 ${key}`, "DoorFitLabel")
+        await sleep(k.hold * 1000)
+      }
+      return
+    } else {
+      await this.head.glide({x: 0, z: 0, look: new vec3(0, 20, START.z - 60)}, k.startCamera)
+    }
     for (const key of [k.bigKey, k.fitKey]) {
       await this.pickFromGallery(key)
       const label = findSceneObjectByName("DoorFitLabel")
@@ -1069,6 +1226,7 @@ export class DemoScenario extends Scenario {
     if (c.measureOn) await this.pinch("MeasureButton")
     const cam = cameraTransform()
     await this.ring.glideTo(() => cam.getWorldPosition().add(cam.back.uniformScale(40)).add(cam.down.uniformScale(80)), 0.4)
-    await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, CONFIG.s9.camera)
+    if (backdrop) await this.head.glide({x: BD.s9.x, z: BD.s9.z, look: this.centroid()}, CONFIG.s9.camera)
+    else await this.head.glide({x: 0, z: 10, look: new vec3(0, 40, START.z - 80)}, CONFIG.s9.camera)
   }
 }

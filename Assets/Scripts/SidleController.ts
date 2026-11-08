@@ -75,10 +75,16 @@ import {
   EDGE_NAMES,
   fitsThroughDoor,
   EdgeName,
+  BACKDROP_ANCHOR,
+  BACKDROP_OBSTACLES,
+  BACKDROP_ROOM,
+  BACKDROP_START,
   Obstacle,
   ROOM_DEPTH_CM,
   ROOM_WIDTH_CM,
+  RoomMode,
   RoomSpec,
+  standinRoom,
   isValidPlacement,
   measureClearances,
   resolveDrag,
@@ -219,7 +225,12 @@ export class SidleController extends BaseScriptComponent {
 
   @ui.separator
   @ui.group_start("Room")
-  // Width/depth are ROOM_WIDTH_CM / ROOM_DEPTH_CM in SidleGeometry (shared with the tests).
+  @input
+  @hint("standin: the virtual 7 x 8 m room built by the Lens around the start pose. backdrop: the living room of the Interactive Preview scene Colorful Home (Preview: Interactive, source Colorful Home); the Lens builds no room and measures against its walls")
+  @widget(new ComboBoxWidget([new ComboBoxItem("Stand-in room (7 x 8 m)", "standin"), new ComboBoxItem("Colorful Home living room (backdrop)", "backdrop")]))
+  roomMode: string = "standin"
+
+  // Stand-in width/depth are ROOM_WIDTH_CM / ROOM_DEPTH_CM in SidleGeometry (shared with the tests).
   @input
   @hint("Wall height, cm")
   @widget(new SliderWidget(200, 350, 5))
@@ -419,7 +430,8 @@ export class SidleController extends BaseScriptComponent {
 
     this.createEvent("OnStartEvent").bind(() => {
       this.camT = WorldCameraFinderProvider.getInstance().getTransform()
-      this.anchorRoomToHead()
+      if (this.mode === "backdrop") this.anchorRoomToBackdrop()
+      else this.anchorRoomToHead()
       // SidleLazyFollow sits lower in the hierarchy: only initialized from OnStart on.
       this.panelFollow = this.panelUI.getSceneObject().getComponent(SidleLazyFollow.getTypeName()) as SidleLazyFollow | null
       if (!this.panelFollow) warn("SidleLazyFollow not found on the panel; the panel cannot be placed or moved")
@@ -931,6 +943,14 @@ export class SidleController extends BaseScriptComponent {
   get roomSpec(): RoomSpec {
     return this.room3()
   }
+  /** "standin" or "backdrop" (anything other than "backdrop" counts as stand-in). */
+  get mode(): RoomMode {
+    return this.roomMode === "backdrop" ? "backdrop" : "standin"
+  }
+  /** Fixed room obstacles (no placed pieces): the coffee table in the stand-in room, the pillar and wall stub in the backdrop. */
+  get roomObstacles(): Obstacle[] {
+    return this.fixedObstacles().map((o) => ({...o}))
+  }
 
   // ════════════════════════════════════════════════════════════════════════════
   // Internals
@@ -941,14 +961,25 @@ export class SidleController extends BaseScriptComponent {
   }
 
   private room3(): RoomSpec {
-    const maxZ = this.startInsetCm
-    return {minX: -ROOM_WIDTH_CM / 2, maxX: ROOM_WIDTH_CM / 2, minZ: maxZ - ROOM_DEPTH_CM, maxZ}
+    if (this.mode === "backdrop") return {...BACKDROP_ROOM}
+    return standinRoom(this.startInsetCm)
   }
 
-  /** Start spot of the piece: the room centre (room-local floor cm). */
+  /** Start spot of the piece (room-local floor cm): the room centre (stand-in), or about 300 cm ahead of the start position (backdrop, BACKDROP_START). */
   private startSpot(): {x: number; z: number} {
+    if (this.mode === "backdrop") return {...BACKDROP_START}
     const R = this.room3()
     return {x: (R.minX + R.maxX) / 2, z: (R.minZ + R.maxZ) / 2}
+  }
+
+  /**
+   * Backdrop mode: the room sits at a fixed world pose that lines it up with the
+   * Colorful Home living room (the preview head starts at the origin). No gaze or head pose is used.
+   */
+  private anchorRoomToBackdrop(): void {
+    const rt = this.room.getTransform()
+    rt.setWorldPosition(new vec3(BACKDROP_ANCHOR.x, BACKDROP_ANCHOR.y, BACKDROP_ANCHOR.z))
+    rt.setWorldRotation(quat.angleAxis((BACKDROP_ANCHOR.yawDeg * Math.PI) / 180, vec3.up()))
   }
 
   /**
@@ -976,10 +1007,16 @@ export class SidleController extends BaseScriptComponent {
     return new vec3(R.maxX - COFFEE_TABLE.w / 2, 0, R.minZ + COFFEE_TABLE.d / 2)
   }
 
-  /** Coffee table, then every placed piece as an oriented rectangle named "Placed_<id>". */
-  private obstacles(): Obstacle[] {
+  /** The room's own obstacles: the coffee table (stand-in), or the backdrop's pillar and wall stub. */
+  private fixedObstacles(): Obstacle[] {
+    if (this.mode === "backdrop") return BACKDROP_OBSTACLES
     const p = this.coffeeTableCenter()
-    const out: Obstacle[] = [{name: "CoffeeTable", cx: p.x, cz: p.z, w: COFFEE_TABLE.w, d: COFFEE_TABLE.d}]
+    return [{name: "CoffeeTable", cx: p.x, cz: p.z, w: COFFEE_TABLE.w, d: COFFEE_TABLE.d}]
+  }
+
+  /** Fixed room obstacles, then every placed piece as an oriented rectangle named "Placed_<id>". */
+  private obstacles(): Obstacle[] {
+    const out: Obstacle[] = this.fixedObstacles().slice()
     for (const pp of this.placed) {
       const def = this.defOf(pp.key)
       if (!def) continue
@@ -1471,6 +1508,12 @@ export class SidleController extends BaseScriptComponent {
   }
 
   private buildRoom(): void {
+    if (this.mode === "backdrop") {
+      // The preview backdrop is the room: no floor, walls, decor, door frame or coffee table of our own.
+      if (this.doorway) this.doorway.enabled = false
+      if (this.coffeeTable) this.coffeeTable.enabled = false
+      return
+    }
     const R = this.room3()
     const W = ROOM_WIDTH_CM
     const D = ROOM_DEPTH_CM

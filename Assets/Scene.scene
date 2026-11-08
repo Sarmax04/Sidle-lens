@@ -739,6 +739,7 @@
         - !<reference> c37bd7d6-dd5e-485c-a39f-9f0a85f88855
         - !<reference> b91fe99a-f2d5-4d07-b51f-cc35c59c8583
       showPlaceholderPieces: true
+      roomMode: backdrop
       wallHeight: !<float> 250.000000
       startInsetCm: !<float> 100.000000
       wallColor: !<Vec4> {x: 0.950000, y: 0.930000, z: 0.880000, w: 1.000000}
